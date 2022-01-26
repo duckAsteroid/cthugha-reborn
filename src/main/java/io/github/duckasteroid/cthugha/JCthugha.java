@@ -1,30 +1,35 @@
 package io.github.duckasteroid.cthugha;
 
 import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
-import io.github.duckasteroid.cthugha.Brake;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
-import io.github.duckasteroid.cthugha.ScreenBuffer;
-import io.github.duckasteroid.cthugha.TimeStatistics;
-import io.github.duckasteroid.cthugha.Translate;
-import io.github.duckasteroid.cthugha.wave.SimpleWave;
 import io.github.duckasteroid.cthugha.tab.Hurricane;
-import java.awt.*;
+import io.github.duckasteroid.cthugha.tab.Spiral;
+import io.github.duckasteroid.cthugha.wave.SimpleWave;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Panel;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.image.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.ImageObserver;
+import java.awt.image.IndexColorModel;
+import java.awt.image.MemoryImageSource;
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Hashtable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.LineUnavailableException;
 
-public class JCthugha implements Runnable {
+public class JCthugha extends Panel implements Runnable, ImageObserver, Closeable {
 
 	final SampledAudioSource audioSource = new SampledAudioSource();
 	int [] sound;
@@ -34,117 +39,132 @@ public class JCthugha implements Runnable {
 
 	MapFileReader reader;
 
-	int[] translate;
+	Image img;
+	MemoryImageSource source;
+
+	Translate translate;
 
 	final Flame flame = new Flame();
 
 	final SimpleWave wave = new SimpleWave().wave(10);
 
-	MemoryImageSource source;
+	TimeStatistics timeStatistics = new TimeStatistics();
 
 	public JCthugha() throws LineUnavailableException {
 	}
 
-	public void init(ScreenManager screen) throws IOException {
+	public void init() throws IOException {
 		IndexColorModel icm;
+
+		sizeChanged();
 
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
+
+
+		//translate = new Translate(dimension, new Smoke(40,40).generate(dimension));
 		icm = reader.random();
+		source = new MemoryImageSource( buffer.width, buffer.height, icm, buffer.pixels, 0, buffer.width);
+		source.setAnimated(true);
+		img = createImage( source );
+		prepareImage( img, this );
 
-		Dimension size = screen.getDimensions();
 
-		buffer = new ScreenBuffer(size);
-		shadow = new ScreenBuffer(size);
-		source = new MemoryImageSource(screen.getWidth(), screen.getHeight(), icm, buffer.pixels, 0, size.width);
-		source.addConsumer(new ImageConsumer() {
+		addKeyListener(new KeyAdapter() {
 			@Override
-			public void setDimensions(int width, int height) {
-				
-			}
+			public void keyTyped(KeyEvent e) {
+				if (e.getKeyChar() == 'p' || e.getKeyChar() == 'P') {
+					try {
+						source.newPixels(buffer.pixels, reader.random(), 0, buffer.width);
+					}
+					catch (IOException ex) {
 
-			@Override
-			public void setProperties(Hashtable<?, ?> props) {
-
-			}
-
-			@Override
-			public void setColorModel(ColorModel model) {
-
-			}
-
-			@Override
-			public void setHints(int hintflags) {
-
-			}
-
-			@Override
-			public void setPixels(int x, int y, int w, int h, ColorModel model, byte[] pixels, int off,
-			                      int scansize) {
-
-			}
-
-			@Override
-			public void setPixels(int x, int y, int w, int h, ColorModel model, int[] pixels, int off,
-			                      int scansize) {
-
-			}
-
-			@Override
-			public void imageComplete(int status) {
-
+					}
+				}
+				else if(e.getKeyChar() == 's' || e.getKeyChar() == 'S') {
+					System.out.println(timeStatistics);
+				}
 			}
 		});
+	}
+
+	private void sizeChanged() {
+		Dimension dims = getSize();
+
+		sound = new int[dims.width];
+
+		buffer = new ScreenBuffer(dims.width, dims.height);
+		shadow = new ScreenBuffer(dims.width, dims.height);
+
+		translate = new Translate(dims, new Spiral().numSpirals(0).deltaA(0.0000003).deltaR(0.001).generate(dims));
+		//translate = new Translate(dims, new Hurricane().generate(dims));
+	}
+
+
+	public boolean imageUpdate(Image img, int flags, int x, int y, int w, int h) {
+		if( ( flags & (ImageObserver.FRAMEBITS | ImageObserver.ALLBITS) ) != 0 ) {
+			repaint();
+		}
+		if( ( flags & (ImageObserver.ERROR | ImageObserver.ABORT) ) != 0 ) {
+			return false;
+		}
+		return true;
+	}
+
+	public void paint(Graphics g) {
+		update(g);
+	}
+
+	public void update(Graphics g) {
+		g.drawImage(img, 0, 0, this);
+		timeStatistics.ping();
+	}
+
+	public synchronized void run() {
+
+			// get sound
+			audioSource.sample(sound, buffer.width, buffer.height);
+
+			// translate
+			translate.transform(shadow.pixels, buffer.pixels);
+
+			// flame
+			flame.flame(buffer);
+
+			//wave
+			wave.wave(sound, buffer);
+
+			source.newPixels();
+			// copy
+			shadow.copy(buffer);
 
 	}
 
-	private static final DisplayMode POSSIBLE_MODES[] = {
-		new DisplayMode(800, 600, 32, 0),
-		new DisplayMode(800, 600, 24, 0),
-		new DisplayMode(800, 600, 16, 0),
-		new DisplayMode(640, 480, 32, 0),
-		new DisplayMode(640, 480, 24, 0),
-		new DisplayMode(640, 480, 16, 0)
-	};
+
+	@Override
+	public void close() throws IOException {
+		audioSource.close();
+	}
 
 	public static void main(String[] args) throws LineUnavailableException, IOException {
-		JCthugha main = new JCthugha();
+		final Frame f = new Frame();
+		final JCthugha jCthugha = new JCthugha();
+		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
+		jCthugha.setBounds(0, 0, 2048, 2048);
+		f.add(jCthugha);         //adding a new Button.
+		f.setSize(2048, 2048);        //setting size.
+		f.setTitle("Java Cthugha");  //setting title.
+		//f.setLayout(null);   //set default layout for frame.
+		f.setVisible(true);           //set frame visibility true
+		f.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				executorService.shutdown();
+				f.dispose();
+			}
+		});
+		jCthugha.init();
 
-		final ScreenManager screen = new ScreenManager();
-		try {
-			DisplayMode displayMode =
-				screen.findFirstCompatibleMode(POSSIBLE_MODES);
-			screen.setFullScreen(displayMode);
-
-			main.init(screen);
-			final ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
-			executorService.scheduleAtFixedRate(main, 0, 1000 / 60, TimeUnit.MILLISECONDS);
-
-		}
-		finally {
-			screen.restoreScreen();
-		}
+		executorService.scheduleAtFixedRate(jCthugha, 0, 1000/60, TimeUnit.MILLISECONDS);
 	}
-
-
-	public void run() {
-		// get sound
-		audioSource.sample(sound, buffer.width, buffer.height);
-
-		// translate
-		for(int i =0 ; i < translate.length; i++) {
-			buffer.pixels[i] = shadow.pixels[translate[i]];
-		}
-		// flame
-		flame.flame(buffer);
-
-		//wave
-		wave.wave(sound, buffer);
-
-		source.newPixels();
-		// copy
-		shadow.copy(buffer);
-	}
-
-
 }

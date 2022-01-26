@@ -54,7 +54,9 @@ public class Translate {
    * @param destination destination pixels to write to
    */
   public void transform(byte[] source, byte[] destination) {
-
+    for(int i = 0 ; i < source.length; i++) {
+      destination[i] = source[table[i]];
+    }
   }
 
   public Translate stretch(Dimension target) {
