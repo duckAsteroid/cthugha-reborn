@@ -109,76 +109,7 @@ public class GenTable implements Callable<Integer> {
   maptabfile, nr_spirals, delta_a, delta_r);
   */
 
-    for (y=0; y<BUFF_HEIGHT; y++) {
-
-      for (x=0; x<BUFF_WIDTH; x++) {
-        closest=0;
-        dist=9999999.0;
-
-        temp_x=x;
-        temp_y=y;
-        for (i=0; i<nr_spirals; i++) {
-          if(dist>(sqrt((temp_x-centersX[i])*(temp_x-centersX[i])+
-            (temp_y-centersY[i])*(temp_y-centersY[i])))){
-            closest=i;
-            dist=sqrt((temp_x-centersX[i])*(temp_x-centersX[i])+
-              (temp_y-centersY[i])*(temp_y-centersY[i]));
-          }
-        }
-        int mapValue ;
-        if ((x==centersX[closest]) && (y==centersY[closest])) {
-          mapValue = 0;
-        } else {
-          cent_y=centersY[closest];
-          cent_x=centersX[closest];
-          temp_x=abs(x-cent_x);
-          temp_y=abs(y-cent_y);
-
-          polar_r=sqrt(temp_x*temp_x + temp_y*temp_y);
-          polar_a=atan2((double)(x-cent_x),(double)(y-cent_y));
-
-          polar_r += (delta_r+(rnd.nextDouble()%10)*0.01)*(double)dir[closest];
-
-          if (polar_r<0)
-            polar_r=0.0;
-
-          if ( yinyang ) {
-
-            polar_a -= delta_a * 3.0 *
-              (float)(5-(int)(polar_r/11) % 11)/5.0;
-
-            if (((int)(polar_r/yywidth)%2) != 0) {
-              polar_a += delta_a;
-            } else {
-              polar_a -= delta_a;
-            }
-          } else {
-
-            polar_a += (delta_a+(rnd.nextDouble()%10)*0.01)
-              *(double)dir[closest];
-          }
-
-          temp_y=polar_r*(cos(polar_a));
-          temp_x=polar_r*(sin(polar_a));
-
-          map_x=(int)(temp_x+cent_x);
-          map_y=(int)(temp_y+cent_y);
-
-          if ((map_y>=BUFF_HEIGHT) || (map_y<0) ||
-            (map_x>=BUFF_WIDTH) || (map_x<0) ) {
-            map_x=0;
-            map_y=0;
-          }
-
-          map_x=max(map_x,0);
-          map_y=max(map_y,0);
-
-          mapValue = map_y * BUFF_WIDTH + map_x;
-
-        }
-        map.writeShort(mapValue);
-      }
-    }
+    
     return 0;
   }
 }
