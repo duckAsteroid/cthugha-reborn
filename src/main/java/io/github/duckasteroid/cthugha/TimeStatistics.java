@@ -1,50 +1,37 @@
 package io.github.duckasteroid.cthugha;
 
-public class TimeStatistics {
-  private long lastTime;
-  private double sum;
-  private long min;
-  private long max;
-  private int count;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
-  public TimeStatistics() {
-    reset();
+public class TimeStatistics extends Statistics {
+  private Long lastTime = null;
+  private final LongSupplier supplier;
+  private final double oneSecond;
+
+  private TimeStatistics(double oneSecond, LongSupplier supplier) {
+    this.oneSecond = oneSecond;
+    this.supplier = supplier;
+  }
+
+  public static TimeStatistics nano() {
+    return new TimeStatistics(TimeUnit.SECONDS.toNanos(1), () -> System.nanoTime());
+  }
+
+  public static TimeStatistics milli() {
+    return new TimeStatistics(TimeUnit.SECONDS.toMillis(1), () -> System.currentTimeMillis());
   }
 
   public void ping() {
-    long now = System.nanoTime();
-    long diff = now - lastTime;
-
-    min = Math.min(min, diff);
-    max = Math.max(max, diff);
-
-    count++;
-    sum += diff;
-
+    final long now = supplier.getAsLong();
+    if (lastTime != null) {
+      final long diff = now - lastTime;
+      add(diff);
+    }
     lastTime = now;
   }
 
   @Override
   public String toString() {
-    double avg = sum / count;
-    double hz = 1 / (avg * 0.000000001);
-    return "TimeStatistics{" +
-      "avg=" + to2DP(avg) +
-      "(hz=" + to2DP(hz) + ")" +
-      ", min=" + min +
-      ", max=" + max +
-      " nanoseconds }";
-  }
-
-  private static final String to2DP(double d) {
-    return String.format("%.2f", d);
-  }
-
-  public void reset() {
-    min = Long.MAX_VALUE;
-    max = Long.MIN_VALUE;
-    sum = 0;
-    count = 0;
-    lastTime = System.nanoTime();
+    return "TimeStatistics{avg= "+to2DP(oneSecond / avg())+" Hz}";
   }
 }

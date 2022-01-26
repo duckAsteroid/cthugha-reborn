@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.audio;
 
+import io.github.duckasteroid.cthugha.Statistics;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -21,6 +22,8 @@ public class SampledAudioSource implements AudioSource {
 
   private final TargetDataLine openLine;
   private final ByteBuffer buffer;
+  private final Statistics statistics = new Statistics();
+
   public SampledAudioSource() throws LineUnavailableException {
     this.openLine = getAudioTargetLine(ideal);
     this.openLine.open(ideal, 12000);
@@ -29,8 +32,13 @@ public class SampledAudioSource implements AudioSource {
     this.openLine.start();
   }
 
+  public void dumpStats() {
+    System.out.println(statistics.toString());
+  }
+
   @Override
   public void sample(int[] sound, int width, int height) {
+    statistics.add(openLine.available());
     if (openLine.available() >= width * 2) {
       buffer.clear();
       int read = openLine.read(buffer.array(), 0, Math.min(buffer.limit(), openLine.available()));

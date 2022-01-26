@@ -48,7 +48,7 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 
 	final SimpleWave wave = new SimpleWave().wave(10);
 
-	TimeStatistics timeStatistics = new TimeStatistics();
+	TimeStatistics timeStatistics = TimeStatistics.nano();
 
 	public JCthugha() throws LineUnavailableException {
 	}
@@ -83,6 +83,7 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 				}
 				else if(e.getKeyChar() == 's' || e.getKeyChar() == 'S') {
 					System.out.println(timeStatistics);
+					audioSource.dumpStats();
 				}
 			}
 		});
@@ -149,10 +150,11 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	public static void main(String[] args) throws LineUnavailableException, IOException {
 		final Frame f = new Frame();
 		final JCthugha jCthugha = new JCthugha();
+		Dimension size = new Dimension(1024,768);
 		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
-		jCthugha.setBounds(0, 0, 2048, 2048);
+		jCthugha.setBounds(0, 0, size.width, size.height);
 		f.add(jCthugha);         //adding a new Button.
-		f.setSize(2048, 2048);        //setting size.
+		f.setSize(size.width, size.height);        //setting size.
 		f.setTitle("Java Cthugha");  //setting title.
 		//f.setLayout(null);   //set default layout for frame.
 		f.setVisible(true);           //set frame visibility true
@@ -165,6 +167,6 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 		});
 		jCthugha.init();
 
-		executorService.scheduleAtFixedRate(jCthugha, 0, 1000/60, TimeUnit.MILLISECONDS);
+		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
 	}
 }
