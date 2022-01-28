@@ -70,7 +70,7 @@ public class ScreenManager {
    modes has a refresh rate of
    DisplayMode.REFRESH_RATE_UNKNOWN.
    */
-  public boolean displayModesMatch(DisplayMode mode1,
+  public static boolean displayModesMatch(DisplayMode mode1,
                                    DisplayMode mode2)
   {
     if (mode1.getWidth() != mode2.getWidth() ||
@@ -112,15 +112,26 @@ public class ScreenManager {
     frame.setUndecorated(true);
     frame.setIgnoreRepaint(true);
     frame.setResizable(false);
-
-    device.setFullScreenWindow(frame);
-    if (displayMode != null &&
-      device.isDisplayChangeSupported())
-    {
+    frame.setSize(displayMode.getWidth(), displayMode.getHeight());
+    frame.setUndecorated(true);
+    frame.setLocation(0, 0);
+    frame.toFront();
+    frame.setAlwaysOnTop(true);
+    frame.requestFocusInWindow();
+    frame.setExtendedState(Frame.MAXIMIZED_BOTH);
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    while(!displayModesMatch(displayMode, getCurrentDisplayMode())) {
+      frame.setVisible(true);
+      device.setFullScreenWindow(frame);
       try {
-        device.setDisplayMode(displayMode);
+        if (displayMode != null && device.isDisplayChangeSupported()) {
+            device.setDisplayMode(displayMode);
+        }
+        Thread.sleep(500);
+      } catch (InterruptedException | IllegalArgumentException ex) {
+        ex.printStackTrace();
       }
-      catch (IllegalArgumentException ex) { }
+
     }
     frame.createBufferStrategy(2);
   }

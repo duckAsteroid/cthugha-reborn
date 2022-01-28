@@ -1,20 +1,18 @@
 package io.github.duckasteroid.cthugha;
 
 import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
-import io.github.duckasteroid.cthugha.Brake;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
-import io.github.duckasteroid.cthugha.ScreenBuffer;
-import io.github.duckasteroid.cthugha.TimeStatistics;
-import io.github.duckasteroid.cthugha.Translate;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
-import io.github.duckasteroid.cthugha.tab.Hurricane;
-import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.image.*;
+import java.awt.Dimension;
+import java.awt.DisplayMode;
+import java.awt.Graphics2D;
+import java.awt.Transparency;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ImageConsumer;
+import java.awt.image.IndexColorModel;
+import java.awt.image.MemoryImageSource;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,6 +29,7 @@ public class JCthugha implements Runnable {
 
 	ScreenBuffer buffer;
 	ScreenBuffer shadow;
+	BufferedImage screenImage;
 
 	MapFileReader reader;
 
@@ -57,10 +56,14 @@ public class JCthugha implements Runnable {
 		buffer = new ScreenBuffer(size);
 		shadow = new ScreenBuffer(size);
 		source = new MemoryImageSource(screen.getWidth(), screen.getHeight(), icm, buffer.pixels, 0, size.width);
+		source.setAnimated(true);
+		screenImage =
+			screen.createCompatibleImage(size.width, size.height, Transparency.OPAQUE);
 		source.addConsumer(new ImageConsumer() {
+			int[] pixels;
 			@Override
 			public void setDimensions(int width, int height) {
-				
+				pixels = new int[width * height];
 			}
 
 			@Override
@@ -81,7 +84,14 @@ public class JCthugha implements Runnable {
 			@Override
 			public void setPixels(int x, int y, int w, int h, ColorModel model, byte[] pixels, int off,
 			                      int scansize) {
-
+				for(int i = 0; i < pixels.length; i++) {
+					this.pixels[i] = model.getRGB(pixels[i]);
+				}
+				screenImage.getRaster().setPixels(x,y,w,h,this.pixels);
+				Graphics2D graphics = screen.getGraphics();
+				graphics.drawImage(screenImage, x,y, null);
+				graphics.dispose();
+				screen.update();
 			}
 
 			@Override
@@ -95,10 +105,10 @@ public class JCthugha implements Runnable {
 
 			}
 		});
-
 	}
 
 	private static final DisplayMode POSSIBLE_MODES[] = {
+		new DisplayMode(1024, 768, 32, 0),
 		new DisplayMode(800, 600, 32, 0),
 		new DisplayMode(800, 600, 24, 0),
 		new DisplayMode(800, 600, 16, 0),
@@ -135,13 +145,16 @@ public class JCthugha implements Runnable {
 		for(int i =0 ; i < translate.length; i++) {
 			buffer.pixels[i] = shadow.pixels[translate[i]];
 		}
+
 		// flame
 		flame.flame(buffer);
 
 		//wave
 		wave.wave(sound, buffer);
 
+		// send the pixels from the memory image to the consumers
 		source.newPixels();
+
 		// copy
 		shadow.copy(buffer);
 	}

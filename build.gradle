@@ -17,3 +17,7 @@ dependencies {
 test {
 	useJUnitPlatform()
 }
+
+application {
+	mainClass = 'io.github.duckasteroid.cthugha.JCthugha'
+}
