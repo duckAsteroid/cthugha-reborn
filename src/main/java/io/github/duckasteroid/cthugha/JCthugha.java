@@ -2,6 +2,8 @@ package io.github.duckasteroid.cthugha;
 
 import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
+import io.github.duckasteroid.cthugha.img.FlashImage;
+import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
@@ -62,6 +64,10 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	RandomTranslateSource translateSource = new RandomTranslateSource();
 
 	ExecutorService backgroundTasks = Executors.newFixedThreadPool(2);
+
+	RandomImageSource randomImageSource = new RandomImageSource(Paths.get("pcx"));
+
+	FlashImage flashImage = null;
 
 	public JCthugha() throws LineUnavailableException {
 	}
@@ -141,16 +147,22 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 
 	public synchronized void run() {
 
-			// get sound
-			audioSource.sample(sound, buffer.width, buffer.height);
+		if (flashImage != null && flashImage.getDisplayFor() > 0) {
 
+		}
+		else {
 			// translate
 			translate.transform(shadow.pixels, buffer.pixels);
 
 			// flame
 			flame.flame(buffer);
+		}
 
-			//wave
+		// get sound
+		audioSource.sample(sound, buffer.width, buffer.height);
+
+
+		//wave
 			wave.wave(sound, buffer);
 
 			source.newPixels();

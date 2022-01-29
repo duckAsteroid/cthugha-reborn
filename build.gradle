@@ -9,6 +9,9 @@ repositories {
 }
 
 dependencies {
+	// Apache imaging for PCX support
+	implementation 'org.apache.commons:commons-imaging:1.0-alpha2'
+
 
 	// JUnit5 for testing
 	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.7.0')
