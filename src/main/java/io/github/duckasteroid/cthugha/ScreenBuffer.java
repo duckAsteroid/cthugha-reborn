@@ -17,6 +17,7 @@ public class ScreenBuffer {
   public ScreenBuffer(Dimension size) {
     this(size.width, size.height);
   }
+
   public ScreenBuffer(int width, int height) {
     this.width = width;
     this.height = height;
@@ -25,9 +26,5 @@ public class ScreenBuffer {
 
   public int index(int x, int y) {
     return (y * width) + x;
-  }
-
-  public void copy(ScreenBuffer buffer) {
-    System.arraycopy(buffer.pixels, 0, this.pixels, 0, buffer.pixels.length);
   }
 }

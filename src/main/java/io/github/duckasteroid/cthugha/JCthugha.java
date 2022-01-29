@@ -6,26 +6,32 @@ import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
-import io.github.duckasteroid.cthugha.tab.Spiral;
 import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
-import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
-import java.awt.Image;
 import java.awt.Panel;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferStrategy;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
 import java.awt.image.ImageObserver;
 import java.awt.image.IndexColorModel;
-import java.awt.image.MemoryImageSource;
+import java.awt.image.PixelInterleavedSampleModel;
+import java.awt.image.Raster;
+import java.awt.image.SampleModel;
+import java.awt.image.SinglePixelPackedSampleModel;
+import java.awt.image.WritableRaster;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -33,8 +39,6 @@ import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.LineUnavailableException;
 
@@ -44,12 +48,8 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	int [] sound;
 
 	ScreenBuffer buffer;
-	ScreenBuffer shadow;
 
 	MapFileReader reader;
-
-	Image img;
-	MemoryImageSource source;
 
 	Translate translate;
 
@@ -63,24 +63,21 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 
 	ExecutorService backgroundTasks = Executors.newFixedThreadPool(2);
 
-	public JCthugha() throws LineUnavailableException {
+	private BufferedImage screen;
+	private final BufferStrategy bufferStrategy;
+
+	public JCthugha(BufferStrategy bufferStrategy) throws LineUnavailableException {
+		this.bufferStrategy = bufferStrategy;
 	}
 
 	public void init(Dimension bufferSize) throws IOException {
 
-		IndexColorModel icm;
-
-		sizeChanged(bufferSize);
-
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 
-
-		icm = reader.random();
-		source = new MemoryImageSource( buffer.width, buffer.height, icm, buffer.pixels, 0, buffer.width);
-		source.setAnimated(true);
-		img = createImage( source );
-		prepareImage( img, this );
+		IndexColorModel indexColorModel = reader.random();
+		sizeChanged(bufferSize);
+		screen = paletteChanged(indexColorModel);
 
 		addKeyListener(new KeyAdapter() {
 			@Override
@@ -88,9 +85,10 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 				if (e.getKeyChar() == 'p' || e.getKeyChar() == 'P') {
 					backgroundTasks.submit(() -> {
 						try {
-							source.newPixels(buffer.pixels, reader.random(), 0, buffer.width);
+							IndexColorModel random = reader.random();
+							paletteChanged(random);
 						} catch (IOException ex) {
-
+							ex.printStackTrace();
 						}
 					});
 				}
@@ -105,6 +103,9 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 						System.out.println(translateSource.getLastGenerated());
 					});
 				}
+				else if(e.getKeyChar() == 'x' || e.getKeyChar() == 'X') {
+					findParentFrame().dispose();
+				}
 			}
 		});
 	}
@@ -113,30 +114,19 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 		sound = new int[dims.width];
 
 		buffer = new ScreenBuffer(dims.width, dims.height);
-		shadow = new ScreenBuffer(dims.width, dims.height);
 
 		translate = new Translate(dims, translateSource.generate(dims, true));
 	}
 
+	private BufferedImage paletteChanged(IndexColorModel icm) {
+		DataBuffer dataBuffer = new DataBufferByte(buffer.pixels, buffer.pixels.length, 0);
+		SampleModel sampleModel = new PixelInterleavedSampleModel(
+			DataBuffer.TYPE_BYTE, buffer.width, buffer.height, 1, buffer.width, new int[] {0});
 
-	public boolean imageUpdate(Image img, int flags, int x, int y, int w, int h) {
-		if( ( flags & (ImageObserver.FRAMEBITS | ImageObserver.ALLBITS) ) != 0 ) {
-			repaint();
-		}
-		if( ( flags & (ImageObserver.ERROR | ImageObserver.ABORT) ) != 0 ) {
-			return false;
-		}
-		return true;
-	}
+		WritableRaster raster = Raster.createWritableRaster(
+			sampleModel, dataBuffer, null);
 
-	public void paint(Graphics g) {
-		update(g);
-	}
-
-	public void update(Graphics g) {
-		Dimension size = getSize();
-		g.drawImage(img, 0, 0, size.width, size.height, this);
-		timeStatistics.ping();
+		return new BufferedImage(icm, raster, false, null);
 	}
 
 	public synchronized void run() {
@@ -145,7 +135,7 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 			audioSource.sample(sound, buffer.width, buffer.height);
 
 			// translate
-			translate.transform(shadow.pixels, buffer.pixels);
+			translate.transform(buffer.pixels, buffer.pixels);
 
 			// flame
 			flame.flame(buffer);
@@ -153,12 +143,32 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 			//wave
 			wave.wave(sound, buffer);
 
-			source.newPixels();
-			// copy
-			shadow.copy(buffer);
+			int[] pixles = new int[buffer.pixels.length];
+			System.arraycopy(buffer.pixels, 0, pixles, 0, pixles.length);
+			screen.getRaster().setPixels(0,0,buffer.width, buffer.height, pixles);
+
+			// draw
+			Graphics g = bufferStrategy.getDrawGraphics();
+			if (!bufferStrategy.contentsLost()) {
+				Dimension size = getSize();
+				//Rectangle clipBounds = mainFrame.getBounds();
+				g.drawImage(screen,0, 0, size.width, size.height, null);
+				bufferStrategy.show();
+				g.dispose();
+			}
 
 	}
 
+	public Frame findParentFrame() {
+		Container parent = getParent();
+		while (parent != null) {
+			if ((parent instanceof Frame)) {
+				return (Frame) parent;
+			}
+			parent = parent.getParent();
+		}
+		return null;
+	}
 
 	@Override
 	public void close() throws IOException {
@@ -167,29 +177,38 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	}
 
 	public static void main(String[] args) throws LineUnavailableException, IOException {
-		DisplayMode displayMode =
-			GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
-		Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
-		int fract = 3;
-		Dimension cthughaBufferSize = new Dimension(screenSize.width / fract, screenSize.height / fract);
-		final Frame f = new Frame();
-		final JCthugha jCthugha = new JCthugha();
-		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
-		jCthugha.setBounds(0, 0, screenSize.width, screenSize.height);
-		f.add(jCthugha);         //adding a new Button.
-		f.setSize(screenSize.width, screenSize.height);        //setting size.
-		//f.setTitle("Java Cthugha");  //setting title.
-		//f.setLayout(null);   //set default layout for frame.
-		f.setUndecorated(true);
-		f.setResizable(false);
-		f.setVisible(true);           //set frame visibility true
-		f.addWindowListener(new WindowAdapter() {
+		GraphicsEnvironment env = GraphicsEnvironment.
+			getLocalGraphicsEnvironment();
+		GraphicsDevice device = env.getDefaultScreenDevice();
+		DisplayMode preferred = new DisplayMode(800,600,32, DisplayMode.REFRESH_RATE_UNKNOWN);
+		Dimension resolution = new Dimension(preferred.getWidth(), preferred.getHeight());
+
+		DisplayMode nativeMode = device.getDisplayMode();
+
+		GraphicsConfiguration gc = device.getDefaultConfiguration();
+		Frame mainFrame = new Frame(gc);
+		//mainFrame.setContentPane(mainFrame.getContentPane());
+		mainFrame.setUndecorated(true);
+		mainFrame.setResizable(false);
+		//mainFrame.setBounds(new Rectangle(resolution));
+		device.setFullScreenWindow(mainFrame);
+		if (device.isDisplayChangeSupported()) {
+			device.setDisplayMode(preferred);
+			mainFrame.setSize(resolution);
+			// mainFrame.validate();
+			mainFrame.setIgnoreRepaint(true);
+		}
+		mainFrame.createBufferStrategy(5);
+		BufferStrategy bufferStrategy = mainFrame.getBufferStrategy();      //set frame visibility true
+		JCthugha cthugha = new JCthugha(bufferStrategy);
+		ScheduledExecutorService executorService = Executors.newScheduledThreadPool(3);
+		mainFrame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				executorService.shutdown();
-				f.dispose();
+				mainFrame.dispose();
 				try {
-					jCthugha.close();
+					cthugha.close();
 				} catch (IOException ex) {
 					ex.printStackTrace();
 				}
@@ -197,8 +216,8 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 		});
 
 		// initialise cthugha
-		jCthugha.init(cthughaBufferSize);
+		cthugha.init(resolution);
 
-		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
+		executorService.scheduleAtFixedRate(cthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
 	}
 }
