@@ -12,11 +12,12 @@ public class MultiBufferTest {
     Color.yellow, Color.gray, Color.cyan, Color.pink, Color.lightGray,
     Color.magenta, Color.orange, Color.darkGray };
 
-  JFrame mainFrame;
+  Frame mainFrame;
 
   public MultiBufferTest(int numBuffers, GraphicsDevice device) {
     try {
-      DisplayMode preferred = new DisplayMode(1280,720,32, DisplayMode.REFRESH_RATE_UNKNOWN);
+      //DisplayMode preferred = new DisplayMode(1280,720,32, DisplayMode.REFRESH_RATE_UNKNOWN);
+      DisplayMode preferred = new DisplayMode(800,600,32, DisplayMode.REFRESH_RATE_UNKNOWN);
       Dimension resolution = new Dimension(preferred.getWidth(), preferred.getHeight());
 
       DisplayMode nativeMode = device.getDisplayMode();
@@ -25,8 +26,8 @@ public class MultiBufferTest {
         .collect(Collectors.joining("\n")));
 
       GraphicsConfiguration gc = device.getDefaultConfiguration();
-      mainFrame = new JFrame(gc);
-      mainFrame.setContentPane(mainFrame.getContentPane());
+      mainFrame = new Frame(gc);
+      //mainFrame.setContentPane(mainFrame.getContentPane());
       mainFrame.setUndecorated(true);
       mainFrame.setResizable(false);
       //mainFrame.setBounds(new Rectangle(resolution));
@@ -34,7 +35,7 @@ public class MultiBufferTest {
       if (device.isDisplayChangeSupported()) {
         device.setDisplayMode(preferred);
         mainFrame.setSize(resolution);
-        mainFrame.validate();
+       // mainFrame.validate();
         mainFrame.setIgnoreRepaint(true);
         System.out.println("Selected:" + summarize(preferred, nativeMode));
       }
@@ -44,13 +45,12 @@ public class MultiBufferTest {
       BufferStrategy bufferStrategy = mainFrame.getBufferStrategy();
 
       for (float lag = 50.0f; lag > 0.00000006f; lag = lag / 1.33f) {
-
         for (int i = 0; i < numBuffers; i++) {
           Graphics g = bufferStrategy.getDrawGraphics();
           if (!bufferStrategy.contentsLost()) {
             g.setColor(COLORS[i]);
-            Rectangle clipBounds = mainFrame.getBounds();
-            g.fillRect(clipBounds.x, clipBounds.y, clipBounds.width * 2, clipBounds.height * 2);
+            //Rectangle clipBounds = mainFrame.getBounds();
+            g.fillRect(bounds.x, bounds.y, bounds.width * 2, bounds.height * 2);
             bufferStrategy.show();
             g.dispose();
           }
