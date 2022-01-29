@@ -9,7 +9,7 @@ import java.util.Arrays;
 public class SimpleWave implements Wave {
   private int[] wave = new int[]{255};
   private double location = 0.5; // 0 - 1
-  private double waveHeight = 0.2; // 1 = norm
+  private double waveHeight = 1.0; // 1 = norm
 
   public SimpleWave wave(int size) {
     this.wave = new int[size];

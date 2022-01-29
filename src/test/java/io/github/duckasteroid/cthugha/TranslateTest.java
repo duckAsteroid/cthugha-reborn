@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.github.duckasteroid.cthugha.tab.Translate;
 import java.awt.Dimension;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,14 @@ class TranslateTest {
     5,1,9,
     4,7,8
   };
+
+  final byte[] source() {
+    return new byte[] {1,2,3,4,5,6,7,8,9};
+  }
+
+  final byte[] empty() {
+    return new byte[]{0,0,0,0,0,0,0,0,0};
+  }
 
   final Dimension testDims = new Dimension(3,3);
 
@@ -31,17 +40,9 @@ class TranslateTest {
   }
 
   @Test
-  void stretch() {
-    Translate subject = new Translate(testDims, example);
-    Translate stretch = subject.stretch( new Dimension(6,6));
-    System.out.println(stretch);
-  }
+  void animate(){
+    int[][] result = Translate.changeTable(new int[]{0,100,500,0,-100}, new int[]{100,0,600,100,0}, 10);
+    assertEquals(11, result.length);
 
-  final byte[] source() {
-    return new byte[] {1,2,3,4,5,6,7,8,9};
-  }
-
-  final byte[] empty() {
-    return new byte[]{0,0,0,0,0,0,0,0,0};
   }
 }

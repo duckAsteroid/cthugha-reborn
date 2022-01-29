@@ -12,8 +12,8 @@ import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Spiral implements TranslateTableSource{
-  Random rnd = new Random();
+public class Spiral extends TranslateTableSource{
+
   /** number of spirals (0 for one centered spiral) */
   int nr_spirals = 1;
   /** change of radius (0 -> simple rotation) */
@@ -27,39 +27,17 @@ public class Spiral implements TranslateTableSource{
 
   private static final int MAX_NR_SPIRALS = 64;
 
-  public Spiral() {}
-
-  public Spiral(int nr_spirals, double delta_r, double delta_a, boolean yinyang, double yywidth) {
-    this.nr_spirals = nr_spirals;
-    this.delta_r = delta_r;
-    this.delta_a = delta_a;
-    this.yinyang = yinyang;
-    this.yywidth = yywidth;
-  }
-
-  public Spiral numSpirals(int nr_spirals) {
-    this.nr_spirals = nr_spirals;
-    return this;
-  }
-
-  public Spiral deltaR(double delta_r) {
-    this.delta_r = delta_r;
-    return this;
-  }
-
-  public Spiral deltaA(double delta_a) {
-    this.delta_a = delta_a;
-    return this;
-  }
-
-  public Spiral yinyang(int yywidth) {
-    this.yinyang = true;
-    this.yywidth = yywidth;
-    return this;
-  }
-
   private final int rand() {
     return rnd.nextInt(Short.MAX_VALUE);
+  }
+
+  @Override
+  public void randomiseParameters() {
+    this.nr_spirals = Random(MAX_NR_SPIRALS);
+    this.delta_a = rnd.nextDouble() ;
+    this.delta_r = rnd.nextDouble() * 5.0;
+    this.yinyang = rnd.nextBoolean();
+    this.yywidth = Random(10);
   }
 
   @Override
@@ -162,5 +140,16 @@ public class Spiral implements TranslateTableSource{
       }
     }
     return result.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  @Override
+  public String toString() {
+    return "Spiral{" +
+      "nr_spirals=" + nr_spirals +
+      ", delta_r=" + delta_r +
+      ", delta_a=" + delta_a +
+      ", yinyang=" + yinyang +
+      ", yywidth=" + yywidth +
+      '}';
   }
 }

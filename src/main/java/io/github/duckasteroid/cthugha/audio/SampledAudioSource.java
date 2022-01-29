@@ -1,12 +1,11 @@
 package io.github.duckasteroid.cthugha.audio;
 
-import io.github.duckasteroid.cthugha.Statistics;
+import io.github.duckasteroid.cthugha.stats.Stats;
+import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.sound.sampled.AudioFormat;
@@ -18,27 +17,25 @@ import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 
 public class SampledAudioSource implements AudioSource {
-  private final AudioFormat ideal = new AudioFormat( 44100f, 16, 1, true, false);
+  private final AudioFormat ideal = new AudioFormat( 44100f, 16, 2, true, false);
 
   private final TargetDataLine openLine;
   private final ByteBuffer buffer;
-  private final Statistics statistics = new Statistics();
+  private final Stats bufferDepth = StatsFactory.stats("audio.buffer.depthOnRead");
 
   public SampledAudioSource() throws LineUnavailableException {
     this.openLine = getAudioTargetLine(ideal);
-    this.openLine.open(ideal, 12000);
+    int bufferSize = ideal.getChannels() * (ideal.getSampleSizeInBits() / 8) // size of a sample
+      * (int)(0.2/* seconds*/ * ideal.getSampleRate()); // number of samples in X seconds
+    this.openLine.open(ideal, bufferSize);
     this.buffer = ByteBuffer.allocate(openLine.getBufferSize());
     this.buffer.order(ideal.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
     this.openLine.start();
   }
 
-  public void dumpStats() {
-    System.out.println(statistics.toString());
-  }
-
   @Override
   public void sample(int[] sound, int width, int height) {
-    statistics.add(openLine.available());
+    bufferDepth.add(openLine.available());
     if (openLine.available() >= width * 2) {
       buffer.clear();
       int read = openLine.read(buffer.array(), 0, Math.min(buffer.limit(), openLine.available()));

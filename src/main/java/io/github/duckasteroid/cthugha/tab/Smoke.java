@@ -3,8 +3,8 @@ package io.github.duckasteroid.cthugha.tab;
 import java.awt.Dimension;
 import java.util.Random;
 
-public class Smoke implements TranslateTableSource {
-  private Random random = new Random();
+public class Smoke extends TranslateTableSource {
+
   private final int speed; // 30 - 300
   private final int randomness; // 0 - 100
 
@@ -23,7 +23,7 @@ public class Smoke implements TranslateTableSource {
     for (int y = 0; y < size.height; y++) {
       for (int x = 0; x < size.width; x++) {
         map_x = x ;// - (5 + random.nextInt(12 * randomness / 100)) * speed / 100;
-        map_y = y - (5 + random.nextInt(12 * randomness / 100)) * speed / 100;
+        map_y = y - (5 + rnd.nextInt(12 * randomness / 100)) * speed / 100;
 
         if (map_y >= size.height || map_y < 0  ||
           map_x >= size.width  || map_x < 0 ) {
@@ -36,5 +36,13 @@ public class Smoke implements TranslateTableSource {
       }
     }
     return result;
+  }
+
+  @Override
+  public String toString() {
+    return "Smoke{" +
+      "speed=" + speed +
+      ", randomness=" + randomness +
+      '}';
   }
 }

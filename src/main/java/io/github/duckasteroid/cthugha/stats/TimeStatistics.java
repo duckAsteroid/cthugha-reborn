@@ -1,9 +1,11 @@
-package io.github.duckasteroid.cthugha;
+package io.github.duckasteroid.cthugha.stats;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-public class TimeStatistics extends Statistics {
+class TimeStatistics extends Statistics {
   private Long lastTime = null;
   private final LongSupplier supplier;
   private final double oneSecond;
@@ -31,7 +33,11 @@ public class TimeStatistics extends Statistics {
   }
 
   @Override
-  public String toString() {
-    return "TimeStatistics{avg= "+to2DP(oneSecond / avg())+" Hz}";
+  public List<String> renderElements() {
+    List<String> superElements = super.renderElements();
+    List<String> renderElements = new ArrayList<>(superElements.size() + 1);
+    renderElements.add("avg="+to2DP(oneSecond / avg())+" Hz");
+    renderElements.addAll(superElements);
+    return renderElements;
   }
 }

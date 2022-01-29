@@ -2,7 +2,7 @@ package io.github.duckasteroid.cthugha.tab;
 
 import java.awt.Dimension;
 
-public class Hurricane implements TranslateTableSource {
+public class Hurricane extends TranslateTableSource {
 
   private int Randomness = 80;
   private long speed = 30;
@@ -11,6 +11,17 @@ public class Hurricane implements TranslateTableSource {
   private boolean reverse = false;
   private double xCenter = .3;
   private double yCenter = .8;
+
+  @Override
+  public void randomiseParameters() {
+    Randomness = Random(150);
+    speed = Random(100);
+    slowX = rnd.nextBoolean();
+    slowY = rnd.nextBoolean();
+    reverse = rnd.nextBoolean();
+    xCenter = rnd.nextDouble();
+    yCenter = rnd.nextDouble();
+  }
 
   @Override
   public int[] generate(Dimension size) {
@@ -25,7 +36,7 @@ public class Hurricane implements TranslateTableSource {
         if (Randomness == 0)
           sp = speed;
         else {
-          speedFactor = TranslateTableSource.Random(Randomness + 1) - Randomness / 3;
+          speedFactor = Random(Randomness + 1) - Randomness / 3;
           sp = speed * (100L + speedFactor) / 100L;
         }
 
@@ -59,5 +70,18 @@ public class Hurricane implements TranslateTableSource {
       }
     }
     return result;
+  }
+
+  @Override
+  public String toString() {
+    return "Hurricane{" +
+      "Randomness=" + Randomness +
+      ", speed=" + speed +
+      ", slowY=" + slowY +
+      ", slowX=" + slowX +
+      ", reverse=" + reverse +
+      ", xCenter=" + xCenter +
+      ", yCenter=" + yCenter +
+      '}';
   }
 }

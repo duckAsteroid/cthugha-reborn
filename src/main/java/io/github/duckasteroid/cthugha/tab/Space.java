@@ -5,11 +5,18 @@ import static java.lang.Math.abs;
 import java.awt.Dimension;
 import java.util.Random;
 
-public class Space implements TranslateTableSource {
-  private Random rnd = new Random();
+public class Space extends TranslateTableSource {
+
   private boolean reverse = false;
   private int Randomness = 70;
   private long speed = 100;
+
+  @Override
+  public void randomiseParameters() {
+    reverse = rnd.nextBoolean();
+    speed = Random(100);
+    Randomness = Random(250);
+  }
 
   @Override
   public int[] generate(Dimension size) {
@@ -56,10 +63,12 @@ public class Space implements TranslateTableSource {
     return result;
   }
 
-  private int Random(int range) {
-    if (range > 0) {
-      return rnd.nextInt(range);
-    }
-    return 0;
+  @Override
+  public String toString() {
+    return "Space{" +
+      "reverse=" + reverse +
+      ", Randomness=" + Randomness +
+      ", speed=" + speed +
+      '}';
   }
 }

@@ -3,16 +3,22 @@ package io.github.duckasteroid.cthugha;
 import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
-import io.github.duckasteroid.cthugha.tab.Hurricane;
+import io.github.duckasteroid.cthugha.stats.Stats;
+import io.github.duckasteroid.cthugha.stats.StatsFactory;
+import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
 import io.github.duckasteroid.cthugha.tab.Spiral;
+import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
 import java.awt.Dimension;
+import java.awt.DisplayMode;
+import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Graphics;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Panel;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
@@ -24,8 +30,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.LineUnavailableException;
 
@@ -48,57 +57,65 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 
 	final SimpleWave wave = new SimpleWave().wave(10);
 
-	TimeStatistics timeStatistics = TimeStatistics.nano();
+	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
+
+	RandomTranslateSource translateSource = new RandomTranslateSource();
+
+	ExecutorService backgroundTasks = Executors.newFixedThreadPool(2);
 
 	public JCthugha() throws LineUnavailableException {
 	}
 
-	public void init() throws IOException {
+	public void init(Dimension bufferSize) throws IOException {
+
 		IndexColorModel icm;
 
-		sizeChanged();
+		sizeChanged(bufferSize);
 
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 
 
-		//translate = new Translate(dimension, new Smoke(40,40).generate(dimension));
 		icm = reader.random();
 		source = new MemoryImageSource( buffer.width, buffer.height, icm, buffer.pixels, 0, buffer.width);
 		source.setAnimated(true);
 		img = createImage( source );
 		prepareImage( img, this );
 
-
 		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyTyped(KeyEvent e) {
 				if (e.getKeyChar() == 'p' || e.getKeyChar() == 'P') {
-					try {
-						source.newPixels(buffer.pixels, reader.random(), 0, buffer.width);
-					}
-					catch (IOException ex) {
+					backgroundTasks.submit(() -> {
+						try {
+							source.newPixels(buffer.pixels, reader.random(), 0, buffer.width);
+						} catch (IOException ex) {
 
-					}
+						}
+					});
 				}
 				else if(e.getKeyChar() == 's' || e.getKeyChar() == 'S') {
-					System.out.println(timeStatistics);
-					audioSource.dumpStats();
+					System.out.println(StatsFactory.getStatisticsSummary());
+					System.out.println(translateSource.getLastGenerated());
+				}
+				else if(e.getKeyChar() == 't' || e.getKeyChar() == 'T') {
+					boolean newSource = e.getKeyChar() == 'T';
+					backgroundTasks.submit(() -> {
+						translate.changeTable(translateSource.generate(bufferSize, newSource), 1);
+						System.out.println(translateSource.getLastGenerated());
+					});
 				}
 			}
 		});
 	}
 
-	private void sizeChanged() {
-		Dimension dims = getSize();
-
+	private void sizeChanged(Dimension dims) {
 		sound = new int[dims.width];
 
 		buffer = new ScreenBuffer(dims.width, dims.height);
 		shadow = new ScreenBuffer(dims.width, dims.height);
 
-		translate = new Translate(dims, new Spiral().numSpirals(0).deltaA(0.0000003).deltaR(0.001).generate(dims));
-		//translate = new Translate(dims, new Hurricane().generate(dims));
+		translate = new Translate(dims, translateSource.generate(dims, true));
 	}
 
 
@@ -117,7 +134,8 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	}
 
 	public void update(Graphics g) {
-		g.drawImage(img, 0, 0, this);
+		Dimension size = getSize();
+		g.drawImage(img, 0, 0, size.width, size.height, this);
 		timeStatistics.ping();
 	}
 
@@ -145,27 +163,41 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	@Override
 	public void close() throws IOException {
 		audioSource.close();
+		backgroundTasks.shutdown();
 	}
 
 	public static void main(String[] args) throws LineUnavailableException, IOException {
+		DisplayMode displayMode =
+			GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
+		Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
+		int fract = 3;
+		Dimension cthughaBufferSize = new Dimension(screenSize.width / fract, screenSize.height / fract);
 		final Frame f = new Frame();
 		final JCthugha jCthugha = new JCthugha();
-		Dimension size = new Dimension(1024,768);
 		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
-		jCthugha.setBounds(0, 0, size.width, size.height);
+		jCthugha.setBounds(0, 0, screenSize.width, screenSize.height);
 		f.add(jCthugha);         //adding a new Button.
-		f.setSize(size.width, size.height);        //setting size.
-		f.setTitle("Java Cthugha");  //setting title.
+		f.setSize(screenSize.width, screenSize.height);        //setting size.
+		//f.setTitle("Java Cthugha");  //setting title.
 		//f.setLayout(null);   //set default layout for frame.
+		f.setUndecorated(true);
+		f.setResizable(false);
 		f.setVisible(true);           //set frame visibility true
 		f.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				executorService.shutdown();
 				f.dispose();
+				try {
+					jCthugha.close();
+				} catch (IOException ex) {
+					ex.printStackTrace();
+				}
 			}
 		});
-		jCthugha.init();
+
+		// initialise cthugha
+		jCthugha.init(cthughaBufferSize);
 
 		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
 	}

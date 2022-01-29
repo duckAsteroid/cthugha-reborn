@@ -1,6 +1,13 @@
-package io.github.duckasteroid.cthugha;
+package io.github.duckasteroid.cthugha.stats;
 
-public class Statistics {
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Tracks key statistics on a particular aspect of system performance
+ */
+class Statistics implements Stats {
   private double sum;
   private long min;
   private long max;
@@ -22,15 +29,18 @@ public class Statistics {
     return sum / count;
   }
 
+
+  public List<String> renderElements() {
+    return Arrays.asList(
+      "avg=" + to2DP(avg()),
+      "min=" + min,
+      "max=" + max,
+      "count=" + count);
+  }
+
   @Override
   public String toString() {
-
-    return "Statistics{" +
-      "avg=" + to2DP(avg()) +
-      ", min=" + min +
-      ", max=" + max +
-      ", count=" + count +
-      " }";
+    return renderElements().stream().collect(Collectors.joining(", ", "{", "}"));
   }
 
   protected static final String to2DP(double d) {
