@@ -43,9 +43,16 @@ public class Translate {
    * @param destination destination pixels to write to
    */
   public void transform(byte[] source, byte[] destination) {
+    byte[] copy;
+    if (source == destination) {
+      copy = new byte[source.length];
+      System.arraycopy(source, 0, copy, 0, source.length);
+    } else{
+      copy = source;
+    }
     for(int i = 0 ; i < source.length; i++) {
       int safePtr = Math.max(0, Math.min(table[i], source.length));
-      destination[i] = source[safePtr];
+      destination[i] = copy[safePtr];
     }
     if (!animationQueue.isEmpty()) {
       this.table = animationQueue.removeFirst();

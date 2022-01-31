@@ -140,23 +140,26 @@ public class JCthugha extends Panel implements Runnable, ImageObserver, Closeabl
 	}
 
 	public synchronized void run() {
+			try {
+				// get sound
+				audioSource.sample(sound, buffer.width, buffer.height);
 
-			// get sound
-			audioSource.sample(sound, buffer.width, buffer.height);
+				// translate
+				translate.transform(shadow.pixels, buffer.pixels);
 
-			// translate
-			translate.transform(shadow.pixels, buffer.pixels);
+				// flame
+				flame.flame(buffer);
 
-			// flame
-			flame.flame(buffer);
+				//wave
+				wave.wave(sound, buffer);
 
-			//wave
-			wave.wave(sound, buffer);
-
-			source.newPixels();
-			// copy
-			shadow.copy(buffer);
-
+				source.newPixels();
+				// copy
+				shadow.copy(buffer);
+			}
+			catch(Throwable t) {
+				t.printStackTrace();
+			}
 	}
 
 
