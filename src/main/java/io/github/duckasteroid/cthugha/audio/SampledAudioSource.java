@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
+import java.time.Duration;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.sound.sampled.AudioFormat;
@@ -20,36 +21,32 @@ public class SampledAudioSource implements AudioSource {
   private final AudioFormat ideal = new AudioFormat( 44100f, 16, 2, true, false);
 
   private final TargetDataLine openLine;
-  private final ByteBuffer buffer;
-  private final Stats bufferDepth = StatsFactory.stats("audio.buffer.depthOnRead");
+  private final AudioBuffer buffer;
 
   public SampledAudioSource() throws LineUnavailableException {
     this.openLine = getAudioTargetLine(ideal);
     int bufferSize = ideal.getChannels() * (ideal.getSampleSizeInBits() / 8) // size of a sample
       * (int)(0.2/* seconds*/ * ideal.getSampleRate()); // number of samples in X seconds
     this.openLine.open(ideal, bufferSize);
-    this.buffer = ByteBuffer.allocate(openLine.getBufferSize());
-    this.buffer.order(ideal.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+    this.buffer = new AudioBuffer(ideal, Duration.ofMillis(200));
+
     this.openLine.start();
   }
 
   @Override
-  public void sample(int[] sound, int width, int height) {
-    bufferDepth.add(openLine.available());
-    if (openLine.available() >= width * 2) {
-      buffer.clear();
-      int read = openLine.read(buffer.array(), 0, Math.min(buffer.limit(), openLine.available()));
-      buffer.position(read);
-      buffer.flip();
-      ShortBuffer intBuffer = buffer.asShortBuffer();
-      for (int i = 0; i < Math.min(intBuffer.limit(), width); i++) {
-        float sValue = intBuffer.get() / ((float)Short.MAX_VALUE);
-        sound[i] = (int)(sValue * height);
-      }
-      //openLine.flush();
-    }
+  public AudioFormat getFormat() {
+    return buffer.getFormat();
   }
 
+  @Override
+  public boolean isMono() {
+    return buffer.isMono();
+  }
+
+  @Override
+  public AudioBuffer.AudioSample sample(int length) {
+    return buffer.readFrom(openLine, length);
+  }
 
   @Override
   public void close() throws IOException {
@@ -58,7 +55,7 @@ public class SampledAudioSource implements AudioSource {
 
   private static Mixer.Info getMixer() {
     return Stream.of(AudioSystem.getMixerInfo())
-      .filter(info -> info.getName().startsWith("Stereo Mix"))
+      .filter(info -> info.getName().startsWith("CABLE Output"))
       .findFirst().orElseThrow(() -> new RuntimeException("No mixer"));
   }
 

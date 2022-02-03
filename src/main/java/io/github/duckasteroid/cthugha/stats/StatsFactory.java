@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
  * Factory for named statistics instances
  */
 public class StatsFactory {
-  public static boolean enabled = Boolean.getBoolean("cthugha.stats.enabled");
+  public static boolean enabled = System.getProperty("cthugha.stats.enabled","true").equals("true");
   public static boolean nanos = System.getProperty("cthugha.stats.time.nanos", "true").equals("true");
   private static HashMap<String, Stats> statistics = new HashMap<>();
 

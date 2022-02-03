@@ -1,24 +1,30 @@
 package io.github.duckasteroid.cthugha.wave;
 
 import io.github.duckasteroid.cthugha.ScreenBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import java.awt.BasicStroke;
+import java.awt.Graphics2D;
+import java.awt.Stroke;
+import java.awt.geom.AffineTransform;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * A simple rendering of the audio wave on the screen
  */
 public class SimpleWave implements Wave {
-  private int[] wave = new int[]{255};
+
   private double location = 0.5; // 0 - 1
   private double waveHeight = 1.0; // 1 = norm
+  private double rotationAngle = 0.0;
+  private Stroke stroke = new BasicStroke(2f);
 
   public SimpleWave wave(int size) {
-    this.wave = new int[size];
-    Arrays.fill(this.wave, 255);
-    return this;
-  }
-
-  public SimpleWave wave(int ... wavePixels) {
-    this.wave = wavePixels;
+    this.stroke = new BasicStroke(size);
     return this;
   }
 
@@ -32,43 +38,40 @@ public class SimpleWave implements Wave {
     return this;
   }
 
-  public SimpleWave rotate(double speed) {
+  public SimpleWave rotate(double angle) {
+    this.rotationAngle += angle;
     return this;
   }
 
-  @Override
-  public void wave(int[] sound, ScreenBuffer buffer) {
-    int centreLine = (int) (buffer.height * location);
 
-    // wave
-    for (int x = 0; x < buffer.width; x++) {
-      for (int w = 0; w < wave.length; w++) {
-        int y = centreLine + w + (int) (sound[x] * waveHeight);
-        buffer.pixels[buffer.index(x, y)] = (byte) wave[w];
-      }
-    }
+  public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+    Graphics2D graphics = buffer.getGraphics();
+    //graphics.clearRect(0,0, buffer.width, buffer.height);
+    graphics.setColor(buffer.getForegroundColor());
+    //graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle)));
+    int[] xs = IntStream.range(0, sound.samples.length).toArray();
+    int[] ys = Arrays.stream(sound.samples)
+      .mapToInt(sample -> (sample[0] + sample[1]) / 2)
+      .map(sample -> Math.min(Short.MAX_VALUE, (int)(sample * waveHeight)))
+      .map(sample -> (int)(buffer.height * location) + AudioBuffer.transpose((short)sample, (int)(buffer.height * (1 - location))))
+      .toArray();
+    graphics.setStroke(stroke);
+    graphics.drawPolyline(xs, ys, xs.length);
+    graphics.dispose();
+  }
 
-    int dx, dy, x, y, k;
-    int x1 = 50, y1 = 50, x2 = 200, y2 = 180;
-
-    dx = x2 - x1;
-    dy = y2 - y1;
-
-    int p0 = 2 * dy - dx, p1;
-
-    x = x1;
-    y = y1;
-
-    for (k = 1; k <= dx; k++) {
-      if (p0 < 0) {
-        p1 = p0 + (2 * dy);
-        x++;
-      } else {
-        p1 = p0 + (2 * dy) - (2 * dx);
-        x++;
-        y++;
-      }
-      //raster.setPixel(x, y, array);
+  public void wave3(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+    Arrays.fill(buffer.pixels, (byte) 0);
+    //graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle)));
+    int[] xs = IntStream.range(0, sound.samples.length).toArray();
+    int[] ys = Arrays.stream(sound.samples)
+      .mapToInt(sample -> sample[0])
+      .map(sample -> (buffer.height / 2 ) + AudioBuffer.transpose((short)sample, buffer.height / 2))
+      .toArray();
+    for (int i= 0; i < ys.length; i++) {
+      buffer.pixels[buffer.index(xs[i], ys[i])] = (byte)(255 & 0xFF);
     }
   }
+
+
 }

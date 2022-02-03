@@ -63,7 +63,6 @@ public class ImageTest {
 
     Translate translate = new Translate(d, table);
 
-
     running = true;
     Random random = new Random();
     // Create game window...

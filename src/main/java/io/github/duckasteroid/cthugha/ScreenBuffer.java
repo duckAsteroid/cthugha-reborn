@@ -1,6 +1,8 @@
 package io.github.duckasteroid.cthugha;
 
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
@@ -17,10 +19,13 @@ public class ScreenBuffer {
   public final int height;
 
   /**
-   * An indexed colour model for each pixel in the buffer
+   * An indexed colour model for each pixel in the buffer. Starts at 0,0 and proceeds width first.
    */
   public byte[] pixels;
 
+  /**
+   * The colors used for this image
+   */
   public int[] colors = new int[256];
 
   public ScreenBuffer(Dimension size) {
@@ -37,68 +42,46 @@ public class ScreenBuffer {
     return ((y % height) * width) + (x % width);
   }
 
+  /**
+   * Write our buffer onto an image raster
+   * @param imageRaster the raster to receive this buffer
+   */
   public void render(WritableRaster imageRaster) {
     for(int y=0; y < height; y++) {
       for(int x=0; x < width; x++) {
         int pixelIndex = index(x,y);
         int colorIndex = pixels[pixelIndex] & 0xff;
         int color = colors[colorIndex];
-        imageRaster.setDataElements(x,y,new int[]{color});
+        imageRaster.setDataElements(x,y, new int[]{color});
       }
     }
   }
 
   public BufferedImage getBufferedImageView() {
-    DataBufferByte dbb = new DataBufferByte(pixels, 1);
+    DataBufferByte dbb = new DataBufferByte(pixels, pixels.length);
     IndexColorModel icm = new IndexColorModel(8, 256, colors, 0, false, -1, DataBuffer.TYPE_BYTE);
     WritableRaster raster =
       Raster.createInterleavedRaster(dbb, width, height, width, 1, new int[]{0}, null);
     return new BufferedImage(icm, raster, true, null);
   }
 
-  public class Pixel {
-    private final int x;
-    private final int y;
+  public Graphics2D getGraphics() {
+    return getBufferedImageView().createGraphics();
+  }
 
-    public Pixel(int x, int y) {
-      this.x = x % width;
-      this.y = y % height;
-    }
+  public Color getForegroundColor() {
+    return new Color(colors[255]);
+  }
 
-    public Pixel getAbove() {
-      return new Pixel(x, y - 1);
-    }
-
-    public boolean hasAbove() {
-      return y > 0;
-    }
-
-    public Pixel getBelow() {
-      return new Pixel(x, y + 1);
-    }
-
-    public boolean hasBelow() {
-      return y < height;
-    }
-
-    public Pixel getLeft() {
-      return new Pixel(x - 1, y);
-    }
-
-    public boolean hasLeft() {
-      return x > 0;
-    }
-
-    public Pixel getRight() {
-      return new Pixel(x + 1, y);
-    }
-
-    public boolean hasRight() {
-      return x < width;
-    }
+  public Color getBackgroundColor() {
+    return new Color(colors[0]);
   }
 
   public void copy(ScreenBuffer buffer) {
     System.arraycopy(buffer.pixels, 0, this.pixels, 0, buffer.pixels.length);
+  }
+
+  public Dimension getDimensions() {
+    return new Dimension(width, height);
   }
 }

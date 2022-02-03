@@ -9,9 +9,13 @@ repositories {
 }
 
 dependencies {
+	implementation(group: 'org.slf4j', name:'slf4j-api', version: '1.7.35')
+
+	runtimeOnly 'ch.qos.logback:logback-classic:1.2.10'
 
 	// JUnit5 for testing
 	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.7.0')
+	testImplementation 'org.mockito:mockito-core:4.3.1'
 }
 
 test {
