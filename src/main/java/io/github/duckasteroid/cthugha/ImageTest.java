@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha;
 
+import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.tab.Spiral;
 import io.github.duckasteroid.cthugha.tab.Translate;
 import java.awt.Color;
@@ -46,7 +47,8 @@ public class ImageTest {
       colors[i] = new Color(i,i,i).getRGB();
     }
     ScreenBuffer screenBuffer = new ScreenBuffer(w,h);
-    screenBuffer.colors = colors;
+    PaletteMap map = new PaletteMap("Test", colors);
+    screenBuffer.paletteMap = map;
 
 
     // 0 1 2
@@ -135,7 +137,7 @@ public class ImageTest {
         BufferedImage image = screenBuffer.getBufferedImageView();
         Graphics imageGraphics = image.getGraphics();
         //imageGraphics.clearRect(0,0,w,h);
-        imageGraphics.setColor(new Color(screenBuffer.colors[255]));
+        imageGraphics.setColor(new Color(screenBuffer.paletteMap.colors[255]));
         int[] xPts = new int[w];
         int[] yPts = new int[w];
         yPts[0] = w/2;
@@ -147,7 +149,7 @@ public class ImageTest {
           yPts[x] = Math.min(h, Math.max(0, yValue));
         }
         imageGraphics.drawPolyline(xPts, yPts, w);
-        imageGraphics.setColor(new Color(screenBuffer.colors[1]));
+        imageGraphics.setColor(new Color(screenBuffer.paletteMap.colors[1]));
         imageGraphics.drawLine(0,random.nextInt(h),w,random.nextInt(h));
         imageGraphics.drawLine(0,random.nextInt(h),w,random.nextInt(h));
         imageGraphics.dispose();
@@ -180,14 +182,14 @@ public class ImageTest {
         // process animation
         translate.transform(screenBuffer.pixels, screenBuffer.pixels);
         // evolve palette
-        for(int i=0;i<screenBuffer.colors.length; i++) {
-          Color color = new Color(screenBuffer.colors[i]);
+        for(int i=0;i<screenBuffer.paletteMap.colors.length; i++) {
+          Color color = new Color(screenBuffer.paletteMap.colors[i]);
           int red = color.getRed() - 1;
           if (red < 0) {
             red = 255;
           }
 
-          screenBuffer.colors[i] = new Color(red, i, i).getRGB();
+          screenBuffer.paletteMap.colors[i] = new Color(red, i, i).getRGB();
         }
         if(false) {
           Thread.sleep(10);

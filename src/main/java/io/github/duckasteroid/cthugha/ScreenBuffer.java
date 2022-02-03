@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha;
 
+import io.github.duckasteroid.cthugha.map.PaletteMap;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -26,7 +27,7 @@ public class ScreenBuffer {
   /**
    * The colors used for this image
    */
-  public int[] colors = new int[256];
+  public PaletteMap paletteMap;
 
   public ScreenBuffer(Dimension size) {
     this(size.width, size.height);
@@ -51,7 +52,7 @@ public class ScreenBuffer {
       for(int x=0; x < width; x++) {
         int pixelIndex = index(x,y);
         int colorIndex = pixels[pixelIndex] & 0xff;
-        int color = colors[colorIndex];
+        int color = paletteMap.colors[colorIndex];
         imageRaster.setDataElements(x,y, new int[]{color});
       }
     }
@@ -59,7 +60,7 @@ public class ScreenBuffer {
 
   public BufferedImage getBufferedImageView() {
     DataBufferByte dbb = new DataBufferByte(pixels, pixels.length);
-    IndexColorModel icm = new IndexColorModel(8, 256, colors, 0, false, -1, DataBuffer.TYPE_BYTE);
+    IndexColorModel icm = new IndexColorModel(8, 256, paletteMap.colors, 0, false, -1, DataBuffer.TYPE_BYTE);
     WritableRaster raster =
       Raster.createInterleavedRaster(dbb, width, height, width, 1, new int[]{0}, null);
     return new BufferedImage(icm, raster, true, null);
@@ -70,11 +71,11 @@ public class ScreenBuffer {
   }
 
   public Color getForegroundColor() {
-    return new Color(colors[255]);
+    return new Color(paletteMap.colors[255]);
   }
 
   public Color getBackgroundColor() {
-    return new Color(colors[0]);
+    return new Color(paletteMap.colors[0]);
   }
 
   public void copy(ScreenBuffer buffer) {

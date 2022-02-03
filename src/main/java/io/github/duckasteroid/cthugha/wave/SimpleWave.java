@@ -69,7 +69,7 @@ public class SimpleWave implements Wave {
       .map(sample -> (buffer.height / 2 ) + AudioBuffer.transpose((short)sample, buffer.height / 2))
       .toArray();
     for (int i= 0; i < ys.length; i++) {
-      buffer.pixels[buffer.index(xs[i], ys[i])] = (byte)(255 & 0xFF);
+      buffer.pixels[buffer.index(xs[i], ys[i])] = (byte)0xFF;
     }
   }
 

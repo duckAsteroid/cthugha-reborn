@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 /**
  * Tracks key statistics on a particular aspect of system performance
  */
-class Statistics implements Stats {
+public class Statistics implements Stats {
   private double sum;
   private long min;
   private long max;
@@ -43,7 +43,7 @@ class Statistics implements Stats {
     return renderElements().stream().collect(Collectors.joining(", ", "{", "}"));
   }
 
-  protected static final String to2DP(double d) {
+  public static final String to2DP(double d) {
     return String.format("%.2f", d);
   }
 
