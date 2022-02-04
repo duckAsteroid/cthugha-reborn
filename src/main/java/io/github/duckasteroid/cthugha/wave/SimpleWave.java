@@ -43,12 +43,11 @@ public class SimpleWave implements Wave {
     return this;
   }
 
-
   public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
     Graphics2D graphics = buffer.getGraphics();
     //graphics.clearRect(0,0, buffer.width, buffer.height);
     graphics.setColor(buffer.getForegroundColor());
-    //graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle)));
+    graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle), buffer.width / 2, buffer.height / 2 ));
     int[] xs = IntStream.range(0, sound.samples.length).toArray();
     int[] ys = Arrays.stream(sound.samples)
       .mapToInt(sample -> (sample[0] + sample[1]) / 2)

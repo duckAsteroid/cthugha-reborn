@@ -63,7 +63,7 @@ public class JCthugha implements Runnable, Closeable {
 	private BufferedImage screenImage;
 	private Dimension windowDimensions;
 
-	private boolean debug = true;
+	private boolean debug = false;
 	private Color debugColor = Color.GREEN;
 	private Font debugFont = new Font("Courier New", Font.BOLD, 24);
 	private long nanoTime = System.nanoTime();
@@ -148,6 +148,10 @@ public class JCthugha implements Runnable, Closeable {
 		this.debug = !debug;
 	}
 
+	public void rotate( double degrees) {
+		this.wave.rotate(degrees);
+	}
+
 	@Override
 	public void close() throws IOException {
 		audioSource.close();
@@ -198,6 +202,17 @@ public class JCthugha implements Runnable, Closeable {
 				}
 				else if (e.getKeyChar() == 'p') {
 					jCthugha.newPalette();
+				}
+
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if(e.getKeyChar() == '<') {
+					jCthugha.rotate(-10);
+				}
+				else if(e.getKeyChar() == '>') {
+					jCthugha.rotate(10);
 				}
 			}
 		});
