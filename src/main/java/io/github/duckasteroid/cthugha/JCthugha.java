@@ -10,7 +10,10 @@ import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
 import io.github.duckasteroid.cthugha.tab.Translate;
+import io.github.duckasteroid.cthugha.wave.RadialWave;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
+import io.github.duckasteroid.cthugha.wave.VibratingCircleWave;
+import io.github.duckasteroid.cthugha.wave.Wave;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
@@ -53,7 +56,10 @@ public class JCthugha implements Runnable, Closeable {
 
 	final Flame flame = new Flame();
 
-	final SimpleWave wave = new SimpleWave().wave(10);
+
+	//final Wave wave = new SimpleWave().wave(10);
+	//final Wave wave = new VibratingCircleWave();
+	final Wave wave = new RadialWave();
 
 	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
 
@@ -149,7 +155,7 @@ public class JCthugha implements Runnable, Closeable {
 	}
 
 	public void rotate( double degrees) {
-		this.wave.rotate(degrees);
+		//this.wave.rotate(degrees);
 	}
 
 	@Override

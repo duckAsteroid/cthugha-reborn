@@ -6,12 +6,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.time.Duration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Spliterator;
-import java.util.Spliterators;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.TargetDataLine;
 
@@ -84,6 +81,86 @@ public class AudioBuffer {
     public AudioSample(short[][] samples, boolean mono) {
       this.samples = samples;
       this.mono = mono;
+    }
+
+    public Stream<short[]> stream() {
+      return Arrays.stream(samples);
+    }
+
+    public Stream<AudioPoint> streamPoints() {
+      return stream().map(AudioPoint::new);
+    }
+
+    public Stream<short[]> stream(int maxLength) {
+      int skip = samples.length / maxLength;
+      return IntStream.range(0, samples.length)
+        .filter(n -> n % skip == 0)
+        .mapToObj(n -> samples[n]);
+    }
+
+    public Stream<AudioPoint> streamPoints(int maxLength) {
+      return stream(maxLength).map(AudioPoint::new);
+    }
+  }
+
+  public enum Channel {
+    LEFT {
+      @Override
+      public short value(short[] sample) {
+        return sample[0];
+      }
+    },
+    RIGHT {
+      @Override
+      public short value(short[] sample) {
+        if (sample.length > 1)
+          return sample[1];
+        else
+          return sample[0];
+      }
+    },
+    MONO_AVG {
+      @Override
+      public short value(short[] sample) {
+        double sum = 0;
+        for(int i = 0; i < sample.length; i++) {
+          sum += sample[i];
+        }
+        return (short)(sum / sample.length);
+      }
+    },
+    MONO_SUB {
+      @Override
+      public short value(short[] sample) {
+        if (sample.length > 1) {
+          return (short) (sample[1] - sample[0]);
+        }
+        return sample[0];
+      }
+    };
+
+    public abstract short value(short[] sample);
+  }
+
+  public static class AudioPoint {
+    final short[] sample;
+
+    public AudioPoint(short[] sample) {
+      this.sample = sample;
+    }
+
+    public short value(Channel ch) {
+      return ch.value(sample);
+    }
+
+    public double normalised(Channel ch) {
+      return (double) Short.MAX_VALUE / ch.value(sample);
+    }
+
+    public int ranged(Channel ch, int min, int max) {
+      int range = max - min;
+      double extent = normalised(ch) * range;
+      return min + (int)extent;
     }
   }
 }
