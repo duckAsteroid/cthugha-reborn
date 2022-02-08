@@ -9,6 +9,9 @@ repositories {
 }
 
 dependencies {
+	// Apache imaging for PCX support
+	implementation 'org.apache.commons:commons-imaging:1.0-alpha2'
+
 	implementation(group: 'org.slf4j', name:'slf4j-api', version: '1.7.35')
 
 	runtimeOnly 'ch.qos.logback:logback-classic:1.2.10'
