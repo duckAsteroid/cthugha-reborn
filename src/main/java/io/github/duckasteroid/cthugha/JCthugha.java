@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -231,6 +232,9 @@ public class JCthugha implements Runnable, Closeable {
 				}
 				else if (e.getKeyChar() == '.') {
 					jCthugha.wave.autoRotate(AUTO_ROTATE_AMT);
+				}
+				else if (e.getKeyChar() == 'x') {
+					Arrays.fill(jCthugha.buffer.pixels, (byte)255);
 				}
 				else if (e.getKeyChar() == 'f') {
 					GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
