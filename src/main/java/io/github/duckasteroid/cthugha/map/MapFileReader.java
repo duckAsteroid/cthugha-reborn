@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.imageio.ImageIO;
 
 /**
  * Reads the colour palette data from a MAP file
@@ -70,5 +72,17 @@ public class MapFileReader {
       }
     }
     return result;
+  }
+
+  public static void main(String[] args) throws IOException {
+    String path = args.length == 0 ? "maps" : args[0];
+    Path dir = Paths.get(path);
+    System.out.println("Processing "+dir.toAbsolutePath());
+    MapFileReader reader = new MapFileReader(dir);
+    for (Path f : reader.paletteFiles()) {
+      PaletteMap map = reader.load(f);
+      ImageIO.write(map.getPaletteImage(32), "PNG", dir.resolve(f.getFileName() +".png").toFile());
+    }
+
   }
 }

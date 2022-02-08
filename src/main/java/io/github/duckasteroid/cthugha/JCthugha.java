@@ -3,6 +3,8 @@ package io.github.duckasteroid.cthugha;
 import static io.github.duckasteroid.cthugha.stats.Statistics.to2DP;
 
 import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioSource;
+import io.github.duckasteroid.cthugha.audio.RandomSimulatedAudio;
 import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
@@ -44,8 +46,10 @@ import org.slf4j.LoggerFactory;
 public class JCthugha implements Runnable, Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
+	public static final double AUTO_ROTATE_AMT = 1;
 
-	final SampledAudioSource audioSource = new SampledAudioSource();
+	//final AudioSource audioSource = new RandomSimulatedAudio(true);
+	final AudioSource audioSource = new SampledAudioSource();
 	int [] sound;
 
 	ScreenBuffer buffer;
@@ -57,9 +61,9 @@ public class JCthugha implements Runnable, Closeable {
 	final Flame flame = new Flame();
 
 
-	//final Wave wave = new SimpleWave().wave(10);
+	final SimpleWave wave = new SimpleWave().wave(10);
 	//final Wave wave = new VibratingCircleWave();
-	final Wave wave = new RadialWave();
+	final Wave wave2 = new RadialWave().wave(2);
 
 	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
 
@@ -67,21 +71,21 @@ public class JCthugha implements Runnable, Closeable {
 
 	BufferStrategy bufferStrategy;
 	private BufferedImage screenImage;
-	private Dimension windowDimensions;
+	private Frame window;
 
-	private boolean debug = false;
+	private boolean debug = true;
 	private Color debugColor = Color.GREEN;
-	private Font debugFont = new Font("Courier New", Font.BOLD, 24);
+	private Font debugFont = new Font("Courier New", Font.PLAIN, 12);
 	private long nanoTime = System.nanoTime();
 	private static final long nanosecond = Duration.ofSeconds(1).toNanos();
 
 	public JCthugha() throws LineUnavailableException {
 	}
 
-	public void init(Dimension dims, BufferStrategy bufferStrategy, BufferedImage screenImage, Dimension windowDimensions) throws IOException {
+	public void init(Dimension dims, BufferStrategy bufferStrategy, BufferedImage screenImage, Frame window) throws IOException {
 		this.bufferStrategy = bufferStrategy;
 		this.screenImage = screenImage;
-		this.windowDimensions = windowDimensions;
+		this.window = window;
 		sound = new int[dims.width];
 		buffer = new ScreenBuffer(dims.width, dims.height);
 		translate = new Translate(dims, translateSource.generate(dims, true));
@@ -93,6 +97,7 @@ public class JCthugha implements Runnable, Closeable {
 	public synchronized void run() {
 			try {
 				timeStatistics.ping();
+
 				// translate
 				translate.transform(buffer.pixels, buffer.pixels);
 
@@ -104,27 +109,16 @@ public class JCthugha implements Runnable, Closeable {
 
 				// wave
 				wave.wave(audioSample, buffer);
+				wave2.wave(audioSample, buffer);
 
 				// render the buffer onto the screen ready image
 				buffer.render(screenImage.getRaster());
 
 				// draw onto back buffer
 				Graphics g2d = bufferStrategy.getDrawGraphics();
-				g2d.drawImage(screenImage, 0,0, windowDimensions.width, windowDimensions.height, null);
+				g2d.drawImage(screenImage, 0,0, window.getWidth(), window.getHeight(), null);
 				if (debug) {
-					g2d.setColor(debugColor);
-					g2d.setFont(debugFont);
-					long now = System.nanoTime();
-					long elapsed = now - nanoTime;
-					nanoTime = now;
-					double hz = ((double) nanosecond / (double) elapsed);
-					int y = 50;
-					g2d.drawString(to2DP(hz) +" FPS", 10, y);
-					int fontHeight = g2d.getFontMetrics().getHeight();
-					y+=fontHeight;
-					g2d.drawString(buffer.paletteMap.getName(), 10, y);
-					y+=fontHeight;
-					g2d.drawImage(buffer.paletteMap.getPaletteImage(), 0, y, windowDimensions.width, 10, null);
+					renderDebugInfo(g2d);
 				}
 				g2d.dispose();
 
@@ -135,6 +129,26 @@ public class JCthugha implements Runnable, Closeable {
 			catch(Throwable t) {
 				LOG.error("Processing main loop", t);
 			}
+	}
+
+	private void renderDebugInfo(Graphics g2d) {
+		g2d.setColor(debugColor);
+		g2d.setFont(debugFont);
+		long now = System.nanoTime();
+		long elapsed = now - nanoTime;
+		nanoTime = now;
+		double hz = ((double) nanosecond / (double) elapsed);
+		int y = 50;
+		g2d.drawString(to2DP(hz) +" FPS", 10, y);
+		int fontHeight = g2d.getFontMetrics().getHeight();
+		y+=fontHeight;
+		g2d.drawString("window="+new Dimension(window.getWidth(), window.getHeight())+"; buffer="+buffer.getDimensions(), 10, y);
+		y+=fontHeight;
+		g2d.drawString(translateSource.getLastGenerated(), 10, y);
+		y+=fontHeight;
+		g2d.drawString(buffer.paletteMap.getName(), 10, y);
+		y+=fontHeight;
+		g2d.drawImage(buffer.paletteMap.getPaletteImage(), 0, y, window.getWidth(), 10, null);
 	}
 
 	public void newTranslation(boolean newMap) {
@@ -155,7 +169,7 @@ public class JCthugha implements Runnable, Closeable {
 	}
 
 	public void rotate( double degrees) {
-		//this.wave.rotate(degrees);
+		this.wave.rotate(degrees);
 	}
 
 	@Override
@@ -175,10 +189,10 @@ public class JCthugha implements Runnable, Closeable {
 		final Frame f = new Frame();
 		final JCthugha jCthugha = new JCthugha();
 		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
-		//jCthugha.setBounds(0, 0, screenSize.width, screenSize.height);
+
 		//f.add(jCthugha);         //adding a new Button.
 		f.setSize(screenSize.width, screenSize.height);        //setting size.
-		//f.setTitle("Java Cthugha");  //setting title.
+		f.setTitle("Java Cthugha");  //setting title.
 		//f.setLayout(null);   //set default layout for frame.
 		//f.setUndecorated(true);
 		f.setIgnoreRepaint(true);
@@ -187,7 +201,7 @@ public class JCthugha implements Runnable, Closeable {
 		f.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				executorService.shutdown();
+				executorService.shutdownNow();
 				f.dispose();
 				try {
 					jCthugha.close();
@@ -209,7 +223,31 @@ public class JCthugha implements Runnable, Closeable {
 				else if (e.getKeyChar() == 'p') {
 					jCthugha.newPalette();
 				}
-
+				else if (e.getKeyChar() == 'd') {
+					jCthugha.debug = !jCthugha.debug;
+				}
+				else if (e.getKeyChar() == ',') {
+					jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT);
+				}
+				else if (e.getKeyChar() == '.') {
+					jCthugha.wave.autoRotate(AUTO_ROTATE_AMT);
+				}
+				else if (e.getKeyChar() == 'f') {
+					GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
+					if (graphicsDevice.isFullScreenSupported()) {
+						if (graphicsDevice.getFullScreenWindow() == null) {
+							DisplayMode mode = graphicsDevice.getDisplayMode();
+							f.setSize(mode.getWidth(), mode.getHeight());
+							graphicsDevice.setFullScreenWindow(f.getOwner());
+						}
+						else {
+							graphicsDevice.setFullScreenWindow(null);
+						}
+					}
+					else {
+						System.out.println("Full screen not supported");
+					}
+				}
 			}
 
 			@Override
@@ -230,8 +268,8 @@ public class JCthugha implements Runnable, Closeable {
 		BufferedImage screenCompatibleImage =
 			graphicsConfiguration.createCompatibleImage(cthughaBufferSize.width,
 				cthughaBufferSize.height);
-		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, screenSize);
+		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f);
 
-		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/70, TimeUnit.MILLISECONDS);
+		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/30, TimeUnit.MILLISECONDS);
 	}
 }

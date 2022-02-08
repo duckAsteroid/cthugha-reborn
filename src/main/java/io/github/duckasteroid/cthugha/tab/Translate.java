@@ -1,16 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import static java.lang.Math.abs;
-
 import java.awt.Dimension;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.IntStream;
 
 /**
  * Performs pixel transforms on the screen buffer
@@ -20,10 +10,7 @@ public class Translate {
   /**
    * The translate table for the buffer specifying the source pixel index for the destination pixel
    */
-  int[] table;
-
-  final LinkedList<int[]> animationQueue = new LinkedList<>();
-  final ReentrantLock lock = new ReentrantLock(false);
+  private int[] table;
 
   public Translate(Dimension size, int[] table) {
     this.dims = size;
@@ -54,18 +41,10 @@ public class Translate {
       int safePtr = Math.max(0, Math.min(table[i], source.length));
       destination[i] = copy[safePtr];
     }
-    if (!animationQueue.isEmpty()) {
-      this.table = animationQueue.removeFirst();
-    }
   }
 
   public void changeTable(int[] newTable) {
-    animationQueue.add(newTable);
-  }
-
-  public void changeTable(int[] newTable, int steps) {
-      int[][] animationSequence = changeTable(table, newTable, steps);
-      animationQueue.addAll(Arrays.asList(animationSequence));
+    table = newTable;
   }
 
   public static int[][] changeTable(int[] oldTable, int[] newTable, int steps) {

@@ -21,6 +21,7 @@ public class SimpleWave implements Wave {
   private double location = 0.5; // 0 - 1
   private double waveHeight = 1.0; // 1 = norm
   private double rotationAngle = 0.0;
+  private double autoRotationAngle = 0.0;
   private Stroke stroke = new BasicStroke(2f);
 
   public SimpleWave wave(int size) {
@@ -43,6 +44,11 @@ public class SimpleWave implements Wave {
     return this;
   }
 
+  public SimpleWave autoRotate(double delta) {
+    this.autoRotationAngle += delta;
+    return this;
+  }
+
   public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
     Graphics2D graphics = buffer.getGraphics();
     //graphics.clearRect(0,0, buffer.width, buffer.height);
@@ -57,6 +63,7 @@ public class SimpleWave implements Wave {
     graphics.setStroke(stroke);
     graphics.drawPolyline(xs, ys, xs.length);
     graphics.dispose();
+    this.rotationAngle += autoRotationAngle;
   }
 
   public void wave3(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {

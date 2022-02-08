@@ -8,7 +8,13 @@ import java.awt.Stroke;
 
 public class RadialWave implements Wave {
   private Stroke stroke = new BasicStroke(10f);
+
   private int radialSamples = 200;
+
+  public RadialWave wave(int size) {
+    this.stroke = new BasicStroke(size);
+    return this;
+  }
 
   @Override
   public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {

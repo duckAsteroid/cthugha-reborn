@@ -6,7 +6,6 @@ import java.awt.Dimension;
 
 public class BigHalfWheel extends TranslateTableSource {
 
-
   @Override
   public int[] generate(Dimension size) {
     int[] theTab = new int[size.height * size.width];
@@ -15,7 +14,7 @@ public class BigHalfWheel extends TranslateTableSource {
 
     cx = (int)(size.width * 0.4);
     cy = 0;
-    q = 3.14159265399f / 2;
+    q = (float) (PI / 2);
     p = (float) (0 / 180 * PI);
 
     for (int j=0;j<size.height;j++) {
