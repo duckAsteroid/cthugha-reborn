@@ -7,6 +7,7 @@ import io.github.duckasteroid.cthugha.audio.AudioSource;
 import io.github.duckasteroid.cthugha.audio.RandomSimulatedAudio;
 import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
+import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
@@ -22,6 +23,7 @@ import java.awt.DisplayMode;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -69,6 +71,8 @@ public class JCthugha implements Runnable, Closeable {
 	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
 
 	RandomTranslateSource translateSource = new RandomTranslateSource();
+
+	RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
 
 	BufferStrategy bufferStrategy;
 	private BufferedImage screenImage;
@@ -236,6 +240,9 @@ public class JCthugha implements Runnable, Closeable {
 				else if (e.getKeyChar() == 'x') {
 					Arrays.fill(jCthugha.buffer.pixels, (byte)255);
 				}
+				else if (e.getKeyChar() == 'i') {
+					jCthugha.flashImage();
+				}
 				else if (e.getKeyChar() == 'f') {
 					GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
 					if (graphicsDevice.isFullScreenSupported()) {
@@ -275,5 +282,17 @@ public class JCthugha implements Runnable, Closeable {
 		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f);
 
 		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/30, TimeUnit.MILLISECONDS);
+	}
+
+	private void flashImage() {
+		try {
+			BufferedImage flash = imageSource.nextImage();
+			Graphics2D graphics = buffer.getBufferedImageView().createGraphics();
+			graphics.drawImage(flash, 0,0, buffer.width, buffer.height, null);
+			graphics.dispose();
+		}
+		catch (IOException e) {
+			LOG.error("Error flash image", e);
+		}
 	}
 }

@@ -40,9 +40,8 @@ public class RandomImageSource {
     }
   }
 
-  public FlashImage nextImage() throws IOException {
+  public BufferedImage nextImage() throws IOException {
     List<Path> paths = imageFiles();
-    BufferedImage image = loadImage(paths.get(rnd.nextInt(paths.size())));
-    return new FlashImage(image, rnd.nextInt(200));
+    return loadImage(paths.get(rnd.nextInt(paths.size())));
   }
 }
