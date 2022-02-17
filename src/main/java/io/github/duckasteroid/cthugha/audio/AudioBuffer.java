@@ -101,6 +101,13 @@ public class AudioBuffer {
     public Stream<AudioPoint> streamPoints(int maxLength) {
       return stream(maxLength).map(AudioPoint::new);
     }
+
+    public double intensity(Channel channel) {
+      return streamPoints()
+        .mapToInt(pt -> pt.value(channel))
+        .mapToDouble(i -> Math.sqrt(i * i))
+        .average().orElse(0.0);
+    }
   }
 
   public enum Channel {
@@ -129,7 +136,7 @@ public class AudioBuffer {
         return (short)(sum / sample.length);
       }
     },
-    MONO_SUB {
+    MONO_DIFF {
       @Override
       public short value(short[] sample) {
         if (sample.length > 1) {

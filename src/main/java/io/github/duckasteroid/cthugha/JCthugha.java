@@ -15,6 +15,7 @@ import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
 import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.RadialWave;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
+import io.github.duckasteroid.cthugha.wave.SpeckleWave;
 import io.github.duckasteroid.cthugha.wave.VibratingCircleWave;
 import io.github.duckasteroid.cthugha.wave.Wave;
 import java.awt.Color;
@@ -64,9 +65,11 @@ public class JCthugha implements Runnable, Closeable {
 	final Flame flame = new Flame();
 
 
-	final SimpleWave wave = new SimpleWave().wave(10);
+	final SimpleWave wave = new SimpleWave();
 	//final Wave wave = new VibratingCircleWave();
-	final Wave wave2 = new RadialWave().wave(2);
+	final Wave wave2 = new RadialWave();
+	final Wave speckles = new SpeckleWave();
+	boolean doSpeckles = true;
 
 	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
 
@@ -115,6 +118,9 @@ public class JCthugha implements Runnable, Closeable {
 				// wave
 				wave.wave(audioSample, buffer);
 				wave2.wave(audioSample, buffer);
+				if (doSpeckles) {
+					speckles.wave(audioSample, buffer);
+				}
 
 				// render the buffer onto the screen ready image
 				buffer.render(screenImage.getRaster());
@@ -173,6 +179,8 @@ public class JCthugha implements Runnable, Closeable {
 		this.debug = !debug;
 	}
 
+	public void toggleSpeckle() { this.doSpeckles = !doSpeckles; }
+
 	public void rotate( double degrees) {
 		this.wave.rotate(degrees);
 	}
@@ -187,7 +195,8 @@ public class JCthugha implements Runnable, Closeable {
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
 		DisplayMode displayMode =	gd.getDisplayMode();
-		Dimension screenSize = new Dimension(1024,768); //new Dimension(displayMode.getWidth(), displayMode.getHeight());
+		Dimension screenSize = new Dimension(1024,768); //
+		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
 		System.out.println(screenSize);
 		int fract = 1;
 		Dimension cthughaBufferSize = new Dimension(screenSize.width / fract, screenSize.height / fract);
@@ -220,7 +229,7 @@ public class JCthugha implements Runnable, Closeable {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				if(e.getKeyChar() == 's') {
-					System.out.println(StatsFactory.getStatisticsSummary());
+					jCthugha.toggleSpeckle();
 				}
 				else if (e.getKeyChar() == 't' || e.getKeyChar() == 'T') {
 					jCthugha.newTranslation(e.isShiftDown());
@@ -281,7 +290,7 @@ public class JCthugha implements Runnable, Closeable {
 				cthughaBufferSize.height);
 		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f);
 
-		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/30, TimeUnit.MILLISECONDS);
+		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
 	}
 
 	private void flashImage() {

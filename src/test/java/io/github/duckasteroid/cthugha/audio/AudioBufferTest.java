@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.TargetDataLine;
 import org.junit.jupiter.api.Test;
@@ -27,8 +29,7 @@ class AudioBufferTest {
     return result;
   }
 
-  @Test
-  void readFrom() {
+  public static TargetDataLine mockAudioLine() {
     short[] left = testData(0, 1000, 100);
     short[] right = testData(-1000, 0, 100);
     TargetDataLine mockTargetDataLine = mock(TargetDataLine.class);
@@ -52,12 +53,39 @@ class AudioBufferTest {
         }
         return data.position() * 2;
       }}).when(mockTargetDataLine).read(any(byte[].class), anyInt(), anyInt());
+    return mockTargetDataLine;
+  }
 
+  @Test
+  void readFrom() {
+    TargetDataLine mockTargetDataLine = mockAudioLine();
     AudioBuffer subject = new AudioBuffer(format, Duration.ofSeconds(1));
     AudioBuffer.AudioSample audioSample =
       subject.readFrom(mockTargetDataLine, 25);
     assertNotNull(audioSample);
     assertFalse(audioSample.mono);
+  }
+
+  @Test
+  void readAudioPoints() {
+    TargetDataLine mockTargetDataLine = mockAudioLine();
+    AudioBuffer subject = new AudioBuffer(format, Duration.ofSeconds(1));
+    AudioBuffer.AudioSample audioSample =
+      subject.readFrom(mockTargetDataLine, 25);
+    List<AudioBuffer.AudioPoint> audioPoints = audioSample.streamPoints().collect(Collectors.toList());
+    assertNotNull(audioPoints);
+    assertEquals(25, audioPoints.size());
+
+  }
+
+  @Test
+  void intensity() {
+    TargetDataLine mockTargetDataLine = mockAudioLine();
+    AudioBuffer subject = new AudioBuffer(format, Duration.ofSeconds(1));
+    AudioBuffer.AudioSample audioSample =
+      subject.readFrom(mockTargetDataLine, 25);
+    double intensity = audioSample.intensity(AudioBuffer.Channel.MONO_AVG);
+    assertEquals(380.0, intensity);
   }
 
   @Test

@@ -22,6 +22,7 @@ public class SimpleWave implements Wave {
   private double waveHeight = 1.0; // 1 = norm
   private double rotationAngle = 0.0;
   private double autoRotationAngle = 0.0;
+  private boolean stereo = true;
   private Stroke stroke = new BasicStroke(2f);
 
   public SimpleWave wave(int size) {
@@ -55,13 +56,24 @@ public class SimpleWave implements Wave {
     graphics.setColor(buffer.getForegroundColor());
     graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle), buffer.width / 2, buffer.height / 2 ));
     int[] xs = IntStream.range(0, sound.samples.length).toArray();
-    int[] ys = Arrays.stream(sound.samples)
-      .mapToInt(sample -> (sample[0] + sample[1]) / 2)
+    double realLocation = stereo ? location / 2 : location;
+    int[] y1s = Arrays.stream(sound.samples)
+      .mapToInt(sample -> sample[0])
       .map(sample -> Math.min(Short.MAX_VALUE, (int)(sample * waveHeight)))
-      .map(sample -> (int)(buffer.height * location) + AudioBuffer.transpose((short)sample, (int)(buffer.height * (1 - location))))
+      .map(sample -> (int)(buffer.height * realLocation) +
+        AudioBuffer.transpose((short)sample, (int)(buffer.height * (1 - location))))
       .toArray();
     graphics.setStroke(stroke);
-    graphics.drawPolyline(xs, ys, xs.length);
+    graphics.drawPolyline(xs, y1s, xs.length);
+    if (stereo) {
+      int[] y2s = Arrays.stream(sound.samples)
+        .mapToInt(sample -> sample[1])
+        .map(sample -> Math.min(Short.MAX_VALUE, (int) (sample * waveHeight)))
+        .map(sample -> (int) (buffer.height * (1-realLocation)) +
+          AudioBuffer.transpose((short) sample, (int) (buffer.height * (1 - location))))
+        .toArray();
+      graphics.drawPolyline(xs, y2s, xs.length);
+    }
     graphics.dispose();
     this.rotationAngle += autoRotationAngle;
   }

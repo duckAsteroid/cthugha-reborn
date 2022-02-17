@@ -7,7 +7,7 @@ import java.awt.Graphics2D;
 import java.awt.Stroke;
 
 public class RadialWave implements Wave {
-  private Stroke stroke = new BasicStroke(10f);
+  private Stroke stroke = new BasicStroke(2f);
 
   private int radialSamples = 200;
 
