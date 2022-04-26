@@ -1,10 +1,8 @@
-package io.github.duckasteroid.cthugha.audio;
+package io.github.duckasteroid.cthugha.audio.io;
 
-import io.github.duckasteroid.cthugha.map.PaletteMap;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.io.IOException;
 import java.util.Random;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import javax.sound.sampled.AudioFormat;
 
 public class RandomSimulatedAudio implements AudioSource{
@@ -26,7 +24,7 @@ public class RandomSimulatedAudio implements AudioSource{
     return false;
   }
 
-  public AudioBuffer.AudioSample sample(final int width) {
+  public AudioSample sample(final int width) {
     // create new random walk sound
     short[][] sound = new short[width][1];
     int height = Short.MAX_VALUE;
@@ -34,7 +32,7 @@ public class RandomSimulatedAudio implements AudioSource{
     for(int i = 1; i < width; i++) {
       sound[i] = new short[] {nextSample(sound[i-1][0], height), nextSample(sound[i-1][1], height)};
     }
-    return new AudioBuffer.AudioSample(sound, false);
+    return new AudioSample(sound, false);
   }
 
   private short nextSample(short current, int height) {

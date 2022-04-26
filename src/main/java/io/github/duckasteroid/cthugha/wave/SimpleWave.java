@@ -2,16 +2,13 @@ package io.github.duckasteroid.cthugha.wave;
 
 import io.github.duckasteroid.cthugha.ScreenBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * A simple rendering of the audio wave on the screen
@@ -50,7 +47,7 @@ public class SimpleWave implements Wave {
     return this;
   }
 
-  public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+  public void wave(AudioSample sound, ScreenBuffer buffer) {
     Graphics2D graphics = buffer.getGraphics();
     //graphics.clearRect(0,0, buffer.width, buffer.height);
     graphics.setColor(buffer.getForegroundColor());
@@ -78,7 +75,7 @@ public class SimpleWave implements Wave {
     this.rotationAngle += autoRotationAngle;
   }
 
-  public void wave3(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+  public void wave3(AudioSample sound, ScreenBuffer buffer) {
     Arrays.fill(buffer.pixels, (byte) 0);
     //graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle)));
     int[] xs = IntStream.range(0, sound.samples.length).toArray();

@@ -9,16 +9,29 @@ repositories {
 }
 
 dependencies {
+	// Logging API
+	implementation(group: 'org.slf4j', name:'slf4j-api', version: '1.7.35')
 	// Apache imaging for PCX support
 	implementation 'org.apache.commons:commons-imaging:1.0-alpha2'
-
-	implementation(group: 'org.slf4j', name:'slf4j-api', version: '1.7.35')
+	// Fast Fourier Transform
+	implementation 'com.github.wendykierp:JTransforms:3.1:with-dependencies'
 
 	runtimeOnly 'ch.qos.logback:logback-classic:1.2.10'
 
 	// JUnit5 for testing
 	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.7.0')
 	testImplementation 'org.mockito:mockito-core:4.3.1'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+compileJava {
+	options.incremental = true
+	options.fork = true
 }
 
 test {

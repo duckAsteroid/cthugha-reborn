@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.wave;
 
 import io.github.duckasteroid.cthugha.ScreenBuffer;
-import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
@@ -11,7 +11,7 @@ import java.util.IntSummaryStatistics;
 public class VibratingCircleWave implements Wave {
   private Stroke stroke = new BasicStroke(10f);
   @Override
-  public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+  public void wave(AudioSample sound, ScreenBuffer buffer) {
     int x = buffer.width /2;
     int y = buffer.height /2;
     int min = 10;

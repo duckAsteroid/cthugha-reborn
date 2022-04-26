@@ -60,7 +60,7 @@ class AudioBufferTest {
   void readFrom() {
     TargetDataLine mockTargetDataLine = mockAudioLine();
     AudioBuffer subject = new AudioBuffer(format, Duration.ofSeconds(1));
-    AudioBuffer.AudioSample audioSample =
+    AudioSample audioSample =
       subject.readFrom(mockTargetDataLine, 25);
     assertNotNull(audioSample);
     assertFalse(audioSample.mono);
@@ -70,9 +70,9 @@ class AudioBufferTest {
   void readAudioPoints() {
     TargetDataLine mockTargetDataLine = mockAudioLine();
     AudioBuffer subject = new AudioBuffer(format, Duration.ofSeconds(1));
-    AudioBuffer.AudioSample audioSample =
+    AudioSample audioSample =
       subject.readFrom(mockTargetDataLine, 25);
-    List<AudioBuffer.AudioPoint> audioPoints = audioSample.streamPoints().collect(Collectors.toList());
+    List<AudioPoint> audioPoints = audioSample.streamPoints().collect(Collectors.toList());
     assertNotNull(audioPoints);
     assertEquals(25, audioPoints.size());
 
@@ -82,9 +82,9 @@ class AudioBufferTest {
   void intensity() {
     TargetDataLine mockTargetDataLine = mockAudioLine();
     AudioBuffer subject = new AudioBuffer(format, Duration.ofSeconds(1));
-    AudioBuffer.AudioSample audioSample =
+    AudioSample audioSample =
       subject.readFrom(mockTargetDataLine, 25);
-    double intensity = audioSample.intensity(AudioBuffer.Channel.MONO_AVG);
+    double intensity = audioSample.intensity(Channel.MONO_AVG);
     assertEquals(380.0, intensity);
   }
 

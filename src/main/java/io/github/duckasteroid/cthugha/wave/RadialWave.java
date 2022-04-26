@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.wave;
 
 import io.github.duckasteroid.cthugha.ScreenBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
@@ -17,7 +18,7 @@ public class RadialWave implements Wave {
   }
 
   @Override
-  public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+  public void wave(AudioSample sound, ScreenBuffer buffer) {
     if (sound.samples.length >= radialSamples) {
       int skipFactor = (int) Math.ceil((double) sound.samples.length / (double) radialSamples);
       final double angle = 2 * Math.PI / radialSamples;

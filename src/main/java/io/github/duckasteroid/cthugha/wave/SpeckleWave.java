@@ -1,7 +1,8 @@
 package io.github.duckasteroid.cthugha.wave;
 
 import io.github.duckasteroid.cthugha.ScreenBuffer;
-import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.Channel;
 import java.util.Random;
 import java.util.stream.IntStream;
 
@@ -16,9 +17,9 @@ public class SpeckleWave implements Wave {
   }
 
   @Override
-  public void wave(AudioBuffer.AudioSample sound, ScreenBuffer buffer) {
+  public void wave(AudioSample sound, ScreenBuffer buffer) {
     final int max = (int)(buffer.pixels.length * fractionMax);
-    double intensity = sound.intensity(AudioBuffer.Channel.MONO_AVG); // FIXME use FFT DC (0Hz)
+    double intensity = sound.intensity(Channel.MONO_AVG); // FIXME use FFT DC (0Hz)
     double relativeIntensity =  intensity / Short.MAX_VALUE;
     if (relativeIntensity > triggerPoint) {
       IntStream.range(0, (int) (max * relativeIntensity))

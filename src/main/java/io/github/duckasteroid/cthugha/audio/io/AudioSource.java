@@ -1,7 +1,7 @@
-package io.github.duckasteroid.cthugha.audio;
+package io.github.duckasteroid.cthugha.audio.io;
 
+import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.io.Closeable;
-import java.util.stream.Stream;
 import javax.sound.sampled.AudioFormat;
 
 /**
@@ -13,7 +13,7 @@ public interface AudioSource extends Closeable {
    * @param width the number of samples to acquire
    * @return the stream of samples (if there was enough, or empty)
    */
-  AudioBuffer.AudioSample sample( final int width );
+  AudioSample sample(final int width );
 
   AudioFormat getFormat();
 

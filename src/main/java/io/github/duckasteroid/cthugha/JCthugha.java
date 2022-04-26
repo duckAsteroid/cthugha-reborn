@@ -2,10 +2,11 @@ package io.github.duckasteroid.cthugha;
 
 import static io.github.duckasteroid.cthugha.stats.Statistics.to2DP;
 
-import io.github.duckasteroid.cthugha.audio.AudioBuffer;
-import io.github.duckasteroid.cthugha.audio.AudioSource;
-import io.github.duckasteroid.cthugha.audio.RandomSimulatedAudio;
-import io.github.duckasteroid.cthugha.audio.SampledAudioSource;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.Channel;
+import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
+import io.github.duckasteroid.cthugha.audio.io.AudioSource;
+import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
@@ -16,7 +17,7 @@ import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.RadialWave;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
 import io.github.duckasteroid.cthugha.wave.SpeckleWave;
-import io.github.duckasteroid.cthugha.wave.VibratingCircleWave;
+import io.github.duckasteroid.cthugha.wave.SpectraBars;
 import io.github.duckasteroid.cthugha.wave.Wave;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -71,6 +72,9 @@ public class JCthugha implements Runnable, Closeable {
 	final Wave speckles = new SpeckleWave();
 	boolean doSpeckles = true;
 
+	final Wave fft = new SpectraBars(new FastFourierTransform(480, audioSource.getFormat(), Channel.MONO_AVG));
+	boolean doFFT = true;
+
 	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
 
 	RandomTranslateSource translateSource = new RandomTranslateSource();
@@ -113,13 +117,16 @@ public class JCthugha implements Runnable, Closeable {
 				flame.flame(buffer);
 
 				// get sound
-				AudioBuffer.AudioSample audioSample = audioSource.sample(buffer.width);
+				AudioSample audioSample = audioSource.sample(buffer.width);
 
 				// wave
 				wave.wave(audioSample, buffer);
 				wave2.wave(audioSample, buffer);
 				if (doSpeckles) {
 					speckles.wave(audioSample, buffer);
+				}
+				if (doFFT) {
+					fft.wave(audioSample, buffer);
 				}
 
 				// render the buffer onto the screen ready image

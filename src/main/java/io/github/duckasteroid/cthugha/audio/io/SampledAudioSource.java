@@ -1,12 +1,11 @@
-package io.github.duckasteroid.cthugha.audio;
+package io.github.duckasteroid.cthugha.audio.io;
 
-import io.github.duckasteroid.cthugha.stats.Stats;
-import io.github.duckasteroid.cthugha.stats.StatsFactory;
+import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.ShortBuffer;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.sound.sampled.AudioFormat;
@@ -44,7 +43,7 @@ public class SampledAudioSource implements AudioSource {
   }
 
   @Override
-  public AudioBuffer.AudioSample sample(int length) {
+  public AudioSample sample(int length) {
     return buffer.readFrom(openLine, length);
   }
 
@@ -55,7 +54,7 @@ public class SampledAudioSource implements AudioSource {
 
   private static Mixer.Info getMixer() {
     return Stream.of(AudioSystem.getMixerInfo())
-      .filter(info -> info.getName().startsWith("CABLE Output"))
+      .filter(info -> info.getName().startsWith("CABLE Output")) // "Microphone (Realtek(R) Audio)"
       .findFirst().orElseThrow(() -> new RuntimeException("No mixer"));
   }
 
@@ -76,11 +75,12 @@ public class SampledAudioSource implements AudioSource {
     Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
     for (Mixer.Info info: mixerInfos){
       Mixer m = AudioSystem.getMixer(info);
-      Line.Info[] lineInfos = m.getTargetLineInfo();
-      if (lineInfos.length > 0) {
+      List<Line.Info> lineInfos =
+        Stream.concat(Arrays.stream(m.getTargetLineInfo()), Arrays.stream(m.getSourceLineInfo())).toList();
+      if (lineInfos.size() > 0) {
         System.out.println("MIXER: "+ info.getName());
       }
-      for (Line.Info lineInfo:lineInfos){
+      for (Line.Info lineInfo: lineInfos){
         if (lineInfo instanceof DataLine.Info) {
           System.out.println ("\t---"+lineInfo.getLineClass().getSimpleName());
           DataLine.Info dli = (DataLine.Info) lineInfo;

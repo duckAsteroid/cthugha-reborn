@@ -5,8 +5,8 @@ import java.util.Random;
 
 public class Smoke extends TranslateTableSource {
 
-  private final int speed; // 30 - 300
-  private final int randomness; // 0 - 100
+  private int speed; // 30 - 300
+  private int randomness; // 0 - 100
 
   public Smoke() {
     this(100,70);
@@ -15,6 +15,12 @@ public class Smoke extends TranslateTableSource {
   public Smoke(int speed, int randomness) {
     this.speed = speed;
     this.randomness = randomness;
+  }
+
+  @Override
+  public void randomiseParameters() {
+    speed = rnd.nextInt(30, 300);
+    randomness = rnd.nextInt(100);
   }
 
   public int[] generate(Dimension size) {
