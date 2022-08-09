@@ -7,57 +7,59 @@ import io.github.duckasteroid.cthugha.audio.dsp.FrequencySpectra;
 import java.awt.Graphics2D;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 
+/**
+ * This wave draws FFT bars on the screen.
+ */
 public class SpectraBars implements Wave {
   private boolean includeDC = false;
   private double height = 1.0;
-  private final FastFourierTransform transform;
 
-  private int steps = 500;
+  private Optional<Double> logScale = Optional.empty(); //Optional.of(Math.E);
+  private final FastFourierTransform transform;
 
   private Duration dwellTime = Duration.ofSeconds(1);
 
-  private FrequencySpectra peakSpectra;
-
-
   public SpectraBars(FastFourierTransform transform) {
     this.transform = transform;
+  }
+
+  public SpectraBars logScale(Optional<Double> logScale) {
+    this.logScale = logScale;
+    return this;
   }
 
   @Override
   public void wave(AudioSample sound, ScreenBuffer buffer) {
     FrequencySpectra spectra = transform.transform(sound);
     Graphics2D graphics = buffer.getGraphics();
-    graphics.setColor(buffer.getForegroundColor());
+
     final int start = includeDC ? 0 : 1;
-
-    if (peakSpectra != null) {
-      // draw it
-      final int barWidth = buffer.width / (peakSpectra.size() - start);
-      for (int i = start; i < peakSpectra.size(); i++) {
-        final int barHeight =
-          (int) (peakSpectra.getMagnitude(i) * buffer.height * height);
-        graphics.fillRect(i * barWidth, Math.max(barHeight - 10, 0), barWidth, barHeight);
-      }
-      // scale it (for next time)
-      peakSpectra = peakSpectra.subtract(1000);
-    }
-
     if (spectra != null) {
-      final int barWidth = buffer.width / (spectra.size() - start);
+      graphics.setColor(buffer.getForegroundColor());
+      final double max = logify(spectra.getMaxFrequency());
+      //final int barWidth = buffer.width / (spectra.size() - start);
       for (int i = start; i < spectra.size(); i++) {
+        double u_freq = logify(spectra.getFrequency(i)) / max;
+        double l_freq = i == 0 ? 0 : logify(spectra.getFrequency(i - 1)) / max;
+
+        double mag = spectra.getNormalisedMagnitude(i);
         final int barHeight =
-          (int) (spectra.getNormalisedMagnitude(i) * buffer.height * height);
-        graphics.fillRect(i * barWidth, 0, barWidth, barHeight);
-      }
-      if (peakSpectra == null) {
-        peakSpectra = spectra;
-      }
-      else {
-        peakSpectra = peakSpectra.combineMaxima(spectra);
+          (int) (mag * buffer.height * height);
+
+        graphics.fillRect((int)(l_freq * buffer.width), 0,
+          (int)(u_freq * buffer.width) , barHeight);
       }
     }
 
     graphics.dispose();
   }
+
+  private double logify(double x) {
+    return logScale
+      .map(log -> Math.log(x))
+      .orElse(x);
+  }
+
 }

@@ -1,12 +1,21 @@
 package io.github.duckasteroid.cthugha.audio;
 
+/**
+ * Represents sources for single valued audio data
+ */
 public enum Channel implements PointValueExtractor {
+  /**
+   * Extracts the left channel from a (stereo) audio
+   */
   LEFT {
     @Override
     public short value(short[] sample) {
       return sample[0];
     }
   },
+  /**
+   * Extracts the right channel from a (stereo) audio
+   */
   RIGHT {
     @Override
     public short value(short[] sample) {
@@ -17,6 +26,9 @@ public enum Channel implements PointValueExtractor {
       }
     }
   },
+  /**
+   * Creates an average of the combined channels
+   */
   MONO_AVG {
     @Override
     public short value(short[] sample) {
@@ -27,6 +39,9 @@ public enum Channel implements PointValueExtractor {
       return (short) (sum / sample.length);
     }
   },
+  /**
+   * Creates a difference of the two channels
+   */
   MONO_DIFF {
     @Override
     public short value(short[] sample) {

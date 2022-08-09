@@ -11,7 +11,6 @@ import org.apache.commons.math3.util.Pair;
 public class FrequencySpectra {
   private final List<Double> binFrequencies;
   private final List<Double> magnitudes;
-
   private final double maxMagnitude;
   private final double minMagnitude;
   public FrequencySpectra(List<Double> binFrequencies, List<Double> magnitudes,
@@ -90,5 +89,9 @@ public class FrequencySpectra {
 
   public double minima() {
     return minMagnitude;
+  }
+
+  public double getMaxFrequency() {
+    return binFrequencies.get(binFrequencies.size() - 1);
   }
 }

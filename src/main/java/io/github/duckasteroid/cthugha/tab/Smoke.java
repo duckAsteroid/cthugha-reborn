@@ -28,7 +28,7 @@ public class Smoke extends TranslateTableSource {
     int[] result = new int[size.width * size.height];
     for (int y = 0; y < size.height; y++) {
       for (int x = 0; x < size.width; x++) {
-        map_x = x ;// - (5 + random.nextInt(12 * randomness / 100)) * speed / 100;
+        map_x = x - (5 + rnd.nextInt(12 * randomness / 100)) * speed / 100;
         map_y = y - (5 + rnd.nextInt(12 * randomness / 100)) * speed / 100;
 
         if (map_y >= size.height || map_y < 0  ||

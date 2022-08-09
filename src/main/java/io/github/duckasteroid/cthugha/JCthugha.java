@@ -72,7 +72,7 @@ public class JCthugha implements Runnable, Closeable {
 	final Wave speckles = new SpeckleWave();
 	boolean doSpeckles = true;
 
-	final Wave fft = new SpectraBars(new FastFourierTransform(480, audioSource.getFormat(), Channel.MONO_AVG));
+	final Wave fft = new SpectraBars(new FastFourierTransform(4800, audioSource.getFormat(), Channel.MONO_AVG));
 	boolean doFFT = true;
 
 	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
@@ -108,6 +108,7 @@ public class JCthugha implements Runnable, Closeable {
 
 	public synchronized void run() {
 			try {
+				// record the refresh rate (how quick this loop runs)
 				timeStatistics.ping();
 
 				// translate
@@ -116,7 +117,7 @@ public class JCthugha implements Runnable, Closeable {
 				// flame
 				flame.flame(buffer);
 
-				// get sound
+				// get latest sound
 				AudioSample audioSample = audioSource.sample(buffer.width);
 
 				// wave
@@ -209,7 +210,7 @@ public class JCthugha implements Runnable, Closeable {
 		Dimension cthughaBufferSize = new Dimension(screenSize.width / fract, screenSize.height / fract);
 		final Frame f = new Frame();
 		final JCthugha jCthugha = new JCthugha();
-		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(3);
+		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
 
 		//f.add(jCthugha);         //adding a new Button.
 		f.setSize(screenSize.width, screenSize.height);        //setting size.
