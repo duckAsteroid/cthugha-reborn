@@ -18,6 +18,7 @@ public class AudioBuffer {
   private final int bytesPerSample;
   private final ByteBuffer buffer;
 
+  private double amplification = 1.0d;
   /**
    * Tracks statistics on the actual depth of the audio buffer on read
    * (how much audio data was waiting)
@@ -41,6 +42,14 @@ public class AudioBuffer {
     return format.getChannels() == 1;
   }
 
+  public double getAmplification() {
+    return amplification;
+  }
+
+  public void setAmplification(double amplification) {
+    this.amplification = amplification;
+  }
+
   public AudioSample readFrom(TargetDataLine line, int length) {
     int available = line.available() / bytesPerSample;
     bufferDepth.add(available);
@@ -56,10 +65,10 @@ public class AudioBuffer {
       int index = 0;
       while(intBuffer.hasRemaining()) {
         sample[index] = new short[sampleSize];
-        short ch1 = intBuffer.get();
+        short ch1 = (short)(intBuffer.get() * amplification);
         sample[index][0] = ch1;
         if (sampleSize > 1) {
-          short ch2 = intBuffer.get();
+          short ch2 = (short)(intBuffer.get() * amplification);
           sample[index][1] = ch2;
         }
         index++;

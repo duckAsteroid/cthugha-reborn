@@ -18,4 +18,8 @@ public interface AudioSource extends Closeable {
   AudioFormat getFormat();
 
   boolean isMono();
+
+  double getAmplification();
+
+  void setAmplification(double amplification);
 }

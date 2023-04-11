@@ -16,7 +16,9 @@ import java.awt.image.WritableRaster;
  * Represents our screen buffer (a raster image)
  */
 public class ScreenBuffer {
+  // pixels wide
   public final int width;
+  // pixels high
   public final int height;
 
   /**
@@ -39,6 +41,12 @@ public class ScreenBuffer {
     this.pixels = new byte[width * height];
   }
 
+  /**
+   * Translate an X, Y coordinate into an index in the raster data
+   * @param x the X coord
+   * @param y the Y coord
+   * @return the index within the raster array
+   */
   public int index(int x, int y) {
     return ((y % height) * width) + (x % width);
   }
@@ -47,23 +55,19 @@ public class ScreenBuffer {
    * Write our buffer onto an image raster
    * @param imageRaster the raster to receive this buffer
    */
-  public void render(WritableRaster imageRaster) {
-    for(int y=0; y < height; y++) {
-      for(int x=0; x < width; x++) {
-        int pixelIndex = index(x,y);
-        int colorIndex = pixels[pixelIndex] & 0xff;
-        int color = paletteMap.colors[colorIndex];
-        imageRaster.setDataElements(x,y, new int[]{color});
-      }
-    }
+  public void render(BufferedImage imageRaster) {
+    imageRaster.getGraphics().drawImage(getBufferedImageView(),0,0,null);
+  }
+  public IndexColorModel getIndexedColorModel() {
+    return new IndexColorModel(8, 256, paletteMap.colors, 0, false, -1, DataBuffer.TYPE_BYTE);
+  }
+  public WritableRaster getWriteableRaster() {
+    DataBufferByte dbb = new DataBufferByte(pixels, pixels.length);
+    return Raster.createInterleavedRaster(dbb, width, height, width, 1, new int[]{0}, null);
   }
 
   public BufferedImage getBufferedImageView() {
-    DataBufferByte dbb = new DataBufferByte(pixels, pixels.length);
-    IndexColorModel icm = new IndexColorModel(8, 256, paletteMap.colors, 0, false, -1, DataBuffer.TYPE_BYTE);
-    WritableRaster raster =
-      Raster.createInterleavedRaster(dbb, width, height, width, 1, new int[]{0}, null);
-    return new BufferedImage(icm, raster, true, null);
+    return new BufferedImage(getIndexedColorModel(), getWriteableRaster(), true, null);
   }
 
   public Graphics2D getGraphics() {

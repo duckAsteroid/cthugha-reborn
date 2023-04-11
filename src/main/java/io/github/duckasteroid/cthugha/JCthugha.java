@@ -3,13 +3,13 @@ package io.github.duckasteroid.cthugha;
 import static io.github.duckasteroid.cthugha.stats.Statistics.to2DP;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
-import io.github.duckasteroid.cthugha.audio.Channel;
-import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
+import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
+import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
@@ -17,7 +17,6 @@ import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.RadialWave;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
 import io.github.duckasteroid.cthugha.wave.SpeckleWave;
-import io.github.duckasteroid.cthugha.wave.SpectraBars;
 import io.github.duckasteroid.cthugha.wave.Wave;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -39,8 +38,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +54,7 @@ public class JCthugha implements Runnable, Closeable {
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
 	final AudioSource audioSource = new SampledAudioSource();
+	private List<Keybind> keybinds;
 	int [] sound;
 
 	ScreenBuffer buffer;
@@ -72,10 +72,10 @@ public class JCthugha implements Runnable, Closeable {
 	final Wave speckles = new SpeckleWave();
 	boolean doSpeckles = true;
 
-	final Wave fft = new SpectraBars(new FastFourierTransform(4800, audioSource.getFormat(), Channel.MONO_AVG));
-	boolean doFFT = true;
+	//final Wave fft = new SpectraBars(new FastFourierTransform(4800, audioSource.getFormat(), Channel.MONO_AVG));
+	boolean doFFT = false;
 
-	Stats timeStatistics = StatsFactory.deltaStats("frameRate");
+	Stats frameRate = StatsFactory.deltaStats("frameRate");
 
 	RandomTranslateSource translateSource = new RandomTranslateSource();
 
@@ -88,34 +88,37 @@ public class JCthugha implements Runnable, Closeable {
 	private boolean debug = true;
 	private Color debugColor = Color.GREEN;
 	private Font debugFont = new Font("Courier New", Font.PLAIN, 12);
-	private long nanoTime = System.nanoTime();
-	private static final long nanosecond = Duration.ofSeconds(1).toNanos();
+	private final NotificationRenderer notificationRenderer = new NotificationRenderer();
 
 	public JCthugha() throws LineUnavailableException {
+
 	}
 
-	public void init(Dimension dims, BufferStrategy bufferStrategy, BufferedImage screenImage, Frame window) throws IOException {
+	public void init(Dimension dims, BufferStrategy bufferStrategy, BufferedImage screenImage, Frame window, List<Keybind> keybinds) throws IOException {
 		this.bufferStrategy = bufferStrategy;
 		this.screenImage = screenImage;
 		this.window = window;
 		sound = new int[dims.width];
 		buffer = new ScreenBuffer(dims.width, dims.height);
 		translate = new Translate(dims, translateSource.generate(dims, true));
+		Path currentWorkingDir = Paths.get("").toAbsolutePath();
+		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
+		this.keybinds = keybinds;
 	}
 
 	public synchronized void run() {
 			try {
 				// record the refresh rate (how quick this loop runs)
-				timeStatistics.ping();
+				frameRate.ping();
 
-				// translate
+				// translate pixels in the screen buffer
 				translate.transform(buffer.pixels, buffer.pixels);
 
 				// flame
-				flame.flame(buffer);
+				flame.flame(buffer, buffer.getWriteableRaster());
 
 				// get latest sound
 				AudioSample audioSample = audioSource.sample(buffer.width);
@@ -127,15 +130,16 @@ public class JCthugha implements Runnable, Closeable {
 					speckles.wave(audioSample, buffer);
 				}
 				if (doFFT) {
-					fft.wave(audioSample, buffer);
+					//fft.wave(audioSample, buffer);
 				}
 
 				// render the buffer onto the screen ready image
-				buffer.render(screenImage.getRaster());
+				buffer.render(screenImage);
 
 				// draw onto back buffer
 				Graphics g2d = bufferStrategy.getDrawGraphics();
 				g2d.drawImage(screenImage, 0,0, window.getWidth(), window.getHeight(), null);
+				notificationRenderer.render(g2d);
 				if (debug) {
 					renderDebugInfo(g2d);
 				}
@@ -151,27 +155,42 @@ public class JCthugha implements Runnable, Closeable {
 	}
 
 	private void renderDebugInfo(Graphics g2d) {
-		g2d.setColor(debugColor);
 		g2d.setFont(debugFont);
-		long now = System.nanoTime();
-		long elapsed = now - nanoTime;
-		nanoTime = now;
-		double hz = ((double) nanosecond / (double) elapsed);
 		int y = 50;
-		g2d.drawString(to2DP(hz) +" FPS", 10, y);
 		int fontHeight = g2d.getFontMetrics().getHeight();
+		renderDebugString(g2d, frameRate.getFrameRate(), y);
 		y+=fontHeight;
-		g2d.drawString("window="+new Dimension(window.getWidth(), window.getHeight())+"; buffer="+buffer.getDimensions(), 10, y);
+		renderDebugString(g2d, "Amplifier: "+(audioSource.getAmplification() * 100), y);
 		y+=fontHeight;
-		g2d.drawString(translateSource.getLastGenerated(), 10, y);
+		renderDebugString(g2d, "window="+new Dimension(window.getWidth(), window.getHeight())+"; buffer="+buffer.getDimensions(), y);
 		y+=fontHeight;
-		g2d.drawString(buffer.paletteMap.getName(), 10, y);
+		renderDebugString(g2d, translateSource.getLastGenerated(),  y);
+		y+=fontHeight;
+		renderDebugString(g2d, buffer.paletteMap.getName(), y);
 		y+=fontHeight;
 		g2d.drawImage(buffer.paletteMap.getPaletteImage(), 0, y, window.getWidth(), 10, null);
 	}
 
+	private void renderDebugString(Graphics g2d, String message, int y) {
+		//g2d.setColor(Color.WHITE);
+		//g2d.drawString(message, 9, y-1);
+		g2d.setColor(Color.BLACK);
+		g2d.drawString(message, 11, y+1);
+		g2d.setColor(debugColor);
+		g2d.drawString(message, 10, y);
+	}
+
+	public void notify(String message) {
+		notificationRenderer.notify(message);
+	}
+
 	public void newTranslation(boolean newMap) {
 		translate.changeTable(translateSource.generate(buffer.getDimensions(), newMap));
+	}
+
+	public void changeAmplitude(double ratio) {
+		audioSource.setAmplification(audioSource.getAmplification() * ratio);
+		//notify("Amplitude = "+audioSource.getAmplification());
 	}
 
 	public void newPalette() {
@@ -203,13 +222,48 @@ public class JCthugha implements Runnable, Closeable {
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
 		DisplayMode displayMode =	gd.getDisplayMode();
-		Dimension screenSize = new Dimension(1024,768); //
+		Dimension screenSize = new Dimension(640,480); //
 		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
 		System.out.println(screenSize);
 		int fract = 1;
 		Dimension cthughaBufferSize = new Dimension(screenSize.width / fract, screenSize.height / fract);
 		final Frame f = new Frame();
+
 		final JCthugha jCthugha = new JCthugha();
+		final List<Keybind> keybindings = Arrays.asList(
+			new Keybind('s', "Toggle speckle wave", (e) -> jCthugha.toggleSpeckle()),
+			new Keybind('t', 'T', "Randomise the translation. Shift T to really randomise it", (e) -> jCthugha.newTranslation(e.isShiftDown())),
+			new Keybind('p', "Change the palette", (e) -> jCthugha.newPalette()),
+			new Keybind( 'd', "Toggle debug", (e) -> jCthugha.debug = !jCthugha.debug),
+			new Keybind(',', "Spin waves left", (e) -> jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT)),
+			new Keybind( '.', "Spin waves right", (e) -> jCthugha.wave.autoRotate(AUTO_ROTATE_AMT)),
+			new Keybind('<', "Rotate wave 10 degrees left", (e)-> jCthugha.rotate(-10)),
+			new Keybind('>', "Rotate wave 10 degrees left", (e)-> jCthugha.rotate(10)),
+			new Keybind('x', "Flash fill the screen", (e) -> Arrays.fill(jCthugha.buffer.pixels, (byte)255)),
+			new Keybind( 'i', "Flash a random image", (e) -> jCthugha.flashImage()),
+			new Keybind('u', 'U',"Increase amplitude", (e) -> {
+				if(e.isShiftDown()) jCthugha.changeAmplitude(1.1);
+				else jCthugha.changeAmplitude(1.01);
+			}),
+			new Keybind('j', 'J', "Decrease amplitude", (e) -> {
+				if(e.isShiftDown()) jCthugha.changeAmplitude(0.9);
+				else jCthugha.changeAmplitude(0.99);
+			}),
+			new Keybind( 'f', "Toggle fullscreen (NOT CURRENTLY WORKING)", (e) -> {
+				GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
+				if (graphicsDevice.isFullScreenSupported()) {
+					if (graphicsDevice.getFullScreenWindow() == null) {
+						DisplayMode mode = graphicsDevice.getDisplayMode();
+						f.setSize(mode.getWidth(), mode.getHeight());
+						graphicsDevice.setFullScreenWindow(f.getOwner());
+					} else {
+						graphicsDevice.setFullScreenWindow(null);
+					}
+				} else {
+					System.out.println("Full screen not supported");
+				}
+			}));
+
 		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
 
 		//f.add(jCthugha);         //adding a new Button.
@@ -236,55 +290,11 @@ public class JCthugha implements Runnable, Closeable {
 		f.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
-				if(e.getKeyChar() == 's') {
-					jCthugha.toggleSpeckle();
-				}
-				else if (e.getKeyChar() == 't' || e.getKeyChar() == 'T') {
-					jCthugha.newTranslation(e.isShiftDown());
-				}
-				else if (e.getKeyChar() == 'p') {
-					jCthugha.newPalette();
-				}
-				else if (e.getKeyChar() == 'd') {
-					jCthugha.debug = !jCthugha.debug;
-				}
-				else if (e.getKeyChar() == ',') {
-					jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT);
-				}
-				else if (e.getKeyChar() == '.') {
-					jCthugha.wave.autoRotate(AUTO_ROTATE_AMT);
-				}
-				else if (e.getKeyChar() == 'x') {
-					Arrays.fill(jCthugha.buffer.pixels, (byte)255);
-				}
-				else if (e.getKeyChar() == 'i') {
-					jCthugha.flashImage();
-				}
-				else if (e.getKeyChar() == 'f') {
-					GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
-					if (graphicsDevice.isFullScreenSupported()) {
-						if (graphicsDevice.getFullScreenWindow() == null) {
-							DisplayMode mode = graphicsDevice.getDisplayMode();
-							f.setSize(mode.getWidth(), mode.getHeight());
-							graphicsDevice.setFullScreenWindow(f.getOwner());
-						}
-						else {
-							graphicsDevice.setFullScreenWindow(null);
-						}
+				for(Keybind bind : keybindings) {
+					if (bind.isFired(e)) {
+						bind.handle(e);
+						break;
 					}
-					else {
-						System.out.println("Full screen not supported");
-					}
-				}
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-				if(e.getKeyChar() == '<') {
-					jCthugha.rotate(-10);
-				}
-				else if(e.getKeyChar() == '>') {
-					jCthugha.rotate(10);
 				}
 			}
 		});
@@ -296,7 +306,7 @@ public class JCthugha implements Runnable, Closeable {
 		BufferedImage screenCompatibleImage =
 			graphicsConfiguration.createCompatibleImage(cthughaBufferSize.width,
 				cthughaBufferSize.height);
-		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f);
+		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f, keybindings);
 
 		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
 	}
@@ -313,3 +323,4 @@ public class JCthugha implements Runnable, Closeable {
 		}
 	}
 }
+

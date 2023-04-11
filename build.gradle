@@ -22,7 +22,13 @@ dependencies {
 
 	// JUnit5 for testing
 	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.7.0')
-	//testImplementation 'org.mockito:mockito-core:4.3.1'
+	testImplementation 'org.mockito:mockito-core:4.3.1'
+}
+
+tasks.register('usbStickify', Copy) {
+	dependsOn jar
+	from "$buildDir/libs/cthuga-reborn.jar"
+	into "D:\\cthuga-reborn\\lib"
 }
 
 java {
@@ -42,8 +48,10 @@ test {
 
 application {
 	mainClassName = "io.github.duckasteroid.cthugha.JCthugha"
+	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
 }
 
 run {
+	workingDir = file("src/dist")
 	systemProperty("cthugha.stats.enabled", "true")
 }

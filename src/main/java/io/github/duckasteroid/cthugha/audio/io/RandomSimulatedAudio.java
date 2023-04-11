@@ -35,6 +35,16 @@ public class RandomSimulatedAudio implements AudioSource{
     return new AudioSample(sound, false);
   }
 
+  @Override
+  public double getAmplification() {
+    return 1.0d;
+  }
+
+  @Override
+  public void setAmplification(double amplification) {
+    // ignored
+  }
+
   private short nextSample(short current, int height) {
     short result = (short) (current + rand(-stepSize, stepSize));
     if (result < -height) {

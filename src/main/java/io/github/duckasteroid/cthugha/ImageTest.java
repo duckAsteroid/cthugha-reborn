@@ -155,7 +155,7 @@ public class ImageTest {
         imageGraphics.dispose();
 
         // draw our visualisation buffer
-        screenBuffer.render(bi.getRaster());
+        screenBuffer.render(bi);
 
         // draw on back buffer...
         g2d = buffer.getDrawGraphics();

@@ -16,11 +16,11 @@ class TimeStatistics extends Statistics {
   }
 
   public static TimeStatistics nano() {
-    return new TimeStatistics(TimeUnit.SECONDS.toNanos(1), () -> System.nanoTime());
+    return new TimeStatistics(TimeUnit.SECONDS.toNanos(1), System::nanoTime);
   }
 
   public static TimeStatistics milli() {
-    return new TimeStatistics(TimeUnit.SECONDS.toMillis(1), () -> System.currentTimeMillis());
+    return new TimeStatistics(TimeUnit.SECONDS.toMillis(1), System::currentTimeMillis);
   }
 
   public void ping() {
@@ -30,6 +30,14 @@ class TimeStatistics extends Statistics {
       add(diff);
     }
     lastTime = now;
+  }
+
+  public double hz() {
+    return oneSecond / last;
+  }
+  @Override
+  public String getFrameRate() {
+    return to2DP(hz()) + " Hz";
   }
 
   @Override

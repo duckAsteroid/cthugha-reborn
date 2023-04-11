@@ -13,11 +13,14 @@ public class Statistics implements Stats {
   private long max;
   private int count;
 
+  protected long last = 0;
+
   public Statistics() {
     reset();
   }
 
   public void add(long value) {
+    last = value;
     min = Math.min(min, value);
     max = Math.max(max, value);
 
