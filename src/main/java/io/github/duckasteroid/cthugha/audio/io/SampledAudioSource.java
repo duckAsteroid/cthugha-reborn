@@ -15,21 +15,53 @@ import javax.sound.sampled.Line;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SampledAudioSource implements AudioSource {
-  private final AudioFormat ideal = new AudioFormat( 44100f, 16, 2, true, false);
-
-  private final TargetDataLine openLine;
+  private static final Logger LOG = LoggerFactory.getLogger(SampledAudioSource.class);
+  public final static AudioFormat IDEAL = new AudioFormat( 44100f, 16, 2, true, false);
+  public final static int
+    BUFFER_SIZE = IDEAL.getChannels() * (IDEAL.getSampleSizeInBits() / 8) // size of a sample
+    * (int)(0.2/* seconds*/ * IDEAL.getSampleRate()); // number of samples in X seconds
+  private TargetDataLine openLine;
   private final AudioBuffer buffer;
+  private final List<LineAcquirer.MixerLine> mixerLines;
+
+  private int lineIndex = 0;
 
   public SampledAudioSource() throws LineUnavailableException {
-    this.openLine = getAudioTargetLine(ideal);
-    int bufferSize = ideal.getChannels() * (ideal.getSampleSizeInBits() / 8) // size of a sample
-      * (int)(0.2/* seconds*/ * ideal.getSampleRate()); // number of samples in X seconds
-    this.openLine.open(ideal, bufferSize);
-    this.buffer = new AudioBuffer(ideal, Duration.ofMillis(200));
+    LineAcquirer laq = new LineAcquirer();
+    mixerLines = laq.allLinesMatching(TargetDataLine.class, IDEAL);
+    this.buffer = new AudioBuffer(IDEAL, Duration.ofMillis(200));
+    setSourceIndex(0);
+  }
 
-    this.openLine.start();
+
+  @Override
+  public List<String> getSourceNames() {
+    return mixerLines.stream().map(LineAcquirer.MixerLine::toString).toList();
+  }
+
+  @Override
+  public int getSourceIndex() {
+    return lineIndex;
+  }
+
+  @Override
+  public void setSourceIndex(int index) {
+    this.lineIndex = index;
+    try {
+      if (this.openLine != null) {
+        this.openLine.close();
+      }
+      this.openLine = mixerLines.get(index).getTargetDataLine();
+      this.openLine.open(IDEAL, BUFFER_SIZE);
+      this.openLine.start();
+    }
+    catch (LineUnavailableException e) {
+      LOG.error("Unable to open line", e);
+    }
   }
 
   @Override
@@ -63,7 +95,7 @@ public class SampledAudioSource implements AudioSource {
   }
 
   private static Mixer.Info getMixer() {
-    final String preferred = System.getProperty("cthugha.mixer", "Mic");
+    final String preferred = System.getProperty("cthugha.mixer", "Speakers/Headphones");
     return Stream.of(AudioSystem.getMixerInfo())
       .filter(info -> info.getName().startsWith(preferred)) // "Microphone (Realtek(R) Audio)"
       .findFirst().orElseThrow(() -> new RuntimeException("No mixer '"+preferred+"'"));

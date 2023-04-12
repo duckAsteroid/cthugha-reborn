@@ -54,7 +54,6 @@ public class JCthugha implements Runnable, Closeable {
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
 	final AudioSource audioSource = new SampledAudioSource();
-	private List<Keybind> keybinds;
 	int [] sound;
 
 	ScreenBuffer buffer;
@@ -65,12 +64,11 @@ public class JCthugha implements Runnable, Closeable {
 
 	final Flame flame = new Flame();
 
-
 	final SimpleWave wave = new SimpleWave();
 	//final Wave wave = new VibratingCircleWave();
 	final Wave wave2 = new RadialWave();
 	final Wave speckles = new SpeckleWave();
-	boolean doSpeckles = true;
+	boolean doSpeckles = false;
 
 	//final Wave fft = new SpectraBars(new FastFourierTransform(4800, audioSource.getFormat(), Channel.MONO_AVG));
 	boolean doFFT = false;
@@ -106,52 +104,50 @@ public class JCthugha implements Runnable, Closeable {
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
-		this.keybinds = keybinds;
 	}
 
 	public synchronized void run() {
-			try {
-				// record the refresh rate (how quick this loop runs)
-				frameRate.ping();
+		try {
+			// record the refresh rate (how quick this loop runs)
+			frameRate.ping();
 
-				// translate pixels in the screen buffer
-				translate.transform(buffer.pixels, buffer.pixels);
+			// translate pixels in the screen buffer
+			translate.transform(buffer.pixels, buffer.pixels);
 
-				// flame
-				flame.flame(buffer, buffer.getWriteableRaster());
+			// flame
+			flame.flame(buffer, buffer.getWriteableRaster());
 
-				// get latest sound
-				AudioSample audioSample = audioSource.sample(buffer.width);
+			// get latest sound
+			AudioSample audioSample = audioSource.sample(buffer.width);
 
-				// wave
-				wave.wave(audioSample, buffer);
-				wave2.wave(audioSample, buffer);
-				if (doSpeckles) {
-					speckles.wave(audioSample, buffer);
-				}
-				if (doFFT) {
-					//fft.wave(audioSample, buffer);
-				}
-
-				// render the buffer onto the screen ready image
-				buffer.render(screenImage);
-
-				// draw onto back buffer
-				Graphics g2d = bufferStrategy.getDrawGraphics();
-				g2d.drawImage(screenImage, 0,0, window.getWidth(), window.getHeight(), null);
-				notificationRenderer.render(g2d);
-				if (debug) {
-					renderDebugInfo(g2d);
-				}
-				g2d.dispose();
-
-				// flip
-				if( !bufferStrategy.contentsLost() )
-					bufferStrategy.show();
+			// wave
+			wave.wave(audioSample, buffer);
+			wave2.wave(audioSample, buffer);
+			if (doSpeckles) {
+				speckles.wave(audioSample, buffer);
 			}
-			catch(Throwable t) {
-				LOG.error("Processing main loop", t);
+			if (doFFT) {
+				//fft.wave(audioSample, buffer);
 			}
+
+			// render the buffer onto the screen ready image
+			buffer.render(screenImage);
+
+			// draw onto back buffer
+			Graphics g2d = bufferStrategy.getDrawGraphics();
+			g2d.drawImage(screenImage, 0,0, window.getWidth(), window.getHeight(), null);
+			notificationRenderer.render(new Dimension(window.getWidth(), window.getHeight()), g2d);
+			if (debug) {
+				renderDebugInfo(g2d);
+			}
+			g2d.dispose();
+
+			// flip
+			if( !bufferStrategy.contentsLost() )
+				bufferStrategy.show();
+		} catch(Throwable t) {
+			LOG.error("Processing main loop", t);
+		}
 	}
 
 	private void renderDebugInfo(Graphics g2d) {
@@ -186,30 +182,36 @@ public class JCthugha implements Runnable, Closeable {
 
 	public void newTranslation(boolean newMap) {
 		translate.changeTable(translateSource.generate(buffer.getDimensions(), newMap));
+		notify(translateSource.getLastGenerated());
 	}
 
 	public void changeAmplitude(double ratio) {
 		audioSource.setAmplification(audioSource.getAmplification() * ratio);
-		//notify("Amplitude = "+audioSource.getAmplification());
+		notify("Amplitude = "+audioSource.getAmplification());
 	}
 
 	public void newPalette() {
 		try {
 			buffer.paletteMap = reader.random();
-		}
-		catch (IOException ioe) {
+			notify(buffer.paletteMap.getName());
+		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
 	}
 
 	public void toggleDebug() {
 		this.debug = !debug;
+		notify("debug="+debug);
 	}
 
-	public void toggleSpeckle() { this.doSpeckles = !doSpeckles; }
+	public void toggleSpeckle() {
+		this.doSpeckles = !doSpeckles;
+		notify("speckles="+doSpeckles);
+	}
 
 	public void rotate( double degrees) {
 		this.wave.rotate(degrees);
+		notify("rotate="+degrees);
 	}
 
 	@Override
@@ -221,7 +223,7 @@ public class JCthugha implements Runnable, Closeable {
 		GraphicsEnvironment localGraphicsEnvironment =
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
-		DisplayMode displayMode =	gd.getDisplayMode();
+		DisplayMode displayMode = gd.getDisplayMode();
 		Dimension screenSize = new Dimension(640,480); //
 		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
 		System.out.println(screenSize);
@@ -231,10 +233,11 @@ public class JCthugha implements Runnable, Closeable {
 
 		final JCthugha jCthugha = new JCthugha();
 		final List<Keybind> keybindings = Arrays.asList(
+			new Keybind('a', "Toggle audio source", (e) -> jCthugha.toggleAudioSource()),
 			new Keybind('s', "Toggle speckle wave", (e) -> jCthugha.toggleSpeckle()),
 			new Keybind('t', 'T', "Randomise the translation. Shift T to really randomise it", (e) -> jCthugha.newTranslation(e.isShiftDown())),
 			new Keybind('p', "Change the palette", (e) -> jCthugha.newPalette()),
-			new Keybind( 'd', "Toggle debug", (e) -> jCthugha.debug = !jCthugha.debug),
+			new Keybind( 'd', "Toggle debug", (e) -> jCthugha.toggleDebug()),
 			new Keybind(',', "Spin waves left", (e) -> jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT)),
 			new Keybind( '.', "Spin waves right", (e) -> jCthugha.wave.autoRotate(AUTO_ROTATE_AMT)),
 			new Keybind('<', "Rotate wave 10 degrees left", (e)-> jCthugha.rotate(-10)),
@@ -311,14 +314,18 @@ public class JCthugha implements Runnable, Closeable {
 		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
 	}
 
+	private void toggleAudioSource() {
+		audioSource.nextSource();
+		notify(audioSource.getSourceName());
+	}
+
 	private void flashImage() {
 		try {
 			BufferedImage flash = imageSource.nextImage();
 			Graphics2D graphics = buffer.getBufferedImageView().createGraphics();
 			graphics.drawImage(flash, 0,0, buffer.width, buffer.height, null);
 			graphics.dispose();
-		}
-		catch (IOException e) {
+		} catch (IOException e) {
 			LOG.error("Error flash image", e);
 		}
 	}

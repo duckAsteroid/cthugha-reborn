@@ -2,6 +2,8 @@ package io.github.duckasteroid.cthugha.audio.io;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.io.Closeable;
+import java.util.Collections;
+import java.util.List;
 import javax.sound.sampled.AudioFormat;
 
 /**
@@ -18,6 +20,21 @@ public interface AudioSource extends Closeable {
   AudioFormat getFormat();
 
   boolean isMono();
+
+  default int getSourceIndex(){return 0;}
+  default void setSourceIndex(int index){}
+  default List<String> getSourceNames(){return Collections.emptyList();}
+
+  default void nextSource() {
+    int index = getSourceIndex();
+    index++;
+    index %= getSourceNames().size();
+    setSourceIndex(index);
+  }
+
+  default String getSourceName() {
+    return getSourceNames().get(getSourceIndex());
+  }
 
   double getAmplification();
 
