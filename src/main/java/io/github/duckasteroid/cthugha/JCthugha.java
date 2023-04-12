@@ -84,6 +84,7 @@ public class JCthugha implements Runnable, Closeable {
 	private Frame window;
 
 	private boolean debug = true;
+	private boolean notify = true;
 	private Color debugColor = Color.GREEN;
 	private Font debugFont = new Font("Courier New", Font.PLAIN, 12);
 	private final NotificationRenderer notificationRenderer = new NotificationRenderer();
@@ -177,7 +178,9 @@ public class JCthugha implements Runnable, Closeable {
 	}
 
 	public void notify(String message) {
-		notificationRenderer.notify(message);
+		if (notify) {
+			notificationRenderer.notify(message);
+		}
 	}
 
 	public void newTranslation(boolean newMap) {
@@ -235,6 +238,7 @@ public class JCthugha implements Runnable, Closeable {
 		final List<Keybind> keybindings = Arrays.asList(
 			new Keybind('a', "Toggle audio source", (e) -> jCthugha.toggleAudioSource()),
 			new Keybind('s', "Toggle speckle wave", (e) -> jCthugha.toggleSpeckle()),
+			new Keybind('n', "Toggle notifications", (e) -> jCthugha.toggleNotifications()),
 			new Keybind('t', 'T', "Randomise the translation. Shift T to really randomise it", (e) -> jCthugha.newTranslation(e.isShiftDown())),
 			new Keybind('p', "Change the palette", (e) -> jCthugha.newPalette()),
 			new Keybind( 'd', "Toggle debug", (e) -> jCthugha.toggleDebug()),
@@ -312,6 +316,11 @@ public class JCthugha implements Runnable, Closeable {
 		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f, keybindings);
 
 		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
+	}
+
+	private void toggleNotifications() {
+		notify = !notify;
+		notificationRenderer.notify("notifications="+notify);
 	}
 
 	private void toggleAudioSource() {
