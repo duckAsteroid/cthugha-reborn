@@ -1,7 +1,7 @@
 plugins {
 	id 'java'
 	id 'application'
-	id "com.github.ben-manes.versions" version "0.36.0"
+	id "com.github.ben-manes.versions" version "0.47.0"
 }
 
 repositories {
@@ -10,19 +10,19 @@ repositories {
 
 dependencies {
 	// Logging API
-	implementation(group: 'org.slf4j', name:'slf4j-api', version: '1.7.35')
+	implementation(group: 'org.slf4j', name:'slf4j-api', version: '2.0.7')
 	// Apache imaging for PCX support
-	implementation 'org.apache.commons:commons-imaging:1.0-alpha2'
+	implementation 'org.apache.commons:commons-imaging:1.0-alpha3'
 	// Fast Fourier Transform
 	implementation 'com.github.wendykierp:JTransforms:3.1:with-dependencies'
 	// Apache lang for primitive array utils
 	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
 
-	runtimeOnly 'ch.qos.logback:logback-classic:1.2.10'
+	runtimeOnly 'ch.qos.logback:logback-classic:1.4.8'
 
 	// JUnit5 for testing
-	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.7.0')
-	testImplementation 'org.mockito:mockito-core:4.3.1'
+	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.10.0-M1')
+	testImplementation 'org.mockito:mockito-core:5.3.1'
 }
 
 tasks.register('usbStickify', Copy) {

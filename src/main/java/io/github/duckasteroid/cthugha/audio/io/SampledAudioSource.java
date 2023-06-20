@@ -33,7 +33,7 @@ public class SampledAudioSource implements AudioSource {
   public SampledAudioSource() throws LineUnavailableException {
     LineAcquirer laq = new LineAcquirer();
     mixerLines = laq.allLinesMatching(TargetDataLine.class, IDEAL);
-    this.buffer = new AudioBuffer(IDEAL, Duration.ofMillis(200));
+    this.buffer = new AudioBuffer(IDEAL, Duration.ofMillis(50));
     setSourceIndex(0);
   }
 

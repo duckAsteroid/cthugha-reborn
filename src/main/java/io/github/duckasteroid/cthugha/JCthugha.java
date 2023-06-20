@@ -7,6 +7,7 @@ import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
+import io.github.duckasteroid.cthugha.kaleidoscope.Kaleidoscope;
 import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
@@ -79,6 +80,7 @@ public class JCthugha implements Runnable, Closeable {
 
 	RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
 
+	Kaleidoscope kaleidoscope = new Kaleidoscope();
 	BufferStrategy bufferStrategy;
 	private BufferedImage screenImage;
 	private Frame window;
@@ -136,8 +138,9 @@ public class JCthugha implements Runnable, Closeable {
 
 			// draw onto back buffer
 			Graphics g2d = bufferStrategy.getDrawGraphics();
-			g2d.drawImage(screenImage, 0,0, window.getWidth(), window.getHeight(), null);
-			notificationRenderer.render(new Dimension(window.getWidth(), window.getHeight()), g2d);
+			Dimension dims = new Dimension(window.getWidth(), window.getHeight());
+			kaleidoscope.render(screenImage, g2d, dims);
+			notificationRenderer.render(dims, g2d);
 			if (debug) {
 				renderDebugInfo(g2d);
 			}
@@ -217,6 +220,16 @@ public class JCthugha implements Runnable, Closeable {
 		notify("rotate="+degrees);
 	}
 
+	public void increaseKaleidoscope() {
+		kaleidoscope.increaseSegments();
+		notify(kaleidoscope.description());
+	}
+
+	public void decreaseKaleidoscope() {
+		kaleidoscope.decreaseSegments();
+		notify(kaleidoscope.description());
+	}
+
 	@Override
 	public void close() throws IOException {
 		audioSource.close();
@@ -227,7 +240,7 @@ public class JCthugha implements Runnable, Closeable {
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
 		DisplayMode displayMode = gd.getDisplayMode();
-		Dimension screenSize = new Dimension(640,480); //
+		Dimension screenSize = new Dimension(1024,768); //
 		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
 		System.out.println(screenSize);
 		int fract = 1;
@@ -242,6 +255,8 @@ public class JCthugha implements Runnable, Closeable {
 			new Keybind('t', 'T', "Randomise the translation. Shift T to really randomise it", (e) -> jCthugha.newTranslation(e.isShiftDown())),
 			new Keybind('p', "Change the palette", (e) -> jCthugha.newPalette()),
 			new Keybind( 'd', "Toggle debug", (e) -> jCthugha.toggleDebug()),
+			new Keybind('r', "Increase kaleidoscope", (e) -> jCthugha.increaseKaleidoscope()),
+			new Keybind('f', "Decrease kaleidoscope", (e) -> jCthugha.decreaseKaleidoscope()),
 			new Keybind(',', "Spin waves left", (e) -> jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT)),
 			new Keybind( '.', "Spin waves right", (e) -> jCthugha.wave.autoRotate(AUTO_ROTATE_AMT)),
 			new Keybind('<', "Rotate wave 10 degrees left", (e)-> jCthugha.rotate(-10)),
