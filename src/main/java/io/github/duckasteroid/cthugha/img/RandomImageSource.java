@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.imaging.common.bytesource.ByteSourceInputStream;
 import org.apache.commons.imaging.formats.pcx.PcxImageParser;
+import org.apache.commons.imaging.formats.pcx.PcxImagingParameters;
 
 public class RandomImageSource {
   final Random rnd = new Random();
@@ -30,7 +31,7 @@ public class RandomImageSource {
 
   public BufferedImage loadImage(Path image) throws IOException {
     PcxImageParser parser = new PcxImageParser();
-    Map params = new HashMap<>();
+    PcxImagingParameters params = new PcxImagingParameters();
     try (InputStream is = Files.newInputStream(image)) {
       ByteSourceInputStream source = new ByteSourceInputStream(is, image.toString());
       return parser.getBufferedImage(source, params);
