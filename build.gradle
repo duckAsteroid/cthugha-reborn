@@ -17,6 +17,8 @@ dependencies {
 	implementation 'com.github.wendykierp:JTransforms:3.1:with-dependencies'
 	// Apache lang for primitive array utils
 	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+	// INI file parsing
+	implementation group: 'org.ini4j', name: 'ini4j', version: '0.5.4'
 
 	runtimeOnly 'ch.qos.logback:logback-classic:1.4.8'
 
