@@ -66,7 +66,7 @@ class FastFourierTransformTest {
 
   @Test
   public void simpleTest()
-    throws LineAcquirer.NoSuchLineException, LineUnavailableException, InterruptedException {
+    throws  LineUnavailableException, InterruptedException {
 
     short[] data = testData().collect(ShortCollector.TO_ARRAY);
 
@@ -75,14 +75,6 @@ class FastFourierTransformTest {
     ShortBuffer floatBuffer = encoded.asShortBuffer();
     floatBuffer.put(data);
 
-    AudioFormat sixteenbitMono = new AudioFormat(48000, 16, 1, true, true);
-    SourceDataLine output = LineAcquirer.acquireOutput("Speakers/Headphones.*", sixteenbitMono);
-    output.open(sixteenbitMono, 48000);
-    output.start();
-    output.write(encoded.array(), 0 , data.length * 2);
-    output.drain();
-    output.stop();
-    output.close();
 
   }
 

@@ -19,7 +19,7 @@ public class NotificationRenderer {
 
   private final int fadeThreshold;
   private final int max;
-  private static Font DEFAULT_FONT = new Font("Timrs New Roman", Font.BOLD, 24);
+  private static Font DEFAULT_FONT = new Font("Times New Roman", Font.BOLD, 24);
   private static Color DEFAULT_COLOR = Color.white;
 
   public NotificationRenderer() {

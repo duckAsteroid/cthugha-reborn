@@ -26,7 +26,7 @@ public class Keybind {
   }
 
   public boolean isFired(KeyEvent event) {
-    return character == event.getKeyChar() || (char2 != null && char2.charValue() == event.getKeyChar());
+    return character == event.getKeyChar() || (char2 != null && char2 == event.getKeyChar());
   }
 
   public void handle(KeyEvent event) {

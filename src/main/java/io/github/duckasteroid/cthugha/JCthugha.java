@@ -1,10 +1,13 @@
 package io.github.duckasteroid.cthugha;
 
-import static io.github.duckasteroid.cthugha.stats.Statistics.to2DP;
+
+import static java.lang.Thread.sleep;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
+import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.display.DisplayResolution;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.keys.Keybind;
@@ -12,6 +15,7 @@ import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
+import io.github.duckasteroid.cthugha.strings.StringRenderer;
 import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
 import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.RadialWave;
@@ -38,6 +42,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,6 +58,9 @@ public class JCthugha implements Runnable, Closeable {
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 	public static final double AUTO_ROTATE_AMT = 1;
 
+	public static Config config;
+	private static boolean running = true;
+
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
 	final AudioSource audioSource = new SampledAudioSource();
 	int [] sound;
@@ -61,6 +70,8 @@ public class JCthugha implements Runnable, Closeable {
 	MapFileReader reader;
 
 	Translate translate;
+
+	final Instant started = Instant.now();
 
 	final Flame flame = new Flame();
 
@@ -78,6 +89,8 @@ public class JCthugha implements Runnable, Closeable {
 	RandomTranslateSource translateSource = new RandomTranslateSource();
 
 	RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
+
+	StringRenderer stringRenderer = new StringRenderer();
 
 	BufferStrategy bufferStrategy;
 	private BufferedImage screenImage;
@@ -112,6 +125,9 @@ public class JCthugha implements Runnable, Closeable {
 			// record the refresh rate (how quick this loop runs)
 			frameRate.ping();
 
+			// get the animation clock duration since start
+			final Duration animationClock = Duration.between(started, Instant.now());
+
 			// translate pixels in the screen buffer
 			translate.transform(buffer.pixels, buffer.pixels);
 
@@ -130,6 +146,7 @@ public class JCthugha implements Runnable, Closeable {
 			if (doFFT) {
 				//fft.wave(audioSample, buffer);
 			}
+			stringRenderer.show(buffer);
 
 			// render the buffer onto the screen ready image
 			buffer.render(screenImage);
@@ -223,11 +240,14 @@ public class JCthugha implements Runnable, Closeable {
 	}
 
 	public static void main(String[] args) throws LineUnavailableException, IOException {
+		System.out.println("JCthugha "+System.getProperty ("user.dir"));
+		final String iniFileName = (args.length == 0 ) ? "cthugha.ini" : args[0];
+		config = new Config(iniFileName);
 		GraphicsEnvironment localGraphicsEnvironment =
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
 		DisplayMode displayMode = gd.getDisplayMode();
-		Dimension screenSize = new Dimension(640,480); //
+		Dimension screenSize = DisplayResolution.HD.getDimensions();
 		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
 		System.out.println(screenSize);
 		int fract = 1;
@@ -236,6 +256,8 @@ public class JCthugha implements Runnable, Closeable {
 
 		final JCthugha jCthugha = new JCthugha();
 		final List<Keybind> keybindings = Arrays.asList(
+			new Keybind('!', "Quit", (e)-> running = false),
+			new Keybind('q', "Show a quote on screen", (e) -> jCthugha.showQuote()),
 			new Keybind('a', "Toggle audio source", (e) -> jCthugha.toggleAudioSource()),
 			new Keybind('s', "Toggle speckle wave", (e) -> jCthugha.toggleSpeckle()),
 			new Keybind('n', "Toggle notifications", (e) -> jCthugha.toggleNotifications()),
@@ -271,7 +293,7 @@ public class JCthugha implements Runnable, Closeable {
 				}
 			}));
 
-		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
+		//ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
 
 		//f.add(jCthugha);         //adding a new Button.
 		f.setSize(screenSize.width, screenSize.height);        //setting size.
@@ -284,7 +306,7 @@ public class JCthugha implements Runnable, Closeable {
 		f.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				executorService.shutdownNow();
+				running = false;
 				f.dispose();
 				try {
 					jCthugha.close();
@@ -315,7 +337,23 @@ public class JCthugha implements Runnable, Closeable {
 				cthughaBufferSize.height);
 		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f, keybindings);
 
-		executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
+		Thread mainLoop = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				while(running) {
+					jCthugha.run();
+					Thread.yield();
+				}
+			}
+		});
+		mainLoop.setPriority(Thread.MAX_PRIORITY);
+		mainLoop.start();
+
+		//executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
+	}
+
+	private void showQuote() {
+		stringRenderer.begin();
 	}
 
 	private void toggleNotifications() {
