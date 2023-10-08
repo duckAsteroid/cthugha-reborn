@@ -10,6 +10,8 @@ public class RandomSimulatedAudio implements AudioSource{
   final boolean stereo;
   final short stepSize = Short.MAX_VALUE / 10;
 
+  double amplification = 1.0d;
+
   public RandomSimulatedAudio(boolean stereo) {
     this.stereo = stereo;
   }
@@ -27,7 +29,7 @@ public class RandomSimulatedAudio implements AudioSource{
   public AudioSample sample(final int width) {
     // create new random walk sound
     short[][] sound = new short[width][1];
-    int height = Short.MAX_VALUE;
+    int height = (int)((Short.MAX_VALUE / 2) * amplification);
     sound[0] = new short[]{ nextSample((short) 0, height), nextSample((short) 0, height)};
     for(int i = 1; i < width; i++) {
       sound[i] = new short[] {nextSample(sound[i-1][0], height), nextSample(sound[i-1][1], height)};
@@ -37,12 +39,12 @@ public class RandomSimulatedAudio implements AudioSource{
 
   @Override
   public double getAmplification() {
-    return 1.0d;
+    return amplification;
   }
 
   @Override
   public void setAmplification(double amplification) {
-    // ignored
+    this.amplification = amplification;
   }
 
   private short nextSample(short current, int height) {
