@@ -1,10 +1,11 @@
 package io.github.duckasteroid.cthugha.params;
 
+import java.awt.Dimension;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Predicate;
+import java.util.function.DoublePredicate;
 import java.util.stream.Stream;
 
 public class AffineTransformParams implements Parameterized {
@@ -27,8 +28,8 @@ public class AffineTransformParams implements Parameterized {
   }
 
   @Override
-  public Collection<RuntimeParameter<?>> params() {
-    ArrayList<RuntimeParameter<?>> result = new ArrayList<>(7);
+  public Collection<RuntimeParameter> params() {
+    ArrayList<RuntimeParameter> result = new ArrayList<>(7);
     result.addAll(scale.params());
     result.addAll(shear.params());
     result.addAll(translate.params());
@@ -37,13 +38,13 @@ public class AffineTransformParams implements Parameterized {
     return result;
   }
 
-  private static Predicate<Double> equals(final double expected, final int dp) {
+  private static DoublePredicate equals(final double expected, final int dp) {
     final double factor = Math.pow(10, dp);
     return (actual) -> Math.round(actual * factor) == Math.round(expected * factor);
   }
 
-  public final Predicate<Double> UNITY = equals(1.0, 10);
-  public final Predicate<Double> ZERO = equals(0.0, 10);
+  public final DoublePredicate UNITY = equals(1.0, 10);
+  public final DoublePredicate ZERO = equals(0.0, 10);
 
   public AffineTransform applyTo(AffineTransform transform) {
     if (!scale.is(UNITY)) {
@@ -83,13 +84,20 @@ public class AffineTransformParams implements Parameterized {
     }
 
     @Override
-    public Collection<RuntimeParameter<?>> params() {
+    public Collection<RuntimeParameter> params() {
       return List.of(x, y);
     }
 
-    public boolean is(Predicate<Double> test) {
-      return Stream.of(x, y).map(DoubleParameter::getValue).anyMatch(test);
+    public boolean is(DoublePredicate test) {
+      return Stream.of(x, y)
+        .map(DoubleParameter::getValue)
+        .mapToDouble(Number::doubleValue)
+        .anyMatch(test);
     }
 
+    public void setCenterOf(Dimension dims) {
+      x.setValue(dims.width / 2);
+      y.setValue(dims.height / 2);
+    }
   }
 }

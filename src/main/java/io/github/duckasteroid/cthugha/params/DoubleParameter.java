@@ -3,7 +3,7 @@ package io.github.duckasteroid.cthugha.params;
 /**
  * A value that can be tweaked at runtime
  */
-public class DoubleParameter extends RuntimeParameter<Double> {
+public class DoubleParameter extends RuntimeParameter {
 
   private final double min;
   private final double max;
@@ -25,21 +25,34 @@ public class DoubleParameter extends RuntimeParameter<Double> {
     return Type.DOUBLE;
   }
 
-  public Double getValue() {
+  public Number getValue() {
     return value;
   }
 
-  public void setValue(double value) {
-    this.value = value;
+  public void setValue(Number value) {
+    this.value = value.doubleValue();
   }
 
-  public double getMin() {
+  public Number getMin() {
     return min;
   }
 
-  public double getMax() {
+  public Number getMax() {
     return max;
   }
 
+  public DoubleParameter projection(double min, double max) {
+    return new DoubleParameter(getDescription(), min, max) {
+      @Override
+      public Number getValue() {
+        return DoubleParameter.this.getValue();
+      }
+
+      @Override
+      public void setValue(Number value) {
+        DoubleParameter.this.setValue(value);
+      }
+    };
+  }
 
 }

@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.params;
 
-public class IntegerParameter extends RuntimeParameter<Integer> {
+public class IntegerParameter extends RuntimeParameter {
 
   private final int min;
   private final int max;
@@ -22,19 +22,19 @@ public class IntegerParameter extends RuntimeParameter<Integer> {
     return Type.INTEGER;
   }
 
-  public Integer getValue() {
+  public Number getValue() {
     return value;
   }
 
-  public void setValue(int value) {
-    this.value = value;
+  public void setValue(Number value) {
+    this.value = value.intValue();
   }
 
-  public int getMin() {
+  public Number getMin() {
     return min;
   }
 
-  public int getMax() {
+  public Number getMax() {
     return max;
   }
 

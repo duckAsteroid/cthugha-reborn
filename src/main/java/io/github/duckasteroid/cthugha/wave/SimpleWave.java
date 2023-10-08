@@ -22,16 +22,16 @@ import java.util.stream.IntStream;
  */
 public class SimpleWave implements Wave, Parameterized {
 
-  private final DoubleParameter location = new DoubleParameter("Location of the wave", 0,1, 0.5); // 0 - 1
-  private final DoubleParameter waveHeight = new DoubleParameter("wave height",0,1,1.0); // 1 = norm
+  public final DoubleParameter location = new DoubleParameter("Location of the wave", 0,1, 0.5); // 0 - 1
+  public final DoubleParameter waveHeight = new DoubleParameter("wave height",0,1,1.0); // 1 = norm
 
-  private final AffineTransformParams transformParams = new AffineTransformParams("Simple wave");
-  private final BooleanParameter stereo = new BooleanParameter("Stereo", true);
+  public final AffineTransformParams transformParams = new AffineTransformParams("Wave transform");
+  public final BooleanParameter stereo = new BooleanParameter("Stereo", true);
 
-  private Stroke stroke = new BasicStroke(2f);
+  public final DoubleParameter strokeWidth = new DoubleParameter("Stroke width", 1.0, 24.0, 2.0);
 
   public SimpleWave wave(int size) {
-    this.stroke = new BasicStroke(size);
+    this.strokeWidth.setValue(size); ;
     return this;
   }
 
@@ -61,8 +61,8 @@ public class SimpleWave implements Wave, Parameterized {
   }
 
   @Override
-  public Collection<RuntimeParameter<?>> params() {
-    return List.of(location, waveHeight, stereo);
+  public Collection<RuntimeParameter> params() {
+    return List.of(location, waveHeight, stereo, strokeWidth);
   }
 
   public void wave(AudioSample sound, ScreenBuffer buffer) {
@@ -80,6 +80,7 @@ public class SimpleWave implements Wave, Parameterized {
       .map(sample -> (int)(buffer.height * realLocation) +
         AudioBuffer.transpose((short)sample, (int)(buffer.height * (1 - location.value))))
       .toArray();
+    Stroke stroke = new BasicStroke((float) strokeWidth.value);
     graphics.setStroke(stroke);
     graphics.drawPolyline(xs, y1s, xs.length);
     if (stereo.value) {

@@ -5,6 +5,7 @@ import static java.lang.Thread.sleep;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
+import io.github.duckasteroid.cthugha.audio.io.RandomSimulatedAudio;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.DisplayResolution;
@@ -13,6 +14,9 @@ import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
+import io.github.duckasteroid.cthugha.params.animation.Animator;
+import io.github.duckasteroid.cthugha.params.animation.LinearAnimator;
+import io.github.duckasteroid.cthugha.params.animation.SineAnimator;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.StringRenderer;
@@ -46,9 +50,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.LineUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +59,16 @@ public class JCthugha implements Runnable, Closeable {
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 	public static final double AUTO_ROTATE_AMT = 1;
 
+	private final Animator linearAnimator = new LinearAnimator(Duration.ofSeconds(2));
+	private final Animator sineAnimator = new SineAnimator(0, Duration.ofSeconds(20));
+	private final Animator sineAnimator2 = new SineAnimator(0, Duration.ofSeconds(10));
+	private final Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
+
 	public static Config config;
 	private static boolean running = true;
 
-	//final AudioSource audioSource = new RandomSimulatedAudio(true);
-	final AudioSource audioSource = new SampledAudioSource();
+	final AudioSource audioSource = new RandomSimulatedAudio(true);
+	//final AudioSource audioSource = new SampledAudioSource();
 	int [] sound;
 
 	ScreenBuffer buffer;
@@ -110,6 +116,7 @@ public class JCthugha implements Runnable, Closeable {
 		this.bufferStrategy = bufferStrategy;
 		this.screenImage = screenImage;
 		this.window = window;
+		this.wave.transformParams.rotateCenter.setCenterOf(dims);
 		sound = new int[dims.width];
 		buffer = new ScreenBuffer(dims.width, dims.height);
 		translate = new Translate(dims, translateSource.generate(dims, true));
@@ -118,6 +125,12 @@ public class JCthugha implements Runnable, Closeable {
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
+		//linearAnimator.addTarget(wave.strokeWidth);
+		sineAnimator.addTarget(wave.transformParams.rotate);
+		sineAnimator2.addTarget(stringRenderer.transformParams.shear.x.projection(-.1,+.1));
+		sineAnimator3.addTarget(stringRenderer.transformParams.shear.y.projection(-.2,+.2));
+		sineAnimator2.addTarget(stringRenderer.transformParams.scale.x.projection(.5,1.5));
+		sineAnimator3.addTarget(stringRenderer.transformParams.scale.y.projection(.5,1.5));
 	}
 
 	public synchronized void run() {
@@ -127,6 +140,11 @@ public class JCthugha implements Runnable, Closeable {
 
 			// get the animation clock duration since start
 			final Duration animationClock = Duration.between(started, Instant.now());
+
+			linearAnimator.doAnimation(animationClock);
+			sineAnimator.doAnimation(animationClock);
+			sineAnimator2.doAnimation(animationClock);
+			sineAnimator3.doAnimation(animationClock);
 
 			// translate pixels in the screen buffer
 			translate.transform(buffer.pixels, buffer.pixels);
@@ -179,6 +197,8 @@ public class JCthugha implements Runnable, Closeable {
 		renderDebugString(g2d, "window="+new Dimension(window.getWidth(), window.getHeight())+"; buffer="+buffer.getDimensions(), y);
 		y+=fontHeight;
 		renderDebugString(g2d, translateSource.getLastGenerated(),  y);
+		y+=fontHeight;
+		renderDebugString(g2d, wave.strokeWidth.toString(), y);
 		y+=fontHeight;
 		renderDebugString(g2d, buffer.paletteMap.getName(), y);
 		y+=fontHeight;
