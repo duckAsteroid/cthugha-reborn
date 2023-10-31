@@ -19,6 +19,7 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.util.Random;
+import java.util.concurrent.Executors;
 import javax.swing.JFrame;
 
 public class ImageTest {
@@ -63,7 +64,7 @@ public class ImageTest {
     Dimension d = new Dimension(w,h);
     int[] table = new Spiral().generate(d);
 
-    Translate translate = new Translate(d, table);
+    Translate translate = new Translate( d, table);
 
     running = true;
     Random random = new Random();

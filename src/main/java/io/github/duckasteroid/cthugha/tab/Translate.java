@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.tab;
 
 import java.awt.Dimension;
+import java.util.stream.IntStream;
 
 /**
  * Performs pixel transforms on the screen buffer
@@ -37,10 +38,10 @@ public class Translate {
     } else{
       copy = source;
     }
-    for(int i = 0 ; i < source.length; i++) {
+    IntStream.range(0, source.length).parallel().forEach(i -> {
       int safePtr = Math.max(0, Math.min(table[i], source.length));
       destination[i] = copy[safePtr];
-    }
+    });
   }
 
   public void changeTable(int[] newTable) {

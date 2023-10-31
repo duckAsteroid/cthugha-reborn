@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.github.duckasteroid.cthugha.tab.Translate;
 import java.awt.Dimension;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 
 class TranslateTest {
@@ -28,13 +30,14 @@ class TranslateTest {
 
   //@Test
   void transform() {
-    Translate subject = new Translate(testDims, noop);
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    Translate subject = new Translate(executorService, testDims, noop);
     byte[] src = source();
     byte[] dest = empty();
     subject.transform(src,dest);
     assertArrayEquals(src, dest);
 
-    subject = new Translate(testDims, example);
+    subject = new Translate(executorService, testDims, example);
     subject.transform(src, dest);
     assertArrayEquals(new byte[]{2,3,6,  5,1,9,  4,7,8}, dest);
   }

@@ -1,11 +1,11 @@
 package io.github.duckasteroid.cthugha;
 
-import static io.github.duckasteroid.cthugha.stats.Statistics.to2DP;
-
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
+import io.github.duckasteroid.cthugha.flame.ConvolveOpFlame;
 import io.github.duckasteroid.cthugha.flame.Flame;
+import io.github.duckasteroid.cthugha.flame.JavaFlame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
@@ -40,6 +40,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +53,8 @@ public class JCthugha implements Runnable, Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 	public static final double AUTO_ROTATE_AMT = 1;
+	public final static int THREADS = 16;
+	private static final ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
 	final AudioSource audioSource = new SampledAudioSource();
@@ -62,7 +66,7 @@ public class JCthugha implements Runnable, Closeable {
 
 	Translate translate;
 
-	final Flame flame = new Flame();
+	final Flame flame = new JavaFlame();
 
 	final SimpleWave wave = new SimpleWave();
 	//final Wave wave = new VibratingCircleWave();
@@ -227,7 +231,7 @@ public class JCthugha implements Runnable, Closeable {
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
 		DisplayMode displayMode = gd.getDisplayMode();
-		Dimension screenSize = new Dimension(640,480); //
+		Dimension screenSize = new Dimension(1549,829); //
 		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
 		System.out.println(screenSize);
 		int fract = 1;

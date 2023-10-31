@@ -54,4 +54,5 @@ application {
 run {
 	workingDir = file("src/dist")
 	systemProperty("cthugha.stats.enabled", "true")
+	systemProperty("sun.java2d.opengl", "true")
 }
