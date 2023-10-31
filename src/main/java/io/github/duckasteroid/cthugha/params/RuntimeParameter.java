@@ -7,7 +7,7 @@ import java.util.function.Predicate;
 public abstract class RuntimeParameter {
   protected final static Random random = new Random();
   public enum Type {
-    BOOLEAN, DOUBLE, INTEGER
+    BOOLEAN, DOUBLE, INTEGER, LONG, ENUM
   }
   private final String description;
 

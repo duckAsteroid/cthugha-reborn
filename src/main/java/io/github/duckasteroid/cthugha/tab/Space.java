@@ -2,20 +2,23 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.abs;
 
+import io.github.duckasteroid.cthugha.params.BooleanParameter;
+import io.github.duckasteroid.cthugha.params.IntegerParameter;
+import io.github.duckasteroid.cthugha.params.LongParameter;
 import java.awt.Dimension;
 import java.util.Random;
 
 public class Space extends TranslateTableSource {
 
-  private boolean reverse = false;
-  private int Randomness = 70;
-  private long speed = 100;
+  public BooleanParameter reverse = new BooleanParameter("Reverse", true);
+  public IntegerParameter randomness = new IntegerParameter("Randomness", 0, 250);
+  public LongParameter speed = new LongParameter("Speed", 1, 100, 2);
 
   @Override
   public void randomiseParameters() {
-    reverse = rnd.nextBoolean();
-    speed = Random(100);
-    Randomness = Random(250);
+    reverse.randomise();
+    speed.randomise();
+    randomness.randomise();
   }
 
   @Override
@@ -28,22 +31,14 @@ public class Space extends TranslateTableSource {
         int dx = x - (size.width / 2);
         int dy = y - (size.height / 2);
 
-        if (!reverse && abs(dx) < 30 && abs(dy) < 20 &&
+        if (!reverse.value && abs(dx) < 30 && abs(dy) < 20 &&
           Random(abs(dx) + abs(dy)) < 4) {
           map_x = Random(size.width);
           map_y = Random(size.height);
         } else {
-          int speedFactor;
-          long sp;
+          long sp = speed.value;
 
-          if (Randomness == 0)
-            sp = speed;
-          else {
-            speedFactor = Random(Randomness + 1) - Randomness / 3;
-            sp = speed * (100L + speedFactor) / 100L;
-          }
-
-          if (reverse)
+          if (reverse.value)
             sp = (-sp);
 
           map_x = (int) (x - (dx * sp) / 700);
@@ -66,9 +61,7 @@ public class Space extends TranslateTableSource {
   @Override
   public String toString() {
     return "Space{" +
-      "reverse=" + reverse +
-      ", Randomness=" + Randomness +
-      ", speed=" + speed +
+      reverse + randomness + speed +
       '}';
   }
 }

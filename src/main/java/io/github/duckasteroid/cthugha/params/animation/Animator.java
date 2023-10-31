@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -13,9 +14,9 @@ import java.util.List;
  */
 public abstract class Animator {
 
-  private static final long NANOS_PER_SECOND = Duration.ofSeconds(1).toNanos();
+  public static final long NANOS_PER_SECOND = Duration.ofSeconds(1).toNanos();
   protected final BigDecimal animationTime;
-  private final List<RuntimeParameter> targets = new ArrayList<>();
+  private final List<RuntimeParameter> targets = Collections.synchronizedList(new ArrayList<>());
 
   protected Animator(Duration animationTime) {
     this.animationTime = asDecimal(animationTime);

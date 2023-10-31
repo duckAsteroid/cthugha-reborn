@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * Interface to a thing that has runtime tuneable parameters
+ * Interface to a thing that has runtime tunable parameters
  */
 public interface Parameterized {
   String getName();

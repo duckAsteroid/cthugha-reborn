@@ -9,10 +9,15 @@ import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.DisplayResolution;
 import io.github.duckasteroid.cthugha.flame.Flame;
+import io.github.duckasteroid.cthugha.flame.JavaFlame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
+import io.github.duckasteroid.cthugha.params.animation.Animator;
+import io.github.duckasteroid.cthugha.params.animation.AnimatorPool;
+import io.github.duckasteroid.cthugha.params.animation.LinearAnimator;
+import io.github.duckasteroid.cthugha.params.animation.SineAnimator;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.StringRenderer;
@@ -44,6 +49,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -53,16 +59,15 @@ import javax.sound.sampled.LineUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JCthugha implements Runnable, Closeable {
+public class JCthugha implements Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 	public static final double AUTO_ROTATE_AMT = 1;
 
-	private final Animator linearAnimator = new LinearAnimator(Duration.ofSeconds(2));
-	private final Animator sineAnimator = new SineAnimator(0, Duration.ofSeconds(20));
-	private final Animator sineAnimator2 = new SineAnimator(0, Duration.ofSeconds(10));
-	private final Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
+	private final AnimatorPool animatorPool = new AnimatorPool();
 
+	public static final int FPS = 60;
+	public static final Duration desiredDuration = Duration.of(Animator.NANOS_PER_SECOND / FPS, ChronoUnit.NANOS);
 	public static Config config;
 	private static boolean running = true;
 
@@ -125,25 +130,33 @@ public class JCthugha implements Runnable, Closeable {
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
 		//linearAnimator.addTarget(wave.strokeWidth);
+		Animator linearAnimator = new LinearAnimator(Duration.ofSeconds(2));
+		Animator sineAnimator = new SineAnimator(0, Duration.ofSeconds(20));
+		Animator sineAnimator2 = new SineAnimator(0, Duration.ofSeconds(10));
+		Animator sineAnimatorStroke = new SineAnimator(0, Duration.ofSeconds(15));
+		Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
 		sineAnimator.addTarget(wave.transformParams.rotate);
 		sineAnimator2.addTarget(stringRenderer.transformParams.shear.x.projection(-.1,+.1));
 		sineAnimator3.addTarget(stringRenderer.transformParams.shear.y.projection(-.2,+.2));
 		sineAnimator2.addTarget(stringRenderer.transformParams.scale.x.projection(.5,1.5));
 		sineAnimator3.addTarget(stringRenderer.transformParams.scale.y.projection(.5,1.5));
+		sineAnimatorStroke.addTarget(wave.strokeWidth);
+		animatorPool.put("s1", sineAnimator);
+		animatorPool.put("s2", sineAnimator2);
+		animatorPool.put("s3", sineAnimator3);
+		animatorPool.put("s4", sineAnimatorStroke);
 	}
 
-	public synchronized void run() {
+	public synchronized Duration doRender() {
+		// get the animation clock duration since start
+		final Instant start = Instant.now();
+
 		try {
 			// record the refresh rate (how quick this loop runs)
 			frameRate.ping();
 
-			// get the animation clock duration since start
-			final Duration animationClock = Duration.between(started, Instant.now());
-
-			linearAnimator.doAnimation(animationClock);
-			sineAnimator.doAnimation(animationClock);
-			sineAnimator2.doAnimation(animationClock);
-			sineAnimator3.doAnimation(animationClock);
+			// let animators do their thing
+			animatorPool.doAnimation(Duration.between(started, start));
 
 			// translate pixels in the screen buffer
 			translate.transform(buffer.pixels, buffer.pixels);
@@ -183,6 +196,7 @@ public class JCthugha implements Runnable, Closeable {
 		} catch(Throwable t) {
 			LOG.error("Processing main loop", t);
 		}
+		return Duration.between(start, Instant.now());
 	}
 
 	private void renderDebugInfo(Graphics g2d) {
@@ -360,8 +374,16 @@ public class JCthugha implements Runnable, Closeable {
 			@Override
 			public void run() {
 				while(running) {
-					jCthugha.run();
-					Thread.yield();
+					Duration taken = jCthugha.doRender();
+					Duration wait = desiredDuration.minus(taken);
+					long sleepFor = wait.toMillis();
+					if (sleepFor > 10) {
+						try {
+							sleep(sleepFor);
+						} catch (InterruptedException e) {
+							running = false;
+						}
+					}
 				}
 			}
 		});

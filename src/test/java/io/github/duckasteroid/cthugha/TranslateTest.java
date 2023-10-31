@@ -30,14 +30,13 @@ class TranslateTest {
 
   //@Test
   void transform() {
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
-    Translate subject = new Translate(executorService, testDims, noop);
+    Translate subject = new Translate( testDims, noop);
     byte[] src = source();
     byte[] dest = empty();
     subject.transform(src,dest);
     assertArrayEquals(src, dest);
 
-    subject = new Translate(executorService, testDims, example);
+    subject = new Translate( testDims, example);
     subject.transform(src, dest);
     assertArrayEquals(new byte[]{2,3,6,  5,1,9,  4,7,8}, dest);
   }
