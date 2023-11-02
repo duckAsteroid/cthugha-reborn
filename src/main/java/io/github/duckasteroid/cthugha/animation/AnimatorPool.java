@@ -1,10 +1,8 @@
-package io.github.duckasteroid.cthugha.params.animation;
+package io.github.duckasteroid.cthugha.animation;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 public class AnimatorPool {

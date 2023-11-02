@@ -3,6 +3,10 @@ package io.github.duckasteroid.cthugha.params;
 public class BooleanParameter extends RuntimeParameter {
   public boolean value;
 
+  public BooleanParameter(String name) {
+    this(name, true);
+  }
+
   public BooleanParameter(String name, boolean b) {
     super(name);
     this.value = b;

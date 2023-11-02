@@ -36,7 +36,6 @@ public interface AudioSource extends Closeable {
     return getSourceNames().get(getSourceIndex());
   }
 
-  double getAmplification();
-
-  void setAmplification(double amplification);
+  default double getAmplitude() { return 1.0; }
+  default void setAmplitude(double amplitude) {}
 }

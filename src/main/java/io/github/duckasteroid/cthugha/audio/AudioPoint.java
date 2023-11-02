@@ -7,8 +7,10 @@ package io.github.duckasteroid.cthugha.audio;
  */
 public class AudioPoint {
   final short[] sample;
+  public final int index;
 
-  public AudioPoint(short[] sample) {
+  public AudioPoint(int index, short[] sample) {
+    this.index = index;
     this.sample = sample;
   }
 
@@ -16,13 +18,15 @@ public class AudioPoint {
     return ch.value(sample);
   }
 
-  public double normalised(PointValueExtractor ch) {
-    return (double) Short.MAX_VALUE / ch.value(sample);
+  public static double normalise(short value) {
+    return  (double) value / (double) Short.MAX_VALUE;
   }
 
-  public int ranged(Channel ch, int min, int max) {
-    int range = max - min;
-    double extent = normalised(ch) * range;
-    return min + (int) extent;
+  public static int transpose(short value, int fsd) {
+    return (int)(normalise(value) * fsd);
   }
+  public double normalised(PointValueExtractor ch) {
+    return normalise(value(ch));
+  }
+
 }

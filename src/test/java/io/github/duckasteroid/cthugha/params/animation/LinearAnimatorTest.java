@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.params.animation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.github.duckasteroid.cthugha.animation.LinearAnimator;
 import java.math.BigDecimal;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;

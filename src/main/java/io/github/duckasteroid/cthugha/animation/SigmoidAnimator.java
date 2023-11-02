@@ -1,7 +1,6 @@
-package io.github.duckasteroid.cthugha.params.animation;
+package io.github.duckasteroid.cthugha.animation;
 
 import io.github.duckasteroid.cthugha.params.Fraction;
-import java.io.FileReader;
 import java.math.BigDecimal;
 import java.time.Duration;
 

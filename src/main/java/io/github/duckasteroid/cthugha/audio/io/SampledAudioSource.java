@@ -75,16 +75,6 @@ public class SampledAudioSource implements AudioSource {
   }
 
   @Override
-  public double getAmplification() {
-    return buffer.getAmplification();
-  }
-
-  @Override
-  public void setAmplification(double amplification) {
-    buffer.setAmplification(amplification);
-  }
-
-  @Override
   public AudioSample sample(int length) {
     return buffer.readFrom(openLine, length);
   }

@@ -5,14 +5,10 @@ import io.github.duckasteroid.cthugha.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AffineTransformParams;
 import io.github.duckasteroid.cthugha.params.Parameterized;
 import io.github.duckasteroid.cthugha.params.RuntimeParameter;
-import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.geom.AffineTransform;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -27,7 +23,7 @@ public class StringRenderer implements Parameterized {
   private final RandomStringSource stringSource = new RandomStringSource();
 
   private Instant end;
-  private RandomStringSource.Quote quote = null;
+  private Quote quote = null;
   private Font font;
 
   public final AffineTransformParams transformParams = new AffineTransformParams("Transform");
@@ -43,7 +39,7 @@ public class StringRenderer implements Parameterized {
       graphics.setColor(buffer.getForegroundColor());
 
       AffineTransform tx = graphics.getTransform();
-      tx = transformParams.applyTo(tx);
+      tx = transformParams.applyTo(buffer.getDimensions(), tx);
       graphics.setTransform(tx);
       graphics.drawChars(chars,0, chars.length,100 , 100 + height);
 

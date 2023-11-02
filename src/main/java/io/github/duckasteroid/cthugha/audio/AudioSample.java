@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.audio;
 
+import java.nio.ShortBuffer;
 import java.util.Arrays;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -9,39 +10,30 @@ import java.util.stream.Stream;
  * A batch of audio data read from the IO source
  */
 public class AudioSample {
-  public final short[][] samples;
-  public final boolean mono;
+  public final ShortBuffer backBuffer;
+  public final int channels;
+  private final double amplification;
 
-  public AudioSample(short[][] samples, boolean mono) {
-    this.samples = samples;
-    this.mono = mono;
-  }
-
-  public Stream<short[]> stream() {
-    return Arrays.stream(samples);
+  public AudioSample(ShortBuffer samples, boolean mono, double amplification) {
+    this.backBuffer = samples;
+    this.channels = mono ? 1 : 2;
+    this.amplification = amplification;
   }
 
   public Stream<AudioPoint> streamPoints() {
-    return stream().map(AudioPoint::new);
-  }
-
-  public IntStream streamIntegerPoints(Channel ch) {
-    return streamPoints().mapToInt(pt -> pt.value(ch));
-  }
-
-  public DoubleStream streamDoublePoints(PointValueExtractor ch) {
-    return streamPoints().mapToDouble(pt -> pt.value(ch));
-  }
-
-  public Stream<short[]> stream(int maxLength) {
-    if (maxLength > samples.length) {
-      return Stream.empty();
-    }
-    return Stream.of(samples).limit(maxLength);
+    final ShortBuffer projection = backBuffer.slice().asReadOnlyBuffer();
+    int size = projection.remaining() / channels;
+    return IntStream.range(0, size).mapToObj(index -> {
+      short[] sampleData = new short[channels];
+      for (int s = 0; s < sampleData.length; s++) {
+        sampleData[s] = (short) (projection.get((index * channels) + s) * amplification);
+      }
+      return new AudioPoint(index, sampleData);
+    });
   }
 
   public Stream<AudioPoint> streamPoints(int maxLength) {
-    return stream(maxLength).map(AudioPoint::new);
+    return streamPoints().limit(maxLength);
   }
 
   public DoubleStream streamDoublePoints(int maxLength, PointValueExtractor ch) {
@@ -53,5 +45,9 @@ public class AudioSample {
       .mapToInt(pt -> pt.value(channel))
       .mapToDouble(i -> Math.sqrt(i * i))
       .average().orElse(0.0);
+  }
+
+  public int size() {
+    return backBuffer.remaining() / channels;
   }
 }

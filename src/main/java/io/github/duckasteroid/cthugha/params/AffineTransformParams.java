@@ -1,12 +1,11 @@
 package io.github.duckasteroid.cthugha.params;
 
 import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.function.DoublePredicate;
-import java.util.stream.Stream;
 
 public class AffineTransformParams implements Parameterized {
   public static final double MIN = Double.MIN_VALUE;
@@ -17,7 +16,7 @@ public class AffineTransformParams implements Parameterized {
   public final XYParam translate = new XYParam("Translation", MIN, MAX, 0.0);
   public final DoubleParameter rotate = new DoubleParameter("Rotation in radians", 0, 2 * Math.PI);
 
-  public final XYParam rotateCenter = new XYParam("Rotation center point", MIN, MAX, 0);
+  public final XYParam rotateCenter = new XYParam("Rotation center point", 0, 1, 0);
   public AffineTransformParams(String name) {
     this.name = name;
   }
@@ -46,7 +45,7 @@ public class AffineTransformParams implements Parameterized {
   public final DoublePredicate UNITY = equals(1.0, 10);
   public final DoublePredicate ZERO = equals(0.0, 10);
 
-  public AffineTransform applyTo(AffineTransform transform) {
+  public AffineTransform applyTo(Dimension dim, AffineTransform transform) {
     if (!scale.is(UNITY)) {
       transform.scale(scale.x.value, scale.y.value);
     }
@@ -57,47 +56,10 @@ public class AffineTransformParams implements Parameterized {
       transform.shear(shear.x.value, shear.y.value);
     }
     if (rotate.value % 2 * Math.PI != 0.0) {
-      transform.rotate(rotate.value, rotateCenter.x.value, rotateCenter.y.value);
+      Point rotateCenterPoint = rotateCenter.pixelLocation(dim);
+      transform.rotate(rotate.value, rotateCenterPoint.x, rotateCenterPoint.y);
     }
     return transform;
   }
 
-  public static class XYParam implements Parameterized {
-    private final String name;
-    public final DoubleParameter x;
-    public final DoubleParameter y;
-
-    public XYParam(String name) {
-      this(name, 0, 1, 0);
-    }
-
-
-    public XYParam(String name, double min, double max, double value) {
-      this.name = name;
-      this.x = new DoubleParameter("X", min, max, value);
-      this.y = new DoubleParameter("Y", min, max, value);
-    }
-
-    @Override
-    public String getName() {
-      return name;
-    }
-
-    @Override
-    public Collection<RuntimeParameter> params() {
-      return List.of(x, y);
-    }
-
-    public boolean is(DoublePredicate test) {
-      return Stream.of(x, y)
-        .map(DoubleParameter::getValue)
-        .mapToDouble(Number::doubleValue)
-        .anyMatch(test);
-    }
-
-    public void setCenterOf(Dimension dims) {
-      x.setValue(dims.width / 2);
-      y.setValue(dims.height / 2);
-    }
-  }
 }

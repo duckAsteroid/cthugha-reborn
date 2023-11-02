@@ -2,7 +2,9 @@ package io.github.duckasteroid.cthugha.wave;
 
 import io.github.duckasteroid.cthugha.ScreenBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.audio.AudioPoint;
 import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.Channel;
 import io.github.duckasteroid.cthugha.params.AffineTransformParams;
 import io.github.duckasteroid.cthugha.params.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.Parameterized;
@@ -22,11 +24,10 @@ import java.util.stream.IntStream;
  */
 public class SimpleWave implements Wave, Parameterized {
 
-  public final DoubleParameter location = new DoubleParameter("Location of the wave", 0,1, 0.5); // 0 - 1
+  public final DoubleParameter location = new DoubleParameter("Relative screen location of the wave as a fraction of height", 0,1, 0.5); // 0 - 1
   public final DoubleParameter waveHeight = new DoubleParameter("wave height",0,1,1.0); // 1 = norm
 
   public final AffineTransformParams transformParams = new AffineTransformParams("Wave transform");
-  public final BooleanParameter stereo = new BooleanParameter("Stereo", true);
 
   public final DoubleParameter strokeWidth = new DoubleParameter("Stroke width", 1.0, 24.0, 2.0);
 
@@ -51,7 +52,7 @@ public class SimpleWave implements Wave, Parameterized {
   }
 
   public SimpleWave autoRotate(double delta) {
-    // use animations!
+    // FIXME use animations!
     return this;
   }
 
@@ -62,51 +63,52 @@ public class SimpleWave implements Wave, Parameterized {
 
   @Override
   public Collection<RuntimeParameter> params() {
-    return List.of(location, waveHeight, stereo, strokeWidth);
+    return List.of(location, waveHeight, strokeWidth);
   }
 
-  public void wave(AudioSample sound, ScreenBuffer buffer) {
+  public void wave(final AudioSample sound, final ScreenBuffer buffer) {
     Graphics2D graphics = buffer.getGraphics();
     //graphics.clearRect(0,0, buffer.width, buffer.height);
     graphics.setColor(buffer.getForegroundColor());
-    AffineTransform transform = transformParams.applyTo(graphics.getTransform());
-
+    AffineTransform transform = transformParams.applyTo(buffer.getDimensions(), graphics.getTransform());
     graphics.transform(transform);
-    int[] xs = IntStream.range(0, sound.samples.length).toArray();
-    final double realLocation = stereo.value ? location.value / 2 : location.value;
-    int[] y1s = Arrays.stream(sound.samples)
-      .mapToInt(sample -> sample[0])
-      .map(sample -> Math.min(Short.MAX_VALUE, (int)(sample * waveHeight.value)))
-      .map(sample -> (int)(buffer.height * realLocation) +
-        AudioBuffer.transpose((short)sample, (int)(buffer.height * (1 - location.value))))
-      .toArray();
+    final double realLocation = location.value / 2;
+
+    int[] xs = new int[sound.size()];
+    int[] y1s = new int[sound.size()];
+    int[] y2s = new int[sound.size()];
+    // copy data from sample into X/Y arrays
+    sound.streamPoints()
+      .map(sample -> screenYs(buffer, realLocation, location.value, waveHeight.value, sample))
+      .forEach(point -> {
+        int index = point[0];
+        xs[index] = index;
+        y1s[index] = point[1];
+        y2s[index] = point[2];
+      });
+
     Stroke stroke = new BasicStroke((float) strokeWidth.value);
     graphics.setStroke(stroke);
     graphics.drawPolyline(xs, y1s, xs.length);
-    if (stereo.value) {
-      int[] y2s = Arrays.stream(sound.samples)
-        .mapToInt(sample -> sample[1])
-        .map(sample -> Math.min(Short.MAX_VALUE, (int) (sample * waveHeight.value)))
-        .map(sample -> (int) (buffer.height * (1-realLocation)) +
-          AudioBuffer.transpose((short) sample, (int) (buffer.height * (1 - location.value))))
-        .toArray();
-      graphics.drawPolyline(xs, y2s, xs.length);
-    }
+    graphics.drawPolyline(xs, y2s, xs.length);
     graphics.dispose();
   }
 
-  public void wave3(AudioSample sound, ScreenBuffer buffer) {
-    Arrays.fill(buffer.pixels, (byte) 0);
-    //graphics.transform(AffineTransform.getRotateInstance(Math.toRadians(rotationAngle)));
-    int[] xs = IntStream.range(0, sound.samples.length).toArray();
-    int[] ys = Arrays.stream(sound.samples)
-      .mapToInt(sample -> sample[0])
-      .map(sample -> (buffer.height / 2 ) + AudioBuffer.transpose((short)sample, buffer.height / 2))
-      .toArray();
-    for (int i= 0; i < ys.length; i++) {
-      buffer.pixels[buffer.index(xs[i], ys[i])] = (byte)0xFF;
-    }
-  }
 
+  // 3 D array of X, Y1 and Y2
+  public static int[] screenYs(final ScreenBuffer buffer, double realLocation, double location, double waveHeight, AudioPoint sample) {
+
+    return new int[]{
+      sample.index,
+      (int)(buffer.height * realLocation) +
+        AudioPoint.transpose(
+          (short) Math.min(Short.MAX_VALUE, sample.value(Channel.LEFT) * waveHeight),
+          (int)(buffer.height * (location))),
+      (int)(buffer.height * (1 - realLocation)) +
+        AudioPoint.transpose(
+          (short) Math.min(Short.MAX_VALUE, sample.value(Channel.RIGHT) * waveHeight),
+          (int)(buffer.height * (1 - location)))
+      };
+  }
 
 }

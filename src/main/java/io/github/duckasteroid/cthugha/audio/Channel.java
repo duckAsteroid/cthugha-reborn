@@ -14,7 +14,7 @@ public enum Channel implements PointValueExtractor {
     }
   },
   /**
-   * Extracts the right channel from a (stereo) audio
+   * Extracts the right channel from a (stereo) audio (if available)
    */
   RIGHT {
     @Override

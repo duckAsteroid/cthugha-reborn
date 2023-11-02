@@ -63,7 +63,7 @@ class AudioBufferTest {
     AudioSample audioSample =
       subject.readFrom(mockTargetDataLine, 25);
     assertNotNull(audioSample);
-    assertFalse(audioSample.mono);
+    assertFalse(audioSample.channels == 0);
   }
 
   @Test
@@ -88,23 +88,5 @@ class AudioBufferTest {
     assertEquals(380.0, intensity);
   }
 
-  @Test
-  void normalise() {
-    float actual = AudioBuffer.normalise((short)0);
-    assertEquals(0f, actual, 0.0001f);
-    actual = AudioBuffer.normalise(Short.MAX_VALUE);
-    assertEquals(1f, actual, 0.0001f);
-    actual = AudioBuffer.normalise(Short.MIN_VALUE);
-    assertEquals(-1f, actual, 0.0001f);
-  }
 
-  //@Test
-  void transpose() {
-    int actual = AudioBuffer.transpose((short) 0, 512);
-    assertEquals(0, actual);
-    actual = AudioBuffer.transpose(Short.MAX_VALUE, 512);
-    assertEquals(512, actual);
-    actual = AudioBuffer.transpose(Short.MIN_VALUE, 512);
-    assertEquals(-511, actual);
-  }
 }

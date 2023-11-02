@@ -6,6 +6,7 @@ import static java.lang.Thread.sleep;
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
+import io.github.duckasteroid.cthugha.audio.io.SimulatedFrequenciesAudioSource;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.DisplayResolution;
 import io.github.duckasteroid.cthugha.flame.Flame;
@@ -13,11 +14,12 @@ import io.github.duckasteroid.cthugha.flame.JavaFlame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
+import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
-import io.github.duckasteroid.cthugha.params.animation.Animator;
-import io.github.duckasteroid.cthugha.params.animation.AnimatorPool;
-import io.github.duckasteroid.cthugha.params.animation.LinearAnimator;
-import io.github.duckasteroid.cthugha.params.animation.SineAnimator;
+import io.github.duckasteroid.cthugha.animation.Animator;
+import io.github.duckasteroid.cthugha.animation.AnimatorPool;
+import io.github.duckasteroid.cthugha.animation.LinearAnimator;
+import io.github.duckasteroid.cthugha.animation.SineAnimator;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.StringRenderer;
@@ -52,9 +54,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import javax.sound.sampled.LineUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,8 +71,8 @@ public class JCthugha implements Closeable {
 	private static boolean running = true;
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
-	final AudioSource audioSource = new SampledAudioSource();
-	int [] sound;
+	//final AudioSource audioSource = new SampledAudioSource();
+	final AudioSource audioSource = new SimulatedFrequenciesAudioSource();
 
 	ScreenBuffer buffer;
 
@@ -121,7 +120,7 @@ public class JCthugha implements Closeable {
 		this.screenImage = screenImage;
 		this.window = window;
 		this.wave.transformParams.rotateCenter.setCenterOf(dims);
-		sound = new int[dims.width];
+
 		buffer = new ScreenBuffer(dims.width, dims.height);
 		translate = new Translate(dims, translateSource.generate(dims, true));
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
@@ -130,12 +129,11 @@ public class JCthugha implements Closeable {
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
 		//linearAnimator.addTarget(wave.strokeWidth);
-		Animator linearAnimator = new LinearAnimator(Duration.ofSeconds(2));
 		Animator sineAnimator = new SineAnimator(0, Duration.ofSeconds(20));
 		Animator sineAnimator2 = new SineAnimator(0, Duration.ofSeconds(10));
 		Animator sineAnimatorStroke = new SineAnimator(0, Duration.ofSeconds(15));
 		Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
-		sineAnimator.addTarget(wave.transformParams.rotate);
+		//sineAnimator.addTarget(wave.transformParams.rotate);
 		sineAnimator2.addTarget(stringRenderer.transformParams.shear.x.projection(-.1,+.1));
 		sineAnimator3.addTarget(stringRenderer.transformParams.shear.y.projection(-.2,+.2));
 		sineAnimator2.addTarget(stringRenderer.transformParams.scale.x.projection(.5,1.5));
@@ -205,7 +203,7 @@ public class JCthugha implements Closeable {
 		int fontHeight = g2d.getFontMetrics().getHeight();
 		renderDebugString(g2d, frameRate.getFrameRate(), y);
 		y+=fontHeight;
-		renderDebugString(g2d, "Amplifier: "+(audioSource.getAmplification() * 100), y);
+		renderDebugString(g2d, "Amplifier: "+(audioSource.getAmplitude() * 100), y);
 		y+=fontHeight;
 		renderDebugString(g2d, "window="+new Dimension(window.getWidth(), window.getHeight())+"; buffer="+buffer.getDimensions(), y);
 		y+=fontHeight;
@@ -239,8 +237,8 @@ public class JCthugha implements Closeable {
 	}
 
 	public void changeAmplitude(double ratio) {
-		audioSource.setAmplification(audioSource.getAmplification() * ratio);
-		notify("Amplitude = "+audioSource.getAmplification());
+		audioSource.setAmplitude(audioSource.getAmplitude() * ratio);
+		notify("Amplitude = "+audioSource.getAmplitude());
 	}
 
 	public void newPalette() {

@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.audio.io;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import java.io.IOException;
+import java.nio.ShortBuffer;
 import java.util.Random;
 import javax.sound.sampled.AudioFormat;
 
@@ -28,23 +29,12 @@ public class RandomSimulatedAudio implements AudioSource{
 
   public AudioSample sample(final int width) {
     // create new random walk sound
-    short[][] sound = new short[width][1];
+    short[] sound = new short[width];
     int height = (int)((Short.MAX_VALUE / 2) * amplification);
-    sound[0] = new short[]{ nextSample((short) 0, height), nextSample((short) 0, height)};
-    for(int i = 1; i < width; i++) {
-      sound[i] = new short[] {nextSample(sound[i-1][0], height), nextSample(sound[i-1][1], height)};
+    for(int i = 0; i < sound.length; i++) {
+      sound[i] = nextSample((short) 0, height);
     }
-    return new AudioSample(sound, false);
-  }
-
-  @Override
-  public double getAmplification() {
-    return amplification;
-  }
-
-  @Override
-  public void setAmplification(double amplification) {
-    this.amplification = amplification;
+    return new AudioSample(ShortBuffer.wrap(sound), false, 1.0);
   }
 
   private short nextSample(short current, int height) {

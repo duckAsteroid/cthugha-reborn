@@ -1,4 +1,4 @@
-package io.github.duckasteroid.cthugha.params.animation;
+package io.github.duckasteroid.cthugha.animation;
 
 import io.github.duckasteroid.cthugha.params.Fraction;
 import io.github.duckasteroid.cthugha.params.RuntimeParameter;
@@ -44,7 +44,7 @@ public abstract class Animator {
     targets.forEach(target -> target.setValue(fract));
   }
 
-  BigDecimal animationFraction(Duration clock) {
+  public BigDecimal animationFraction(Duration clock) {
     BigDecimal dbClock = asDecimal(clock);
     BigDecimal remainder = dbClock.remainder(animationTime);
     return remainder.divide(animationTime, RoundingMode.HALF_EVEN);
