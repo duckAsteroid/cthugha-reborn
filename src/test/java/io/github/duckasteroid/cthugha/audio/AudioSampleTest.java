@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.ShortBuffer;
 import java.util.List;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class AudioSampleTest {
@@ -54,6 +56,32 @@ class AudioSampleTest {
       assertEquals(monoData[i], audioPoint.value(Channel.LEFT));
       assertEquals(monoData[i], audioPoint.value(Channel.RIGHT));
     }
+  }
+
+  @Test
+  public void downsampleTest() {
+    AudioSample subject = new AudioSample(ShortBuffer.wrap(monoData), true, 1.0);
+    assertEquals(8, subject.size());
+    // test every 2nd point
+    List<AudioPoint> downsample = subject.downsample(4).toList();
+    assertEquals(4, downsample.size());
+    int[] actualValues = downsample.stream().mapToInt(pt -> pt.value(Channel.LEFT)).toArray();
+    assertArrayEquals(new int[] {0,2,4,6}, actualValues);
+
+    // test too many samples
+    downsample = subject.downsample(100).toList();
+    assertEquals(8, subject.size());
+
+    // test with odd skip factor
+    short[] testData = new short[1024];
+    for (int i = 0; i <testData.length; i++) {
+      testData[i] = (short) i;
+    }
+    subject = new AudioSample(ShortBuffer.wrap(testData), true, 1.0);
+    assertEquals(1024, subject.size());
+    downsample = subject.downsample(100).toList();
+    assertEquals(100, downsample.size());
+    assertEquals(990, downsample.get(99).sample[0]);
   }
 
 }

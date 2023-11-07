@@ -32,6 +32,24 @@ public class AudioSample {
     });
   }
 
+  public Stream<AudioPoint> downsample(int maxLength) {
+    if (maxLength < backBuffer.remaining()) {
+      final ShortBuffer projection = backBuffer.slice().asReadOnlyBuffer();
+      int skipFactor = (int) Math.ceil(projection.remaining() / maxLength );
+      int size = projection.remaining() / channels;
+      return IntStream.range(0, size)
+        .filter(i -> i % skipFactor == 0)
+        .mapToObj(index -> {
+          short[] sampleData = new short[channels];
+          for (int s = 0; s < sampleData.length; s++) {
+            sampleData[s] = (short) (projection.get((index * channels) + s) * amplification);
+          }
+          return new AudioPoint(index, sampleData);
+      }).limit(maxLength);
+    }
+    return streamPoints(maxLength);
+  }
+
   public Stream<AudioPoint> streamPoints(int maxLength) {
     return streamPoints().limit(maxLength);
   }
