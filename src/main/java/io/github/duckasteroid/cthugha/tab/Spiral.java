@@ -8,36 +8,37 @@ import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Spiral extends TranslateTableSource{
+public class Spiral extends AbstractNode implements TranslateTableSource{
 
   /** number of spirals (0 for one centered spiral) */
-  int nr_spirals = 1;
+  public IntegerParameter nr_spirals = new IntegerParameter("Number of spirals", 0, MAX_NR_SPIRALS, 1);
   /** change of radius (0 -> simple rotation) */
-  double delta_r=2.0;
+  public DoubleParameter delta_r= new DoubleParameter("Delta R", 0, 5, 2.0);
   /** change of angle (default 0.1) */
-  double delta_a=0.1;
+  public DoubleParameter delta_a = new DoubleParameter("Delta A", 0, 1, 0.1);
   /** Does the direction of rotation change with the radius. */
-  boolean yinyang = false;
+  public BooleanParameter yinyang = new BooleanParameter("Yin/Yang");
   /** Width of section of constant direction (if changing dir.) */
-  double yywidth = 10.0;
+  public DoubleParameter yywidth = new DoubleParameter("YY Width", 0, 10.0, 10);
+
+
+  public Spiral() {
+    super("Spirals");
+    initChildren(nr_spirals, delta_r, delta_a, yinyang, yywidth);
+  }
 
   private static final int MAX_NR_SPIRALS = 64;
 
   private final int rand() {
-    return rnd.nextInt(Short.MAX_VALUE);
-  }
-
-  @Override
-  public void randomiseParameters() {
-    this.nr_spirals = Random(MAX_NR_SPIRALS);
-    this.delta_a = rnd.nextDouble() ;
-    this.delta_r = rnd.nextDouble() * 5.0;
-    this.yinyang = rnd.nextBoolean();
-    this.yywidth = Random(10);
+    return random.nextInt(Short.MAX_VALUE);
   }
 
   @Override
@@ -48,17 +49,17 @@ public class Spiral extends TranslateTableSource{
     int[] centersY = new int[MAX_NR_SPIRALS];
     int[] dir = new int[MAX_NR_SPIRALS];
 
-    if(nr_spirals == 0) {
+    if(nr_spirals.value == 0) {
       centersX[0] = size.width / 2;
       centersY[0] = size.height / 2;
       dir[0] = 1;
-      nr_spirals = 1;
+      nr_spirals.value = 1;
     } else {
-      nr_spirals=max(min(nr_spirals, MAX_NR_SPIRALS),1);
-      for (int i=0; i<nr_spirals; i++) {
+      nr_spirals.value=max(min(nr_spirals.value, MAX_NR_SPIRALS),1);
+      for (int i=0; i<nr_spirals.value; i++) {
         centersX[i]=rand() % size.width;
         centersY[i]=rand() % size.height;
-        dir[i]=rnd.nextBoolean() ? 1 : -1;
+        dir[i]=random.nextBoolean() ? 1 : -1;
       }
     }
 
@@ -78,7 +79,7 @@ public class Spiral extends TranslateTableSource{
 
         temp_x=x;
         temp_y=y;
-        for (int i=0; i<nr_spirals; i++) {
+        for (int i=0; i<nr_spirals.value; i++) {
           if(dist>(sqrt((temp_x-centersX[i])*(temp_x-centersX[i])+
             (temp_y-centersY[i])*(temp_y-centersY[i])))){
             closest=i;
@@ -98,24 +99,24 @@ public class Spiral extends TranslateTableSource{
           polar_r=sqrt(temp_x*temp_x + temp_y*temp_y);
           polar_a=atan2(x-cent_x, y-cent_y);
 
-          polar_r += (delta_r+(rand()%10)*0.01)*(double)dir[closest];
+          polar_r += (delta_r.value+(rand()%10)*0.01)*(double)dir[closest];
 
           if (polar_r<0)
             polar_r=0.0;
 
-          if ( yinyang ) {
+          if ( yinyang.value ) {
 
-            polar_a -= delta_a * 3.0 *
+            polar_a -= delta_a.value * 3.0 *
               (float)(5-(int)(polar_r/11) % 11)/5.0;
 
-            if (((int)(polar_r/yywidth)%2) != 0) {
-              polar_a += delta_a;
+            if (((int)(polar_r/yywidth.value)%2) != 0) {
+              polar_a += delta_a.value;
             } else {
-              polar_a -= delta_a;
+              polar_a -= delta_a.value;
             }
           } else {
 
-            polar_a += (delta_a+(rand()%10)*0.01)
+            polar_a += (delta_a.value+(rand()%10)*0.01)
               *(double)dir[closest];
           }
 
@@ -140,16 +141,5 @@ public class Spiral extends TranslateTableSource{
       }
     }
     return result.stream().mapToInt(Integer::intValue).toArray();
-  }
-
-  @Override
-  public String toString() {
-    return "Spiral{" +
-      "nr_spirals=" + nr_spirals +
-      ", delta_r=" + delta_r +
-      ", delta_a=" + delta_a +
-      ", yinyang=" + yinyang +
-      ", yywidth=" + yywidth +
-      '}';
   }
 }

@@ -44,6 +44,12 @@ public class DoubleParameter extends AbstractValue {
     return max;
   }
 
+  /**
+   * Creates a parameter that wraps this parameter but with different min/max values
+   * @param min minimum
+   * @param max maximum
+   * @return a parameter that wraps the underlying parameter and adds new min/max range
+   */
   public DoubleParameter projection(double min, double max) {
     return new DoubleParameter(getName(), min, max) {
       @Override

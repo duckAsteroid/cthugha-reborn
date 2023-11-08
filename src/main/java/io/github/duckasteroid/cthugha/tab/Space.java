@@ -2,22 +2,22 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.abs;
 
+import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;
 import java.awt.Dimension;
+import java.util.Random;
 
-public class Space extends TranslateTableSource {
+public class Space extends AbstractNode implements TranslateTableSource {
 
   public BooleanParameter reverse = new BooleanParameter("Reverse", true);
   public IntegerParameter randomness = new IntegerParameter("Randomness", 0, 250);
   public LongParameter speed = new LongParameter("Speed", 1, 100, 2);
 
-  @Override
-  public void randomiseParameters() {
-    reverse.randomise();
-    speed.randomise();
-    randomness.randomise();
+  public Space() {
+    super("Space");
+    initChildren(reverse, randomness, speed);
   }
 
   @Override
@@ -55,12 +55,5 @@ public class Space extends TranslateTableSource {
       }
     }
     return result;
-  }
-
-  @Override
-  public String toString() {
-    return "Space{" +
-      reverse + randomness + speed +
-      '}';
   }
 }

@@ -8,16 +8,17 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.awt.Dimension;
 
-public class DownSpiral extends TranslateTableSource {
-  float a = 0.75f;
-  float b = 10.0f;
+public class DownSpiral extends AbstractNode implements TranslateTableSource {
+  public DoubleParameter a = new DoubleParameter("A", 0, Float.MAX_VALUE, 0.75);
+  public DoubleParameter b = new DoubleParameter("B", 1, Float.MAX_VALUE, 1500);
 
-  @Override
-  public void randomiseParameters() {
-    a = rnd.nextFloat();
-    b = rnd.nextFloat() * 150;
+  public DownSpiral() {
+    super("Down spiral tab");
+    initChildren(a,b);
   }
 
   @Override
@@ -36,7 +37,7 @@ public class DownSpiral extends TranslateTableSource {
 
         if (j == 0 || j == size.height) {
 
-          dx = (int) ((float) (cx - i) * a);
+          dx = (int) ((double) (cx - i) * a.value);
           dy = cy - j;
 
         } else {
@@ -54,12 +55,12 @@ public class DownSpiral extends TranslateTableSource {
           if (i < cx)
             ang += PI;
 
-          dx = (int) ceil(-sin(ang - p) * dist / b);
-          dy = (int) ceil(cos(ang - p) * dist / b);
+          dx = (int) ceil(-sin(ang - p) * dist / b.value);
+          dy = (int) ceil(cos(ang - p) * dist / b.value);
 
           if (i == 0 || i == size.width) {
             dx = cx - i;
-            dy = (int) ((float) (cy - j) * a);
+            dy = (int) ((float) (cy - j) * a.value);
           }
         }
 
@@ -68,13 +69,5 @@ public class DownSpiral extends TranslateTableSource {
       }
     }
     return theTab;
-  }
-
-  @Override
-  public String toString() {
-    return "DownSpiral{" +
-      "a=" + a +
-      ", b=" + b +
-      '}';
   }
 }

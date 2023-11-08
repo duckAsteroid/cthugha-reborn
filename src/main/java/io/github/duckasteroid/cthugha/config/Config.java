@@ -25,9 +25,13 @@ public class Config {
 
   private final Ini iniFile;
 
-  private final static Config SINGLETON = singleton();
+  private final static Config SINGLETON = createSingleton();
 
   public static Config singleton() {
+    return SINGLETON;
+  }
+
+  private static Config createSingleton() {
     final String filename_prefix = System.getProperty(CONFIG_FILENAME_PROPERTY, CONFIG_FILENAME);
     final String profile = System.getProperty(CONFIG_PROFILE, "");
     if (!profile.isBlank()) LOG.debug("Using profile "+profile);

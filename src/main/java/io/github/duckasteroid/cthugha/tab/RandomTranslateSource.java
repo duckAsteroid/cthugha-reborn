@@ -25,7 +25,7 @@ public class RandomTranslateSource {
     if (selected == null || newSource) {
       selected = sources.get(rnd.nextInt(sources.size()));
     }
-    selected.randomiseParameters();
+    selected.randomise();
     return selected.generate(size);
   }
 

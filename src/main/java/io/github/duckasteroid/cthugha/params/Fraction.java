@@ -9,8 +9,8 @@ public class Fraction {
   public final double fraction;
 
   public Fraction(double fraction) {
-    if (fraction < 0) throw new IllegalArgumentException("Must be > 0");
-    if (fraction > 1) throw new IllegalArgumentException("Must be > 0");
+    if (fraction < 0) throw new IllegalArgumentException("Must be >= 0");
+    if (fraction > 1) throw new IllegalArgumentException("Must be <= 1");
     this.fraction = fraction;
   }
 

@@ -2,15 +2,23 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.PI;
 
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.XYParam;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.awt.Dimension;
 
-public class BigHalfWheel extends TranslateTableSource {
+public class BigHalfWheel extends AbstractNode implements TranslateTableSource {
+  public XYParam center = new XYParam("Wheel centre location", 0,1, 0.4);
 
+  public BigHalfWheel() {
+    super("Big half wheel");
+    initChildren(center);
+  }
   @Override
   public int[] generate(Dimension size) {
     int[] theTab = new int[size.height * size.width];
     int dx,dy,cx,cy,dist;
-    float q,ang,p;
+    float q, ang, p;
 
     cx = (int)(size.width * 0.4);
     cy = 0;

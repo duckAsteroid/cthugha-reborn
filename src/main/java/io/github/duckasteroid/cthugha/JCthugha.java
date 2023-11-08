@@ -67,14 +67,14 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 	private final AnimatorPool animatorPool = new AnimatorPool();
 
 	public ObjectParameter<Duration> desiredDuration = new ObjectParameter<>("FrameRate (per second)",
-		10, 120,
+		10, 120, 60,
 		fps -> Duration.of(Animator.NANOS_PER_SECOND / fps, ChronoUnit.NANOS),
 		duration -> (int) (duration.toNanos() / Animator.NANOS_PER_SECOND));
 	private BooleanParameter running = new BooleanParameter("Running");
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
 	//final AudioSource audioSource = new SampledAudioSource();
-	final AudioSource audioSource = new SimulatedFrequenciesAudioSource();
+	final SimulatedFrequenciesAudioSource audioSource = new SimulatedFrequenciesAudioSource(3);
 
 	ScreenBuffer buffer;
 
@@ -136,6 +136,8 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		Animator sineAnimatorStroke = new SineAnimator(0, Duration.ofSeconds(15));
 		Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
 		//sineAnimator.addTarget(wave.transformParams.rotate);
+		audioSource.oscillators.forEach(oscillator ->
+			sineAnimator.addTarget(oscillator.frequency.projection(20, 2000)));
 		sineAnimator2.addTarget(stringRenderer.transformParams.shear.x.projection(-.1,+.1));
 		sineAnimator3.addTarget(stringRenderer.transformParams.shear.y.projection(-.2,+.2));
 		sineAnimator2.addTarget(stringRenderer.transformParams.scale.x.projection(.5,1.5));

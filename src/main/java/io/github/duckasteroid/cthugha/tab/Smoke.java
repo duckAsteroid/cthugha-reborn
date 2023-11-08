@@ -1,9 +1,10 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import java.awt.Dimension;
 
-public class Smoke extends TranslateTableSource {
+public class Smoke extends AbstractNode implements TranslateTableSource {
 
   public IntegerParameter speed = new IntegerParameter("Speed", 1, 300); // 30 - 300
   public IntegerParameter randomness = new IntegerParameter("Randomness", 1, 100); // 0 - 100
@@ -15,17 +16,12 @@ public class Smoke extends TranslateTableSource {
   }
 
   public Smoke(int speed, int randomness) {
+    super("Smoke tab");
     this.speed.setValue( speed);
     this.randomness.setValue(randomness);
+    initFields(getClass());
   }
 
-  @Override
-  public void randomiseParameters() {
-    speed.randomise();
-    randomness.randomise();
-    directionVectorX.randomise();
-    directionVectorY.randomise();
-  }
 
   public int[] generate(Dimension size) {
     int map_x, map_y;

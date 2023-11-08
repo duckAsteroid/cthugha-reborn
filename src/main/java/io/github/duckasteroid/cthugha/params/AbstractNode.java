@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -21,7 +23,7 @@ public abstract class AbstractNode implements Node {
 
   public AbstractNode() {
     this.name = getClass().getSimpleName();
-    this.children = new ArrayList<>();
+    initFields(getClass());
   }
 
   public AbstractNode(String name) {
@@ -48,10 +50,10 @@ public abstract class AbstractNode implements Node {
    */
   protected void initFields(Class<?> clazz) {
     List<Node> list = Arrays.stream(clazz.getFields())
-      .filter(field -> field.getType().isAssignableFrom(Node.class))
+      .filter(field -> Node.class.isAssignableFrom(field.getType()))
       .map(field -> {
         try {
-          return Optional.ofNullable((Node) field.get(this));
+          return Optional.ofNullable((Node) field.get(AbstractNode.this));
         } catch (IllegalAccessException ignored) {
         }
         return Optional.ofNullable((Node)null);
@@ -113,5 +115,17 @@ public abstract class AbstractNode implements Node {
   public void removeChild(Node child) {
     children.remove(child);
     if (child instanceof AbstractNode someChild) someChild.setParent(null);
+  }
+
+  @Override
+  public void randomise() {
+    children.forEach(Node::randomise);
+  }
+
+  @Override
+  public String toString() {
+    return getName() + " [" + getNodeType().name() + "]: " +
+      children.stream().map(Objects::toString)
+        .collect(Collectors.joining(",\n", "{\n", "}"));
   }
 }

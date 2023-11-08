@@ -36,6 +36,8 @@ public interface Node {
 
   boolean hasParent();
 
+  void randomise();
+
   /**
    * Provides a stream view of the path from this node via its parents
    */

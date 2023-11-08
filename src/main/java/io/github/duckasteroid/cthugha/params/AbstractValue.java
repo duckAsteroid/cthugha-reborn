@@ -40,7 +40,7 @@ public abstract class AbstractValue extends AbstractNode {
    * Select a new random value somewhere between {@link #getMin()} and {@link #getMax()}
    */
   public void randomise() {
-    setValue(random.nextDouble(getMin().doubleValue(), getScale()));
+    setValue(random.nextDouble(getMin().doubleValue(), getMax().doubleValue()));
   }
 
   /**
