@@ -1,28 +1,21 @@
 package io.github.duckasteroid.cthugha.wave;
 
-import io.github.duckasteroid.cthugha.ScreenBuffer;
-import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioPoint;
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.Channel;
+import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.AffineTransformParams;
-import io.github.duckasteroid.cthugha.params.BooleanParameter;
-import io.github.duckasteroid.cthugha.params.Parameterized;
-import io.github.duckasteroid.cthugha.params.DoubleParameter;
-import io.github.duckasteroid.cthugha.params.RuntimeParameter;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.IntStream;
 
 /**
  * A simple rendering of the audio wave on the screen
  */
-public class SimpleWave implements Wave, Parameterized {
+public class SimpleWave extends AbstractNode implements Wave {
 
   public final DoubleParameter location = new DoubleParameter("Relative screen location of the wave as a fraction of height", 0,1, 0.5); // 0 - 1
   public final DoubleParameter waveHeight = new DoubleParameter("wave height",0,1,1.0); // 1 = norm
@@ -30,6 +23,11 @@ public class SimpleWave implements Wave, Parameterized {
   public final AffineTransformParams transformParams = new AffineTransformParams("Wave transform");
 
   public final DoubleParameter strokeWidth = new DoubleParameter("Stroke width", 1.0, 24.0, 2.0);
+
+  public SimpleWave() {
+    super("SimpleWave");
+    initFields(SimpleWave.class);
+  }
 
   public SimpleWave wave(int size) {
     this.strokeWidth.setValue(size); ;
@@ -54,16 +52,6 @@ public class SimpleWave implements Wave, Parameterized {
   public SimpleWave autoRotate(double delta) {
     // FIXME use animations!
     return this;
-  }
-
-  @Override
-  public String getName() {
-    return "Simple wave";
-  }
-
-  @Override
-  public Collection<RuntimeParameter> params() {
-    return List.of(location, waveHeight, strokeWidth);
   }
 
   public void wave(final AudioSample sound, final ScreenBuffer buffer) {

@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.animation;
 
 import io.github.duckasteroid.cthugha.params.Fraction;
-import io.github.duckasteroid.cthugha.params.RuntimeParameter;
+import io.github.duckasteroid.cthugha.params.AbstractValue;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -16,7 +16,7 @@ public abstract class Animator {
 
   public static final long NANOS_PER_SECOND = Duration.ofSeconds(1).toNanos();
   protected final BigDecimal animationTime;
-  private final List<RuntimeParameter> targets = Collections.synchronizedList(new ArrayList<>());
+  private final List<AbstractValue> targets = Collections.synchronizedList(new ArrayList<>());
 
   protected Animator(Duration animationTime) {
     this.animationTime = asDecimal(animationTime);
@@ -26,15 +26,21 @@ public abstract class Animator {
     return Duration.ofNanos(animationTime.multiply(BigDecimal.valueOf(NANOS_PER_SECOND)).longValue());
   }
 
+  /**
+   * Creates a big decimal view of the duration in seconds
+   * Including the nanosecond part as 10<sup>-9</sup>
+   * @param d the duration
+   * @return the big decimal second value
+   */
   protected static BigDecimal asDecimal(Duration d) {
     return BigDecimal.valueOf(d.getSeconds()).add(BigDecimal.valueOf(d.getNano(), 9));
   }
 
-  public void addTarget(RuntimeParameter param) {
+  public void addTarget(AbstractValue param) {
     targets.add(param);
   }
 
-  public void removeTarget(RuntimeParameter param) {
+  public void removeTarget(AbstractValue param) {
     targets.remove(param);
   }
 

@@ -1,4 +1,4 @@
-package io.github.duckasteroid.cthugha;
+package io.github.duckasteroid.cthugha.display;
 
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import java.awt.Color;
@@ -8,12 +8,12 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.IndexColorModel;
-import java.awt.image.PixelInterleavedSampleModel;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
 
 /**
- * Represents our screen buffer (a raster image)
+ * Represents our screen buffer - an array of byte pixels. Each representing the index into a color
+ * {@link PaletteMap}
  */
 public class ScreenBuffer {
   // pixels wide
@@ -52,40 +52,74 @@ public class ScreenBuffer {
   }
 
   /**
-   * Write our buffer onto an image raster
-   * @param imageRaster the raster to receive this buffer
+   * Write our buffer onto an image
+   * @param image the image to receive this buffer
    */
-  public void render(BufferedImage imageRaster) {
-    imageRaster.getGraphics().drawImage(getBufferedImageView(),0,0,null);
+  public void render(BufferedImage image) {
+    image.getGraphics().drawImage(getBufferedImageView(),0,0,null);
   }
+
+  /**
+   * Convert the {@link PaletteMap} into an {@link IndexColorModel}
+   * @return the color model
+   */
   public IndexColorModel getIndexedColorModel() {
     return new IndexColorModel(8, 256, paletteMap.colors, 0, false, -1, DataBuffer.TYPE_BYTE);
   }
+
+  /**
+   * Create a {@link WritableRaster} based on this screen buffers data
+   * @return a WriteableRaster
+   */
   public WritableRaster getWriteableRaster() {
     DataBufferByte dbb = new DataBufferByte(pixels, pixels.length);
     return Raster.createInterleavedRaster(dbb, width, height, width, 1, new int[]{0}, null);
   }
 
+  /**
+   * Create a {@link BufferedImage} view of this buffer
+   * @return the image
+   */
   public BufferedImage getBufferedImageView() {
     return new BufferedImage(getIndexedColorModel(), getWriteableRaster(), true, null);
   }
 
+  /**
+   * A 2D Graphics surface using the {@link #getBufferedImageView()}
+   * @return a 2d graphics surface
+   */
   public Graphics2D getGraphics() {
     return getBufferedImageView().createGraphics();
   }
 
+  /**
+   * The foreground color (index 255)
+   * @return the foreground color
+   */
   public Color getForegroundColor() {
     return new Color(paletteMap.colors[255]);
   }
 
+  /**
+   * The background color (index 0)
+   * @return the background
+   */
   public Color getBackgroundColor() {
     return new Color(paletteMap.colors[0]);
   }
 
-  public void copy(ScreenBuffer buffer) {
-    System.arraycopy(buffer.pixels, 0, this.pixels, 0, buffer.pixels.length);
+  /**
+   * Copy the pixels from the source into this buffer
+   * @param source the source of pixels
+   */
+  public void copy(ScreenBuffer source) {
+    System.arraycopy(source.pixels, 0, this.pixels, 0, source.pixels.length);
   }
 
+  /**
+   * The dimensions of this buffer
+   * @return width and height
+   */
   public Dimension getDimensions() {
     return new Dimension(width, height);
   }

@@ -5,21 +5,22 @@ import static java.lang.Thread.sleep;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
-import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SimulatedFrequenciesAudioSource;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.DisplayResolution;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.flame.JavaFlame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.keys.Keybind;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
-import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
 import io.github.duckasteroid.cthugha.animation.Animator;
 import io.github.duckasteroid.cthugha.animation.AnimatorPool;
-import io.github.duckasteroid.cthugha.animation.LinearAnimator;
 import io.github.duckasteroid.cthugha.animation.SineAnimator;
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
+import io.github.duckasteroid.cthugha.params.values.ObjectParameter;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.StringRenderer;
@@ -58,17 +59,18 @@ import javax.sound.sampled.LineUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JCthugha implements Closeable {
+public class JCthugha extends AbstractNode implements Runnable, Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 	public static final double AUTO_ROTATE_AMT = 1;
 
 	private final AnimatorPool animatorPool = new AnimatorPool();
 
-	public static final int FPS = 60;
-	public static final Duration desiredDuration = Duration.of(Animator.NANOS_PER_SECOND / FPS, ChronoUnit.NANOS);
-	public static Config config;
-	private static boolean running = true;
+	public ObjectParameter<Duration> desiredDuration = new ObjectParameter<>("FrameRate (per second)",
+		10, 120,
+		fps -> Duration.of(Animator.NANOS_PER_SECOND / fps, ChronoUnit.NANOS),
+		duration -> (int) (duration.toNanos() / Animator.NANOS_PER_SECOND));
+	private BooleanParameter running = new BooleanParameter("Running");
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
 	//final AudioSource audioSource = new SampledAudioSource();
@@ -273,7 +275,7 @@ public class JCthugha implements Closeable {
 	public static void main(String[] args) throws LineUnavailableException, IOException {
 		System.out.println("JCthugha "+System.getProperty ("user.dir"));
 		final String iniFileName = (args.length == 0 ) ? "cthugha.ini" : args[0];
-		config = new Config(iniFileName);
+
 		GraphicsEnvironment localGraphicsEnvironment =
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
@@ -287,7 +289,7 @@ public class JCthugha implements Closeable {
 
 		final JCthugha jCthugha = new JCthugha();
 		final List<Keybind> keybindings = Arrays.asList(
-			new Keybind('!', "Quit", (e)-> running = false),
+			new Keybind('!', "Quit", (e)-> jCthugha.stop()),
 			new Keybind('q', "Show a quote on screen", (e) -> jCthugha.showQuote()),
 			new Keybind('a', "Toggle audio source", (e) -> jCthugha.toggleAudioSource()),
 			new Keybind('s', "Toggle speckle wave", (e) -> jCthugha.toggleSpeckle()),
@@ -337,14 +339,14 @@ public class JCthugha implements Closeable {
 		f.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				running = false;
+				jCthugha.stop();
 				f.dispose();
 				try {
 					jCthugha.close();
-					System.out.println(StatsFactory.getStatisticsSummary());
 				} catch (IOException ex) {
 					ex.printStackTrace();
 				}
+				System.out.println(StatsFactory.getStatisticsSummary());
 			}
 		});
 		f.addKeyListener(new KeyAdapter() {
@@ -368,27 +370,30 @@ public class JCthugha implements Closeable {
 				cthughaBufferSize.height);
 		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f, keybindings);
 
-		Thread mainLoop = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				while(running) {
-					Duration taken = jCthugha.doRender();
-					Duration wait = desiredDuration.minus(taken);
-					long sleepFor = wait.toMillis();
-					if (sleepFor > 10) {
-						try {
-							sleep(sleepFor);
-						} catch (InterruptedException e) {
-							running = false;
-						}
-					}
-				}
-			}
-		});
+		Thread mainLoop = new Thread(jCthugha);
 		mainLoop.setPriority(Thread.MAX_PRIORITY);
 		mainLoop.start();
 
 		//executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
+	}
+
+	public void run() {
+		while(running.value) {
+			Duration taken = doRender();
+			Duration wait = desiredDuration.getObjectValue().minus(taken);
+			long sleepFor = wait.toMillis();
+			if (sleepFor > 10) {
+				try {
+					sleep(sleepFor);
+				} catch (InterruptedException e) {
+					running.value = false;
+				}
+			}
+		}
+	}
+
+	private void stop() {
+		running.value = false;
 	}
 
 	private void showQuote() {

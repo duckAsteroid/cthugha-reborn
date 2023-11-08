@@ -1,8 +1,7 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.params.IntegerParameter;
+import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import java.awt.Dimension;
-import java.util.Random;
 
 public class Smoke extends TranslateTableSource {
 

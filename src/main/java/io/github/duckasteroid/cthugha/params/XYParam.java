@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.params;
 
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.util.Collection;
@@ -7,8 +8,7 @@ import java.util.List;
 import java.util.function.DoublePredicate;
 import java.util.stream.Stream;
 
-public class XYParam implements Parameterized {
-  private final String name;
+public class XYParam extends AbstractNode {
   public final DoubleParameter x;
   public final DoubleParameter y;
 
@@ -18,19 +18,10 @@ public class XYParam implements Parameterized {
 
 
   public XYParam(String name, double min, double max, double value) {
-    this.name = name;
+    super(name);
     this.x = new DoubleParameter("X", min, max, value);
     this.y = new DoubleParameter("Y", min, max, value);
-  }
-
-  @Override
-  public String getName() {
-    return name;
-  }
-
-  @Override
-  public Collection<RuntimeParameter> params() {
-    return List.of(x, y);
+    initChildren(x, y);
   }
 
   public boolean is(DoublePredicate test) {

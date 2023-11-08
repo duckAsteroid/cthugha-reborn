@@ -1,22 +1,20 @@
 package io.github.duckasteroid.cthugha.strings;
 
 import io.github.duckasteroid.cthugha.JCthugha;
-import io.github.duckasteroid.cthugha.ScreenBuffer;
+import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
+import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.AffineTransformParams;
-import io.github.duckasteroid.cthugha.params.Parameterized;
-import io.github.duckasteroid.cthugha.params.RuntimeParameter;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
 
-public class StringRenderer implements Parameterized {
+public class StringRenderer extends AbstractNode {
   private static final String DEFAULT = "PT10S";
-  private static final Duration duration = JCthugha.config.getConfigAs(Constants.SECTION, Constants.KEY_DURATION, DEFAULT, Duration::parse);
+  private static final Duration duration = Config.singleton().getConfigAs(Constants.SECTION, Constants.KEY_DURATION, DEFAULT, Duration::parse);
 
   private final FontSource fontSource = new FontSource();
 
@@ -27,6 +25,7 @@ public class StringRenderer implements Parameterized {
   private Font font;
 
   public final AffineTransformParams transformParams = new AffineTransformParams("Transform");
+
 
   public void show(ScreenBuffer buffer) {
     if (quote != null) {
@@ -55,13 +54,4 @@ public class StringRenderer implements Parameterized {
     quote = stringSource.nextQuote();
   }
 
-  @Override
-  public String getName() {
-    return "String renderer";
-  }
-
-  @Override
-  public Collection<RuntimeParameter> params() {
-    return List.of();
-  }
 }

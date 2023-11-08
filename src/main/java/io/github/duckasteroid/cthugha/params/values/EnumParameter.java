@@ -1,5 +1,6 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.values;
 
+import io.github.duckasteroid.cthugha.params.NodeType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -7,15 +8,26 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class EnumParameter<T extends Enum> extends IntegerParameter {
+/**
+ * An object parameter that uses the integer index of objects in an
+ * enumerated list to map to an integer
+ * @param <T> the type of object enumerated
+ */
+public class EnumParameter<T> extends ObjectParameter<T> {
 
   private final List<T> values;
 
-  public EnumParameter(String description, List<T> values) {
-    super(description, 0, values.size());
+  public EnumParameter(String description, final List<T> values) {
+    super(description, 0, values.size(), values::get, values::indexOf);
     this.values = values;
   }
 
+  /**
+   * Create from a Java {@link Enum} type
+   * @param enumType the enum class
+   * @return an {@link EnumParameter} instance for the enum type
+   * @param <T> the type of enum wrapped
+   */
   public static <T extends Enum> EnumParameter<T> forType(Class<T> enumType) {
     try {
       Method m = enumType.getMethod("values");
@@ -26,21 +38,21 @@ public class EnumParameter<T extends Enum> extends IntegerParameter {
     }
   }
   @Override
-  public Type getType() {
-    return Type.ENUM;
+  public NodeType getNodeType() {
+    return NodeType.ENUM;
   }
 
   public T getEnumeration() {
-    return values.get(value);
+    return getObjectValue();
   }
 
   public void setEnumeration(T value) {
-    setValue(values.indexOf(value));
+    setObjectValue(value);
   }
 
   @Override
   public String toString() {
-    return super.getDescription()+ " [" + getType().name() + "]: " + getEnumeration().toString()
+    return super.getName()+ " [" + getNodeType().name() + "]: " + getEnumeration().toString()
       + " " + values.stream().map(Objects::toString)
         .collect(Collectors.joining(",", "[", "]"));
   }

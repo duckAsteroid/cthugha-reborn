@@ -1,12 +1,11 @@
 package io.github.duckasteroid.cthugha.wave;
 
-import io.github.duckasteroid.cthugha.ScreenBuffer;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
 import io.github.duckasteroid.cthugha.audio.dsp.FrequencySpectra;
 import java.awt.Graphics2D;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
 
 /**

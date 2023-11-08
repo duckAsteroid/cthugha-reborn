@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.audio;
 
-import io.github.duckasteroid.cthugha.params.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import java.nio.ByteBuffer;

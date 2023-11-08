@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.params;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 import org.junit.jupiter.api.Test;
 
 class EnumParameterTest {

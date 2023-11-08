@@ -1,6 +1,9 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.values;
 
-public class IntegerParameter extends RuntimeParameter {
+import io.github.duckasteroid.cthugha.params.NodeType;
+import io.github.duckasteroid.cthugha.params.AbstractValue;
+
+public class IntegerParameter extends AbstractValue {
 
   private final int min;
   private final int max;
@@ -18,8 +21,8 @@ public class IntegerParameter extends RuntimeParameter {
   }
 
   @Override
-  public Type getType() {
-    return Type.INTEGER;
+  public NodeType getNodeType() {
+    return NodeType.INTEGER;
   }
 
   public Number getValue() {

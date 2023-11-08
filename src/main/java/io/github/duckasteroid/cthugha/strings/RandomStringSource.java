@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.strings;
 
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.config.Config;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -19,7 +20,8 @@ public class RandomStringSource {
 
   public RandomStringSource() {
     List<Quote> tmp;
-    try (Stream<String> lines = Files.lines(Paths.get(JCthugha.config.getConfig(Constants.SECTION, Constants.KEY_STRINGS_FILE, DEFAULT_STRINGS_FILE_NAME)))) {
+    try (Stream<String> lines = Files.lines(Paths.get(
+      Config.singleton().getConfig(Constants.SECTION, Constants.KEY_STRINGS_FILE, DEFAULT_STRINGS_FILE_NAME)))) {
       tmp = lines.map(Quote::parse).collect(Collectors.toList());
     }
     catch (IOException ioe) {

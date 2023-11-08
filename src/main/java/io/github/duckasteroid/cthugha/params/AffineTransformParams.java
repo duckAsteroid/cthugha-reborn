@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.params;
 
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.geom.AffineTransform;
@@ -7,10 +8,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.function.DoublePredicate;
 
-public class AffineTransformParams implements Parameterized {
+public class AffineTransformParams extends AbstractNode {
   public static final double MIN = Double.MIN_VALUE;
   public static final double MAX = Double.MAX_VALUE;
-  private final String name;
   public final XYParam scale = new XYParam("Scale",MIN, MAX, 1.0);
   public final XYParam shear = new XYParam("Shear", MIN, MAX, 0.0);
   public final XYParam translate = new XYParam("Translation", MIN, MAX, 0.0);
@@ -18,23 +18,8 @@ public class AffineTransformParams implements Parameterized {
 
   public final XYParam rotateCenter = new XYParam("Rotation center point", 0, 1, 0);
   public AffineTransformParams(String name) {
-    this.name = name;
-  }
-
-  @Override
-  public String getName() {
-    return name;
-  }
-
-  @Override
-  public Collection<RuntimeParameter> params() {
-    ArrayList<RuntimeParameter> result = new ArrayList<>(7);
-    result.addAll(scale.params());
-    result.addAll(shear.params());
-    result.addAll(translate.params());
-    result.add(rotate);
-    result.addAll(rotateCenter.params());
-    return result;
+    super(name);
+    initChildren(scale, shear, translate, rotate, rotateCenter);
   }
 
   private static DoublePredicate equals(final double expected, final int dp) {

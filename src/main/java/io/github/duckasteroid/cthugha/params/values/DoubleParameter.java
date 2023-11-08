@@ -1,9 +1,12 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.values;
+
+import io.github.duckasteroid.cthugha.params.NodeType;
+import io.github.duckasteroid.cthugha.params.AbstractValue;
 
 /**
  * A value that can be tweaked at runtime
  */
-public class DoubleParameter extends RuntimeParameter {
+public class DoubleParameter extends AbstractValue {
 
   private final double min;
   private final double max;
@@ -21,8 +24,8 @@ public class DoubleParameter extends RuntimeParameter {
   }
 
   @Override
-  public Type getType() {
-    return Type.DOUBLE;
+  public NodeType getNodeType() {
+    return NodeType.DOUBLE;
   }
 
   public Number getValue() {
@@ -42,7 +45,7 @@ public class DoubleParameter extends RuntimeParameter {
   }
 
   public DoubleParameter projection(double min, double max) {
-    return new DoubleParameter(getDescription(), min, max) {
+    return new DoubleParameter(getName(), min, max) {
       @Override
       public Number getValue() {
         return DoubleParameter.this.getValue();

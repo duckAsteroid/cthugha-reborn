@@ -1,17 +1,12 @@
 package io.github.duckasteroid.cthugha.notify;
 
-import io.github.duckasteroid.cthugha.ScreenBuffer;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Point;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class NotificationRenderer {
   private final ReentrantLock lock = new ReentrantLock(false);

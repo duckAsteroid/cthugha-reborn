@@ -1,6 +1,9 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.values;
 
-public class BooleanParameter extends RuntimeParameter {
+import io.github.duckasteroid.cthugha.params.NodeType;
+import io.github.duckasteroid.cthugha.params.AbstractValue;
+
+public class BooleanParameter extends AbstractValue {
   public boolean value;
 
   public BooleanParameter(String name) {
@@ -13,8 +16,8 @@ public class BooleanParameter extends RuntimeParameter {
   }
 
   @Override
-  public Type getType() {
-    return Type.BOOLEAN;
+  public NodeType getNodeType() {
+    return NodeType.BOOLEAN;
   }
 
   @Override

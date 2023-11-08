@@ -1,19 +1,14 @@
 package io.github.duckasteroid.cthugha.wave;
 
-import io.github.duckasteroid.cthugha.ScreenBuffer;
-import io.github.duckasteroid.cthugha.audio.AudioBuffer;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioPoint;
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.Channel;
-import io.github.duckasteroid.cthugha.params.IntegerParameter;
+import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Stroke;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 public class RadialWave implements Wave {
   private IntegerParameter strokeWidth = new IntegerParameter("Stroke width", 1, 24, 12);

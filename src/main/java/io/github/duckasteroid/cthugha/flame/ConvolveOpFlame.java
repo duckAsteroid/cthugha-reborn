@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.flame;
 
-import io.github.duckasteroid.cthugha.ScreenBuffer;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import java.awt.RenderingHints;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;

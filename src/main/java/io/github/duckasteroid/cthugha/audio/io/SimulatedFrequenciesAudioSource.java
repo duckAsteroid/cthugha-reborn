@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.audio.io;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
-import io.github.duckasteroid.cthugha.params.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.io.IOException;
 import java.nio.ShortBuffer;
 import java.util.stream.DoubleStream;

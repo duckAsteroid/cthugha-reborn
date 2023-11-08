@@ -1,6 +1,9 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.values;
 
-public class LongParameter extends RuntimeParameter {
+import io.github.duckasteroid.cthugha.params.NodeType;
+import io.github.duckasteroid.cthugha.params.AbstractValue;
+
+public class LongParameter extends AbstractValue {
 
   private final long min;
   private final long max;
@@ -18,8 +21,8 @@ public class LongParameter extends RuntimeParameter {
   }
 
   @Override
-  public Type getType() {
-    return Type.LONG;
+  public NodeType getNodeType() {
+    return NodeType.LONG;
   }
 
   public Number getValue() {

@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.strings;
 
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.config.Config;
 import java.awt.Font;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +30,7 @@ public class FontSource {
   }
 
   public FontSource() {
-    fontNames = JCthugha.config.getConfigs(Constants.SECTION,Constants.KEY_FONTS, FALLBACK_FONTS);
+    fontNames = Config.singleton().getConfigs(Constants.SECTION,Constants.KEY_FONTS, FALLBACK_FONTS);
   }
 
   public static Font parse(final String s) {

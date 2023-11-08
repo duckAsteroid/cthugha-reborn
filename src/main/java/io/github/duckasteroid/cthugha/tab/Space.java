@@ -2,11 +2,10 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.abs;
 
-import io.github.duckasteroid.cthugha.params.BooleanParameter;
-import io.github.duckasteroid.cthugha.params.IntegerParameter;
-import io.github.duckasteroid.cthugha.params.LongParameter;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
+import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
+import io.github.duckasteroid.cthugha.params.values.LongParameter;
 import java.awt.Dimension;
-import java.util.Random;
 
 public class Space extends TranslateTableSource {
 

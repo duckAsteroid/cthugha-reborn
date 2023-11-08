@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.tab.Spiral;
 import io.github.duckasteroid.cthugha.tab.Translate;
@@ -19,7 +20,6 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.util.Random;
-import java.util.concurrent.Executors;
 import javax.swing.JFrame;
 
 public class ImageTest {

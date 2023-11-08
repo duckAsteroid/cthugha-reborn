@@ -1,8 +1,7 @@
 package io.github.duckasteroid.cthugha.flame;
 
-import io.github.duckasteroid.cthugha.ScreenBuffer;
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import java.awt.image.WritableRaster;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.IntStream;
 
 public class JavaFlame implements Flame{
