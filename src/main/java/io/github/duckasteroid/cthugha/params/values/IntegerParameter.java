@@ -30,7 +30,7 @@ public class IntegerParameter extends AbstractValue {
   }
 
   public void setValue(Number value) {
-    this.value = value.intValue();
+    this.value = (int)Math.round(value.doubleValue());
   }
 
   public Number getMin() {

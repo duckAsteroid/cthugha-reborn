@@ -19,7 +19,7 @@ public class Smoke extends AbstractNode implements TranslateTableSource {
     super("Smoke tab");
     this.speed.setValue( speed);
     this.randomness.setValue(randomness);
-    initFields(getClass());
+    initChildren(this.speed, this.randomness, directionVectorX, directionVectorY);
   }
 
 
