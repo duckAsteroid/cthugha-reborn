@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.abs;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
@@ -21,7 +22,8 @@ public class Space extends AbstractNode implements TranslateTableSource {
   }
 
   @Override
-  public int[] generate(Dimension size) {
+  public int[] generate(ScreenBuffer buffer) {
+    final Dimension size = buffer.getDimensions();
     int map_x, map_y;
     int[] result = new int[size.width * size.height];
 

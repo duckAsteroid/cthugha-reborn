@@ -1,9 +1,12 @@
 package io.github.duckasteroid.cthugha.audio.dsp;
 
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
 import static java.lang.Math.sqrt;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.PointValueExtractor;
+import io.github.duckasteroid.cthugha.audio.io.AudioValue;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import java.util.ArrayList;
@@ -18,18 +21,6 @@ import org.jtransforms.fft.DoubleFFT_1D;
 public class FastFourierTransform {
   private final int size;
 
-  public int getSize() {
-    return size;
-  }
-
-  public AudioFormat getFormat() {
-    return format;
-  }
-
-  public List<Double> getBinFrequencies() {
-    return binFrequencies;
-  }
-
   private final AudioFormat format;
   private final List<Double> binFrequencies;
 
@@ -38,8 +29,6 @@ public class FastFourierTransform {
    * How we will reduce multi channel audio into a single 1D value
    */
   private PointValueExtractor pointValueExtractor;
-
-  private final Stats fftMax = StatsFactory.stats("audio.fft.max");
 
   public FastFourierTransform(int size, AudioFormat format, PointValueExtractor pointValueExtractor) {
     this.size = size;
@@ -53,28 +42,33 @@ public class FastFourierTransform {
     this.fft = new DoubleFFT_1D(size);
   }
 
-  public FrequencySpectra transform(AudioSample sample) {
-    double[] data = sample.streamDoublePoints(size, pointValueExtractor).toArray();
-    if (sample.intensity(pointValueExtractor) > 200) {
+  public int getSize() {
+    return size;
+  }
 
-      Double[] magnitudes;
-      double min = Double.MAX_VALUE, max = 0;
-      if (data.length >= size * 2) {
-        fft.realForward(data);
-        magnitudes = new Double[size / 2];
-        for (int i = 0; i < size; i += 2) {
-          int bin = i / 2;
-          double magnitude = sqrt(data[i] * data[i]) + sqrt(data[i + 1] * data[i + 1]);
-          min = Math.min(min, magnitude);
-          max = Math.max(max, magnitude);
-          magnitudes[bin] = magnitude;
-        }
-        // FIXME can we scale magnitude according to data.length to normalise?
-        fftMax.add((long)max);
-        // FIXME rather than by using local min/max FFT keeps magically scaling in UX
-        // FIXME logarithmic x scale for frequencies
-        return new FrequencySpectra(binFrequencies, List.of(magnitudes), 0, 508094);
+  public FrequencySpectra transform(AudioSample sample) {
+    double[] data = sample.streamPoints()
+      .limit(size * 2L)
+      .map(pt -> pointValueExtractor.value(pt))
+      .mapToDouble(AudioValue::value)
+      //.mapToDouble(new WindowingFunction.Cosine(size * 2)::apply)
+      .toArray();
+    Double[] magnitudes;
+    double min = Double.MAX_VALUE, max = 0;
+    if (data.length >= size * 2) {
+      fft.realForward(data);
+      magnitudes = new Double[size / 2];
+      for (int i = 0; i < size; i += 2) {
+        int bin = i / 2;
+        double magnitude = sqrt(data[i] * data[i]) + sqrt(data[i + 1] * data[i + 1]);
+        min = Math.min(min, magnitude);
+        max = Math.max(max, magnitude);
+        magnitudes[bin] = magnitude;
       }
+      // FIXME can we scale magnitude according to data.length to normalise?
+      // FIXME rather than by using local min/max FFT keeps magically scaling in UX
+      // FIXME logarithmic x scale for frequencies
+      return new FrequencySpectra(binFrequencies, List.of(magnitudes), 0, 508094);
     }
     return null;
   }

@@ -62,7 +62,7 @@ public class ImageTest {
       3,6,7
     };
     Dimension d = new Dimension(w,h);
-    int[] table = new Spiral().generate(d);
+    int[] table = new Spiral().generate(screenBuffer);
 
     Translate translate = new Translate( d, table);
 

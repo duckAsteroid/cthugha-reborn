@@ -8,6 +8,7 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import java.awt.Dimension;
@@ -22,7 +23,8 @@ public class DownSpiral extends AbstractNode implements TranslateTableSource {
   }
 
   @Override
-  public int[] generate(Dimension size) {
+  public int[] generate(ScreenBuffer buffer) {
+    final Dimension size = buffer.getDimensions();
     int[] theTab = new int[size.width * size.height];
     int dx, dy, dist;
     int cx = size.width / 2;

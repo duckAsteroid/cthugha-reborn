@@ -13,11 +13,10 @@ import java.awt.Stroke;
 public class RadialWave implements Wave {
   private IntegerParameter strokeWidth = new IntegerParameter("Stroke width", 1, 24, 12);
 
-  private static final int radialSamples = 200;
   private Stroke stroke;
 
   public RadialWave() {
-    wave(12);
+    wave(2);
   }
 
   public RadialWave wave(int size) {
@@ -27,6 +26,7 @@ public class RadialWave implements Wave {
   }
 
   public Polyline calculateWaveform(AudioSample sound, ScreenBuffer buffer) {
+    final int radialSamples = buffer.width;
     if (sound.size() >= radialSamples) {
       // the angle of each radial point around the circle
       final double angle = 2 * Math.PI / radialSamples;

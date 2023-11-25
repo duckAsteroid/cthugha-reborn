@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.params;
 
 import java.util.Random;
+import org.apache.commons.numbers.fraction.Fraction;
 
 /**
  * The base interface for all {@link Node}s that are actually a modifiable value. We use Number
@@ -55,7 +56,7 @@ public abstract class AbstractValue extends AbstractNode {
    * Set the value as a fraction (0-1) of the {@link #getScale()}
    */
   public void setValue(Fraction f) {
-    final double value = getMin().doubleValue() + (getScale() * f.fraction);
+    final double value = getMin().doubleValue() + (getScale() * f.doubleValue());
     setValue(value);
   }
 

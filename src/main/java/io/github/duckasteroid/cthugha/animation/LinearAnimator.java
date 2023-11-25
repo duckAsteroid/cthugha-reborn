@@ -1,8 +1,9 @@
 package io.github.duckasteroid.cthugha.animation;
 
-import io.github.duckasteroid.cthugha.params.Fraction;
+
 import java.math.BigDecimal;
 import java.time.Duration;
+import org.apache.commons.numbers.fraction.Fraction;
 
 /**
  * Linearly slides to and fro between 0 and 1
@@ -19,7 +20,7 @@ public class LinearAnimator extends Animator {
   }
 
   public LinearAnimator(double fraction, Duration time) {
-    this(new Fraction(fraction), time, RampType.RAMP_DOWN);
+    this(Fraction.from(fraction), time, RampType.RAMP_DOWN);
   }
   public LinearAnimator(Fraction initialValue, Duration stepSize, RampType rampType) {
     super(stepSize);
@@ -33,6 +34,6 @@ public class LinearAnimator extends Animator {
     if (rampType == RampType.RAMP_DOWN) {
         value = 1.0 / animationFraction.doubleValue();
     }
-    return new Fraction(value);
+    return Fraction.from(value);
   }
 }

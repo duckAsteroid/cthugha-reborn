@@ -1,10 +1,10 @@
 package io.github.duckasteroid.cthugha.animation;
 
-import io.github.duckasteroid.cthugha.params.Fraction;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.numbers.fraction.Fraction;
 
 public class CompositeAnimator extends Animator {
   private final List<Animator> children;

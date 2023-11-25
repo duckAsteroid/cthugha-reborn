@@ -35,7 +35,7 @@ public class Config {
     final String filename_prefix = System.getProperty(CONFIG_FILENAME_PROPERTY, CONFIG_FILENAME);
     final String profile = System.getProperty(CONFIG_PROFILE, "");
     if (!profile.isBlank()) LOG.debug("Using profile "+profile);
-    final String filename = (!profile.isBlank()) ? filename_prefix + SUFFIX : filename_prefix + "-" + profile + SUFFIX;
+    final String filename = (profile.isBlank()) ? filename_prefix + SUFFIX : filename_prefix + "-" + profile + SUFFIX;
     try {
       LOG.debug("Using config file "+filename);
       return new Config(filename);

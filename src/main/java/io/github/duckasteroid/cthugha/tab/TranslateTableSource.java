@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import java.awt.Dimension;
 import java.util.Random;
 
@@ -10,10 +11,10 @@ public interface TranslateTableSource {
 
   /**
    * Generate this translation table at the given screen size
-   * @param size
+   * @param buffer The screenbuffer to generate for
    * @return
    */
-  int[] generate(Dimension size);
+  int[] generate(ScreenBuffer buffer);
 
   /**
    * Randomise the generating parameters of this translation

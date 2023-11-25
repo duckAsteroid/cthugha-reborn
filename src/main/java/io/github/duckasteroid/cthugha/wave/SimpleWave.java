@@ -22,7 +22,7 @@ public class SimpleWave extends AbstractNode implements Wave {
 
   public final AffineTransformParams transformParams = new AffineTransformParams("Wave transform");
 
-  public final DoubleParameter strokeWidth = new DoubleParameter("Stroke width", 1.0, 24.0, 2.0);
+  public final DoubleParameter strokeWidth = new DoubleParameter("Stroke width", 1.0, 24.0, 1.0);
 
   public SimpleWave() {
     super("SimpleWave");

@@ -20,10 +20,10 @@ import org.slf4j.LoggerFactory;
 
 public class SampledAudioSource implements AudioSource {
   private static final Logger LOG = LoggerFactory.getLogger(SampledAudioSource.class);
-  public final static AudioFormat IDEAL = new AudioFormat( 44100f, 16, 2, true, false);
+  public final static AudioFormat IDEAL = new AudioFormat( 44100f, 16, 2, true, true);
   public final static int
     BUFFER_SIZE = IDEAL.getChannels() * (IDEAL.getSampleSizeInBits() / 8) // size of a sample
-    * (int)(0.2/* seconds*/ * IDEAL.getSampleRate()); // number of samples in X seconds
+    * (int) (0.2/* seconds*/ * IDEAL.getSampleRate()); // number of samples in X seconds
   private TargetDataLine openLine;
   private final AudioBuffer buffer;
   private final List<LineAcquirer.MixerLine> mixerLines;

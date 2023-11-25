@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import java.awt.Dimension;
@@ -23,7 +24,8 @@ public class Smoke extends AbstractNode implements TranslateTableSource {
   }
 
 
-  public int[] generate(Dimension size) {
+  public int[] generate(ScreenBuffer buffer) {
+    final Dimension size = buffer.getDimensions();
     int map_x, map_y;
     int[] directionVector = new int[] {directionVectorX.value, directionVectorY.value};
 

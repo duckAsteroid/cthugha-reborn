@@ -4,18 +4,56 @@ import io.github.duckasteroid.cthugha.map.PaletteMap;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import org.apache.commons.numbers.fraction.Fraction;
 
 /**
  * Represents our screen buffer - an array of byte pixels. Each representing the index into a color
  * {@link PaletteMap}
  */
 public class ScreenBuffer {
+
+  public interface PointWrapper {
+    Point wrapped(Point p, Dimension constraint);
+  }
+  public enum PointWrapMode implements PointWrapper {
+    LIMIT {
+      @Override
+      public Point wrapped(Point p, Dimension constraint) {
+        return new Point(
+          constrain(p.x, 0, constraint.width - 1),
+          constrain(p.y, 0, constraint.height - 1));
+      }
+
+
+    },
+    WRAP {
+      @Override
+      public Point wrapped(Point p, Dimension constraint) {
+        return new Point(
+          wrap(p.x, constraint.width),
+          wrap(p.y, constraint.height));
+      }
+    }
+  }
+  public static int wrap(int value, int max) {
+    value = value % max;
+    if (value < 0) {
+      return max + value;
+    }
+    return value;
+  }
+  public static int constrain(int value, int min, int max) {
+    return Math.max(min, Math.min(max, value));
+  }
   // pixels wide
   public final int width;
   // pixels high
@@ -41,6 +79,10 @@ public class ScreenBuffer {
     this.pixels = new byte[width * height];
   }
 
+  public Stream<Point> iterate() {
+    return IntStream.range(0, pixels.length).mapToObj(this::fromIndex);
+  }
+
   /**
    * Translate an X, Y coordinate into an index in the raster data
    * @param x the X coord
@@ -49,6 +91,21 @@ public class ScreenBuffer {
    */
   public int index(int x, int y) {
     return ((y % height) * width) + (x % width);
+  }
+
+  public int toIndex(Point pt, PointWrapMode mode) {
+    Point corrected = mode.wrapped(pt, getDimensions());
+    return index(corrected.x, corrected.y);
+  }
+
+  public int toIndex(Fraction x, Fraction y) {
+    return index(x.multiply(width).intValue(), y.multiply(height).intValue());
+  }
+
+  public Point fromIndex(int index) {
+    int y = Math.min(height, index / width);
+    int x = index % width;
+    return new Point(x,y);
   }
 
   /**

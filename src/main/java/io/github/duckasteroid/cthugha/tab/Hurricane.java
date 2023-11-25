@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.XYParam;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
@@ -22,7 +23,8 @@ public class Hurricane extends AbstractNode implements TranslateTableSource {
     initChildren(Randomness, speed, slowY, slowX, reverse, center);
   }
   @Override
-  public int[] generate(Dimension size) {
+  public int[] generate(ScreenBuffer buffer) {
+    final Dimension size = buffer.getDimensions();
     int[] result = new int[size.width * size.height];
     int xCenter = (int)(size.width * this.center.x.value);
     int yCenter = (int)(size.height * this.center.y.value);

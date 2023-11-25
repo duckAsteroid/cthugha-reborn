@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.PI;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.XYParam;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -15,7 +16,8 @@ public class BigHalfWheel extends AbstractNode implements TranslateTableSource {
     initChildren(center);
   }
   @Override
-  public int[] generate(Dimension size) {
+  public int[] generate(ScreenBuffer buffer) {
+    final Dimension size = buffer.getDimensions();
     int[] theTab = new int[size.height * size.width];
     int dx,dy,cx,cy,dist;
     float q, ang, p;

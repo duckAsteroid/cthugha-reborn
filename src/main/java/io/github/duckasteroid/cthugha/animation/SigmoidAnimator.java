@@ -1,8 +1,8 @@
 package io.github.duckasteroid.cthugha.animation;
 
-import io.github.duckasteroid.cthugha.params.Fraction;
 import java.math.BigDecimal;
 import java.time.Duration;
+import org.apache.commons.numbers.fraction.Fraction;
 
 public class SigmoidAnimator extends Animator {
   private final double slope;
@@ -21,6 +21,6 @@ public class SigmoidAnimator extends Animator {
   @Override
   public Fraction next(BigDecimal f) {
     double x = f.doubleValue();
-    return new Fraction(sigmoid(x));
+    return Fraction.from(sigmoid(x));
   }
 }

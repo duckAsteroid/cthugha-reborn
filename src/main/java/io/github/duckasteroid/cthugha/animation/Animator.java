@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.animation;
 
-import io.github.duckasteroid.cthugha.params.Fraction;
+
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.numbers.fraction.Fraction;
 
 /**
  * A thing that updates parameters

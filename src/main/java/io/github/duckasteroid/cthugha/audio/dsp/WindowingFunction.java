@@ -1,16 +1,27 @@
 package io.github.duckasteroid.cthugha.audio.dsp;
 
+import static java.lang.Math.PI;
+import static java.lang.Math.cos;
+
+import io.github.duckasteroid.cthugha.audio.AudioPoint;
+import io.github.duckasteroid.cthugha.audio.io.AudioValue;
 import java.util.stream.DoubleStream;
 
-public enum WindowingFunction {
-  TUKEY_5 {
-    @Override
-    public void apply(double[] data) {
-      for (int i = 0; i < data.length; i++) {
+public abstract class WindowingFunction {
 
-      }
+  public static class Cosine extends WindowingFunction {
+    private final int size;
+
+    public Cosine(int size) {
+      this.size = size;
     }
-  };
 
-  public abstract void apply(double[] data);
+    @Override
+    public double apply(AudioValue v) {
+      return v.value() * (1 - cos((2*PI*v.index()) / size));
+    }
+  }
+
+  public abstract double apply(AudioValue v);
+
 }

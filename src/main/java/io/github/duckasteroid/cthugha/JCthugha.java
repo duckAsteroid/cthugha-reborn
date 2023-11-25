@@ -4,7 +4,10 @@ package io.github.duckasteroid.cthugha;
 import static java.lang.Thread.sleep;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.Channel;
+import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
+import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SimulatedFrequenciesAudioSource;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.DisplayResolution;
@@ -29,6 +32,7 @@ import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.RadialWave;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
 import io.github.duckasteroid.cthugha.wave.SpeckleWave;
+import io.github.duckasteroid.cthugha.wave.SpectraBars;
 import io.github.duckasteroid.cthugha.wave.Wave;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -67,14 +71,14 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 	private final AnimatorPool animatorPool = new AnimatorPool();
 
 	public ObjectParameter<Duration> desiredDuration = new ObjectParameter<>("FrameRate (per second)",
-		10, 120, 60,
+		10, 120, 40,
 		fps -> Duration.of(Animator.NANOS_PER_SECOND / fps, ChronoUnit.NANOS),
 		duration -> (int) (duration.toNanos() / Animator.NANOS_PER_SECOND));
 	private BooleanParameter running = new BooleanParameter("Running");
 
 	//final AudioSource audioSource = new RandomSimulatedAudio(true);
-	//final AudioSource audioSource = new SampledAudioSource();
-	final SimulatedFrequenciesAudioSource audioSource = new SimulatedFrequenciesAudioSource(3);
+	final AudioSource audioSource = new SampledAudioSource();
+	//final SimulatedFrequenciesAudioSource audioSource = new SimulatedFrequenciesAudioSource(2);
 
 	ScreenBuffer buffer;
 
@@ -92,10 +96,11 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 	final Wave speckles = new SpeckleWave();
 	boolean doSpeckles = false;
 
-	//final Wave fft = new SpectraBars(new FastFourierTransform(4800, audioSource.getFormat(), Channel.MONO_AVG));
-	boolean doFFT = false;
+	final Wave fft = new SpectraBars(new FastFourierTransform(512, audioSource.getFormat(), Channel.MONO_AVG));
+	boolean doFFT = true;
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
+	static Stats sleepTime = StatsFactory.deltaStats("sleepTime");
 
 	RandomTranslateSource translateSource = new RandomTranslateSource();
 
@@ -124,7 +129,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		this.wave.transformParams.rotateCenter.setCenterOf(dims);
 
 		buffer = new ScreenBuffer(dims.width, dims.height);
-		translate = new Translate(dims, translateSource.generate(dims, true));
+		translate = new Translate(dims, translateSource.generate(buffer, true));
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
@@ -136,13 +141,12 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		Animator sineAnimatorStroke = new SineAnimator(0, Duration.ofSeconds(15));
 		Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
 		//sineAnimator.addTarget(wave.transformParams.rotate);
-		audioSource.oscillators.forEach(oscillator ->
-			sineAnimator.addTarget(oscillator.frequency.projection(20, 2000)));
+		//sineAnimator.addTarget(audioSource.oscillators.get(0).frequency);
 		sineAnimator2.addTarget(stringRenderer.transformParams.shear.x.projection(-.1,+.1));
 		sineAnimator3.addTarget(stringRenderer.transformParams.shear.y.projection(-.2,+.2));
 		sineAnimator2.addTarget(stringRenderer.transformParams.scale.x.projection(.5,1.5));
 		sineAnimator3.addTarget(stringRenderer.transformParams.scale.y.projection(.5,1.5));
-		sineAnimatorStroke.addTarget(wave.strokeWidth);
+		//sineAnimatorStroke.addTarget(wave.strokeWidth);
 		animatorPool.put("s1", sineAnimator);
 		animatorPool.put("s2", sineAnimator2);
 		animatorPool.put("s3", sineAnimator3);
@@ -176,7 +180,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 				speckles.wave(audioSample, buffer);
 			}
 			if (doFFT) {
-				//fft.wave(audioSample, buffer);
+				fft.wave(audioSample, buffer);
 			}
 			stringRenderer.show(buffer);
 
@@ -236,7 +240,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 	}
 
 	public void newTranslation(boolean newMap) {
-		translate.changeTable(translateSource.generate(buffer.getDimensions(), newMap));
+		translate.changeTable(translateSource.generate(buffer, newMap));
 		notify(translateSource.getLastGenerated());
 	}
 
@@ -280,7 +284,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 
 		GraphicsEnvironment localGraphicsEnvironment =
 			GraphicsEnvironment.getLocalGraphicsEnvironment();
-		GraphicsDevice gd = localGraphicsEnvironment.getDefaultScreenDevice();
+		GraphicsDevice gd = localGraphicsEnvironment.getScreenDevices()[0];
 		DisplayMode displayMode = gd.getDisplayMode();
 		Dimension screenSize = DisplayResolution.HD.getDimensions();
 		//Dimension screenSize =  new Dimension(displayMode.getWidth(), displayMode.getHeight());
@@ -384,7 +388,8 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 			Duration taken = doRender();
 			Duration wait = desiredDuration.getObjectValue().minus(taken);
 			long sleepFor = wait.toMillis();
-			if (sleepFor > 10) {
+			if (sleepFor > 0) {
+				sleepTime.add(sleepFor);
 				try {
 					sleep(sleepFor);
 				} catch (InterruptedException e) {

@@ -8,6 +8,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -42,7 +43,8 @@ public class Spiral extends AbstractNode implements TranslateTableSource{
   }
 
   @Override
-  public int[] generate(Dimension size) {
+  public int[] generate(ScreenBuffer buffer) {
+    final Dimension size = buffer.getDimensions();
 
     ArrayList<Integer> result = new ArrayList<>(size.width * size.height);
     int[] centersX = new int[MAX_NR_SPIRALS];
