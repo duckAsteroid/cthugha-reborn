@@ -20,6 +20,7 @@ public class RandomTranslateSource {
     sources.add(new Smoke());
     sources.add(new Space());
     sources.add(new Spiral());
+    sources.add(new Wavy());
   }
 
   public int[] generate(ScreenBuffer buffer, boolean newSource) {

@@ -2,7 +2,7 @@ package io.github.duckasteroid.cthugha.audio.dsp;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
-import static java.lang.Math.sqrt;
+import static java.lang.Math.abs;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.PointValueExtractor;
@@ -28,7 +28,7 @@ public class FastFourierTransform {
   /**
    * How we will reduce multi channel audio into a single 1D value
    */
-  private PointValueExtractor pointValueExtractor;
+  private final PointValueExtractor pointValueExtractor;
 
   public FastFourierTransform(int size, AudioFormat format, PointValueExtractor pointValueExtractor) {
     this.size = size;
@@ -38,7 +38,7 @@ public class FastFourierTransform {
     if (pointValueExtractor == null)
       throw new IllegalArgumentException("Value extractor cannot be null");
     this.pointValueExtractor = pointValueExtractor;
-    this.binFrequencies = IntStream.range(0,size / 2).mapToObj(this::bin_freq).toList();
+    this.binFrequencies = IntStream.range(0, size / 2).mapToObj(this::bin_freq).toList();
     this.fft = new DoubleFFT_1D(size);
   }
 
@@ -49,7 +49,7 @@ public class FastFourierTransform {
   public FrequencySpectra transform(AudioSample sample) {
     double[] data = sample.streamPoints()
       .limit(size * 2L)
-      .map(pt -> pointValueExtractor.value(pt))
+      .map(pointValueExtractor::value)
       .mapToDouble(AudioValue::value)
       //.mapToDouble(new WindowingFunction.Cosine(size * 2)::apply)
       .toArray();
@@ -58,13 +58,11 @@ public class FastFourierTransform {
     if (data.length >= size * 2) {
       fft.realForward(data);
       magnitudes = new Double[size / 2];
-      for (int i = 0; i < size; i += 2) {
-        int bin = i / 2;
-        double magnitude = sqrt(data[i] * data[i]) + sqrt(data[i + 1] * data[i + 1]);
-        min = Math.min(min, magnitude);
-        max = Math.max(max, magnitude);
-        magnitudes[bin] = magnitude;
-      }
+      IntStream.range(0, size / 2).parallel().forEach(i -> {
+        int fftIndex = i * 2;
+        double magnitude = abs(data[fftIndex]) + abs(data[fftIndex + 1]);
+        magnitudes[i] = magnitude;
+      });
       // FIXME can we scale magnitude according to data.length to normalise?
       // FIXME rather than by using local min/max FFT keeps magically scaling in UX
       // FIXME logarithmic x scale for frequencies
@@ -74,6 +72,6 @@ public class FastFourierTransform {
   }
 
   private double bin_freq(int bin) {
-    return (bin * format.getSampleRate() / 2) / ( size / 2);
+    return (bin * format.getSampleRate() / 2) / ( (double) size / 2);
   }
 }

@@ -7,6 +7,8 @@ import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.Channel;
 import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
+import io.github.duckasteroid.cthugha.audio.io.CompositeAudioSource;
+import io.github.duckasteroid.cthugha.audio.io.RandomSimulatedAudio;
 import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
 import io.github.duckasteroid.cthugha.audio.io.SimulatedFrequenciesAudioSource;
 import io.github.duckasteroid.cthugha.config.Config;
@@ -67,6 +69,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 	public static final double AUTO_ROTATE_AMT = 1;
+	private static final Duration MIN_WAIT = Duration.ofMillis(10);
 
 	private final AnimatorPool animatorPool = new AnimatorPool();
 
@@ -76,9 +79,11 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		duration -> (int) (duration.toNanos() / Animator.NANOS_PER_SECOND));
 	private BooleanParameter running = new BooleanParameter("Running");
 
-	//final AudioSource audioSource = new RandomSimulatedAudio(true);
-	final AudioSource audioSource = new SampledAudioSource();
-	//final SimulatedFrequenciesAudioSource audioSource = new SimulatedFrequenciesAudioSource(2);
+	final AudioSource audioSource = new CompositeAudioSource(
+		new RandomSimulatedAudio(true),
+		new SimulatedFrequenciesAudioSource(2),
+		new SampledAudioSource());
+
 
 	ScreenBuffer buffer;
 
@@ -387,8 +392,8 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		while(running.value) {
 			Duration taken = doRender();
 			Duration wait = desiredDuration.getObjectValue().minus(taken);
-			long sleepFor = wait.toMillis();
-			if (sleepFor > 0) {
+			if (wait.compareTo(MIN_WAIT) >= 0) {
+				long sleepFor = wait.toMillis();
 				sleepTime.add(sleepFor);
 				try {
 					sleep(sleepFor);

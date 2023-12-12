@@ -52,7 +52,7 @@ public class RadialWave implements Wave {
       Graphics2D graphics = buffer.getBufferedImageView().createGraphics();
       graphics.setColor(buffer.getForegroundColor());
       graphics.setStroke(stroke);
-      graphics.drawPolyline(line.xs, line.ys, line.size());
+      graphics.drawPolygon(line.xs, line.ys, line.size());
       graphics.dispose();
     }
   }

@@ -37,52 +37,6 @@ public class FrequencySpectra {
     return magnitudes.get(bin);
   }
 
-  public double getNormalisedMagnitude(int bin) {
-    return (getMagnitude(bin) - minMagnitude) / maxMagnitude;
-  }
-
-  public FrequencySpectra combineMaxima(FrequencySpectra other) {
-    return combine(pair -> Math.max(pair.getFirst(), pair.getSecond()), other);
-  }
-
-  public FrequencySpectra combine(Function<Pair<Double, Double>, Double> combiner, FrequencySpectra other) {
-    if (this.size() != other.size())
-      throw new IllegalArgumentException("Spectra must be the same size");
-    double min = Double.MAX_VALUE;
-    double max = 0;
-    Double[] result = new Double[size()];
-    for (int i = 0; i < result.length; i++) {
-      double combined = combiner.apply(Pair.create(this.magnitudes.get(i), other.magnitudes.get(i)));
-      result[i] = combined;
-      min = Math.min(min, combined);
-      max = Math.max(max, combined);
-    }
-    return new FrequencySpectra(binFrequencies, Arrays.asList(result), min, max);
-  }
-
-  public FrequencySpectra scale(double scalar) {
-    if (scalar < 0 || scalar > 1)
-      throw new IllegalArgumentException("Scalar must be a fraction");
-    return scale(value -> value * scalar);
-  }
-
-  public FrequencySpectra subtract(double amount) {
-    return scale(value -> Math.max(0, value - amount));
-  }
-
-  public FrequencySpectra scale(Function<Double, Double> scalar) {
-    double min = Double.MAX_VALUE;
-    double max = 0;
-    Double[] result = new Double[size()];
-    for (int i = 0; i < result.length; i++) {
-      double combined = scalar.apply(magnitudes.get(i));
-      result[i] = combined;
-      min = Math.min(min, combined);
-      max = Math.max(max, combined);
-    }
-    return new FrequencySpectra(binFrequencies, Arrays.asList(result), min, max);
-  }
-
   public double maxima() {
     return maxMagnitude;
   }
