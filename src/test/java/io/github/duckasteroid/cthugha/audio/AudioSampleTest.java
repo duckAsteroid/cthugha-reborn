@@ -34,7 +34,7 @@ class AudioSampleTest {
 
   @Test
   public void stereoTest() {
-    AudioSample subject = new AudioSample(ShortBuffer.wrap(stereoData), false, 1.0);
+    AudioSample subject = new AudioSample(ShortBuffer.wrap(stereoData), false, 1.0,  null);
     assertEquals(8, subject.size());
     List<AudioPoint> list = subject.streamPoints().toList();
     assertEquals(8, list.size());
@@ -47,7 +47,7 @@ class AudioSampleTest {
 
   @Test
   public void monoTest() {
-    AudioSample subject = new AudioSample(ShortBuffer.wrap(monoData), true, 1.0);
+    AudioSample subject = new AudioSample(ShortBuffer.wrap(monoData), true, 1.0, null);
     assertEquals(8, subject.size());
     List<AudioPoint> list = subject.streamPoints().toList();
     assertEquals(8, list.size());
@@ -60,7 +60,7 @@ class AudioSampleTest {
 
   @Test
   public void downsampleTest() {
-    AudioSample subject = new AudioSample(ShortBuffer.wrap(monoData), true, 1.0);
+    AudioSample subject = new AudioSample(ShortBuffer.wrap(monoData), true, 1.0,  null);
     assertEquals(8, subject.size());
     // test every 2nd point
     List<AudioPoint> downsample = subject.downsample(4).toList();
@@ -77,7 +77,7 @@ class AudioSampleTest {
     for (int i = 0; i <testData.length; i++) {
       testData[i] = (short) i;
     }
-    subject = new AudioSample(ShortBuffer.wrap(testData), true, 1.0);
+    subject = new AudioSample(ShortBuffer.wrap(testData), true, 1.0, null);
     assertEquals(1024, subject.size());
     downsample = subject.downsample(100).toList();
     assertEquals(100, downsample.size());

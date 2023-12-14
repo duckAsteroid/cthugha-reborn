@@ -10,19 +10,17 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Stroke;
 
+/**
+ * A waveform where time is represented by the angle around a circle
+ * Amplitude is the distance from the centre of the circle.
+ */
 public class RadialWave implements Wave {
   private IntegerParameter strokeWidth = new IntegerParameter("Stroke width", 1, 24, 12);
-
   private Stroke stroke;
 
   public RadialWave() {
-    wave(2);
-  }
-
-  public RadialWave wave(int size) {
-    this.strokeWidth.value = size;
-    this.stroke = new BasicStroke(size);
-    return this;
+    this.strokeWidth.value = 2;
+    this.stroke = new BasicStroke(2);
   }
 
   public Polyline calculateWaveform(AudioSample sound, ScreenBuffer buffer) {

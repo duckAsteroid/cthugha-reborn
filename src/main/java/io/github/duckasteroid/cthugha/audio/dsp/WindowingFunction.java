@@ -3,9 +3,7 @@ package io.github.duckasteroid.cthugha.audio.dsp;
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 
-import io.github.duckasteroid.cthugha.audio.AudioPoint;
-import io.github.duckasteroid.cthugha.audio.io.AudioValue;
-import java.util.stream.DoubleStream;
+import io.github.duckasteroid.cthugha.audio.AudioValue;
 
 public abstract class WindowingFunction {
 

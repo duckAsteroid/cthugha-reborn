@@ -14,6 +14,9 @@ import java.awt.geom.AffineTransform;
 
 /**
  * A simple rendering of the audio wave on the screen
+ * X is time
+ * Y is amplitude
+ * The LEFT and RIGHT channels are drawn at points on the screen
  */
 public class SimpleWave extends AbstractNode implements Wave {
 

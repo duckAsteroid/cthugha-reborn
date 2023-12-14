@@ -1,17 +1,10 @@
 package io.github.duckasteroid.cthugha.audio.dsp;
 
-import static java.lang.Math.PI;
-import static java.lang.Math.cos;
 import static java.lang.Math.abs;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.PointValueExtractor;
-import io.github.duckasteroid.cthugha.audio.io.AudioValue;
-import io.github.duckasteroid.cthugha.stats.Stats;
-import io.github.duckasteroid.cthugha.stats.StatsFactory;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import io.github.duckasteroid.cthugha.audio.AudioValue;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.sound.sampled.AudioFormat;

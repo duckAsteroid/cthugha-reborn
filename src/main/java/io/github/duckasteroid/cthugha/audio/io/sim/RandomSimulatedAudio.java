@@ -1,15 +1,20 @@
-package io.github.duckasteroid.cthugha.audio.io;
+package io.github.duckasteroid.cthugha.audio.io.sim;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.Channel;
+import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
+import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import java.io.IOException;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import javax.sound.sampled.AudioFormat;
 
-public class RandomSimulatedAudio implements AudioSource{
+public class RandomSimulatedAudio implements AudioSource {
   final Random rnd = new Random();
   final boolean stereo;
   final short stepSize = Short.MAX_VALUE / 10;
+
+  private final FastFourierTransform transform = new FastFourierTransform(512, getFormat(), Channel.MONO_AVG);
 
   double amplification = 1.0d;
 
@@ -19,12 +24,12 @@ public class RandomSimulatedAudio implements AudioSource{
 
   @Override
   public AudioFormat getFormat() {
-    return new AudioFormat(44100f, 16, 2, true, false);
+    return new AudioFormat(44100f, 16, stereo ? 2 : 1, true, false);
   }
 
   @Override
   public boolean isMono() {
-    return false;
+    return !stereo;
   }
 
   public AudioSample sample(final int width) {
@@ -34,7 +39,7 @@ public class RandomSimulatedAudio implements AudioSource{
     for(int i = 0; i < sound.length; i++) {
       sound[i] = nextSample((short) 0, height);
     }
-    return new AudioSample(ShortBuffer.wrap(sound), false, 1.0);
+    return new AudioSample(ShortBuffer.wrap(sound), false, 1.0,  transform);
   }
 
   private short nextSample(short current, int height) {

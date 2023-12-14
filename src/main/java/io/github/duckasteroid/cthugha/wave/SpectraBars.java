@@ -24,16 +24,14 @@ public class SpectraBars implements Wave {
   public EnumParameter<String> drawMode = new EnumParameter<>("Draw mode", List.of("Bar", "Line"));
   public BooleanParameter logarithmic = new BooleanParameter("Logarithmic scale", true);
 
-  private final FastFourierTransform transform;
 
-  public SpectraBars(FastFourierTransform transform) {
-    this.transform = transform;
+  public SpectraBars() {
     drawMode.setObjectValue("Line");
   }
 
   @Override
   public void wave(AudioSample sound, ScreenBuffer buffer) {
-    FrequencySpectra spectra = transform.transform(sound);
+    FrequencySpectra spectra = sound.fft();
     Graphics2D graphics = buffer.getGraphics();
 
     final int start = includeDC.value ? 0 : 1;

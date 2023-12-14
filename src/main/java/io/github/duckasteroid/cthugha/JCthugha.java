@@ -4,14 +4,11 @@ package io.github.duckasteroid.cthugha;
 import static java.lang.Thread.sleep;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
-import io.github.duckasteroid.cthugha.audio.Channel;
-import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
 import io.github.duckasteroid.cthugha.audio.io.AudioSource;
 import io.github.duckasteroid.cthugha.audio.io.CompositeAudioSource;
-import io.github.duckasteroid.cthugha.audio.io.RandomSimulatedAudio;
-import io.github.duckasteroid.cthugha.audio.io.SampledAudioSource;
-import io.github.duckasteroid.cthugha.audio.io.SimulatedFrequenciesAudioSource;
-import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.audio.io.sim.RandomSimulatedAudio;
+import io.github.duckasteroid.cthugha.audio.io.sampled.SampledAudioSource;
+import io.github.duckasteroid.cthugha.audio.io.sim.SimulatedFrequenciesAudioSource;
 import io.github.duckasteroid.cthugha.display.DisplayResolution;
 import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.flame.Flame;
@@ -35,6 +32,7 @@ import io.github.duckasteroid.cthugha.wave.RadialWave;
 import io.github.duckasteroid.cthugha.wave.SimpleWave;
 import io.github.duckasteroid.cthugha.wave.SpeckleWave;
 import io.github.duckasteroid.cthugha.wave.SpectraBars;
+import io.github.duckasteroid.cthugha.wave.VibratingCircleWave;
 import io.github.duckasteroid.cthugha.wave.Wave;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -96,12 +94,12 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 	final Flame flame = new JavaFlame();
 
 	final SimpleWave wave = new SimpleWave();
-	//final Wave wave = new VibratingCircleWave();
 	final Wave wave2 = new RadialWave();
+	final Wave wave3 = new VibratingCircleWave();
 	final Wave speckles = new SpeckleWave();
 	boolean doSpeckles = false;
 
-	final Wave fft = new SpectraBars(new FastFourierTransform(512, audioSource.getFormat(), Channel.MONO_AVG));
+	final Wave fft = new SpectraBars();
 	boolean doFFT = true;
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
@@ -181,6 +179,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 			// wave
 			wave.wave(audioSample, buffer);
 			wave2.wave(audioSample, buffer);
+			wave3.wave(audioSample, buffer);
 			if (doSpeckles) {
 				speckles.wave(audioSample, buffer);
 			}

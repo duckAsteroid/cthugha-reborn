@@ -1,9 +1,16 @@
-package io.github.duckasteroid.cthugha.audio.io;
+package io.github.duckasteroid.cthugha.audio.io.sampled;
 
-import io.github.duckasteroid.cthugha.audio.AudioBuffer;
 import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.Channel;
+import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
+import io.github.duckasteroid.cthugha.audio.io.AudioSource;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.stats.Stats;
+import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import java.io.IOException;
-import java.time.Duration;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.ShortBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,16 +32,34 @@ public class SampledAudioSource implements AudioSource {
     BUFFER_SIZE = IDEAL.getChannels() * (IDEAL.getSampleSizeInBits() / 8) // size of a sample
     * (int) (0.2/* seconds*/ * IDEAL.getSampleRate()); // number of samples in X seconds
   private TargetDataLine openLine;
-  private final AudioBuffer buffer;
+  private final ByteBuffer buffer;
+  private final AudioFormat format;
+  private final int bytesPerSample;
   private final List<LineAcquirer.MixerLine> mixerLines;
 
   private int lineIndex = 0;
+  private DoubleParameter amplification = new DoubleParameter("Amplification", 0, 100, 1);
+
+  private final FastFourierTransform fastFourierTransform;
+
+  /**
+   * Tracks statistics on the actual depth of the audio buffer on read
+   * (how much audio data was waiting)
+   */
+  private final Stats bufferDepth = StatsFactory.stats("audio.buffer.depthOnRead");
 
   public SampledAudioSource() throws LineUnavailableException {
     LineAcquirer laq = new LineAcquirer();
     mixerLines = laq.allLinesMatching(TargetDataLine.class, IDEAL);
-    this.buffer = new AudioBuffer(IDEAL, Duration.ofMillis(200));
+    this.format = IDEAL;
+    this.bytesPerSample = format.getChannels() * (format.getSampleSizeInBits() / 8);
+    double seconds = 200 / 1000.0d; // 200 ms
+    int numSamples =  (int)Math.round(seconds * format.getSampleRate());
+    this.buffer = ByteBuffer.allocate(bytesPerSample * numSamples);
+    this.buffer.order(format.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
     setSourceIndex(0);
+
+    fastFourierTransform = new FastFourierTransform(512, IDEAL, Channel.MONO_AVG);
   }
 
 
@@ -66,17 +91,28 @@ public class SampledAudioSource implements AudioSource {
 
   @Override
   public AudioFormat getFormat() {
-    return buffer.getFormat();
+    return format;
   }
 
   @Override
   public boolean isMono() {
-    return buffer.isMono();
+    return format.getChannels() == 1;
   }
 
   @Override
   public AudioSample sample(int length) {
-    return buffer.readFrom(openLine, length);
+      // how many samples are available?
+      int available = openLine.available() / bytesPerSample;
+      bufferDepth.add(available);
+
+      buffer.clear();
+      buffer.limit(Math.min(length * bytesPerSample, buffer.capacity()));
+      int read = openLine.read(buffer.array(), 0, Math.min(buffer.limit(), openLine.available()));
+      buffer.position(read);
+      buffer.flip();
+      ShortBuffer intBuffer = buffer.asShortBuffer();
+      return new AudioSample(intBuffer, isMono(), amplification.value, fastFourierTransform);
+
   }
 
   @Override

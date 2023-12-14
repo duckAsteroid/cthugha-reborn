@@ -2,7 +2,6 @@ package io.github.duckasteroid.cthugha.audio;
 
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.audio.io.LineAcquirer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
@@ -18,9 +17,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
-import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
 import org.jtransforms.fft.DoubleFFT_1D;
 import org.junit.jupiter.api.Test;
 

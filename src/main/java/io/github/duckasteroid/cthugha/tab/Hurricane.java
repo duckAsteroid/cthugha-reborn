@@ -2,12 +2,11 @@ package io.github.duckasteroid.cthugha.tab;
 
 import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
-import io.github.duckasteroid.cthugha.params.XYParam;
+import io.github.duckasteroid.cthugha.params.values.XYParam;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;
 import java.awt.Dimension;
-import java.util.Random;
 
 public class Hurricane extends AbstractNode implements TranslateTableSource {
 

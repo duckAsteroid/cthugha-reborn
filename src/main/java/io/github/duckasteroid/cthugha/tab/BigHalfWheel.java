@@ -4,8 +4,7 @@ import static java.lang.Math.PI;
 
 import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
-import io.github.duckasteroid.cthugha.params.XYParam;
-import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.XYParam;
 import java.awt.Dimension;
 
 public class BigHalfWheel extends AbstractNode implements TranslateTableSource {

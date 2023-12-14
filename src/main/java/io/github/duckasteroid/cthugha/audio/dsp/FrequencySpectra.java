@@ -21,6 +21,9 @@ public class FrequencySpectra {
     this.minMagnitude = minMagnitude;
   }
 
+  /**
+   * How many frequency bins are present in the spectra
+   */
   public int size() {
     return binFrequencies.size();
   }

@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.audio.io;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
+import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
 import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
@@ -38,4 +39,5 @@ public interface AudioSource extends Closeable {
 
   default double getAmplitude() { return 1.0; }
   default void setAmplitude(double amplitude) {}
+
 }

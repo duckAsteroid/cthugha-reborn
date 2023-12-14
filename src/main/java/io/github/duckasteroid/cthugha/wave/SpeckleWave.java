@@ -19,16 +19,6 @@ public class SpeckleWave implements Wave {
 
   @Override
   public void wave(AudioSample sound, ScreenBuffer buffer) {
-    final int max = (int)(buffer.pixels.length * fractionMax.value);
-    double intensity = sound.intensity(Channel.MONO_AVG); // FIXME use FFT DC (0Hz)
-    double relativeIntensity =  intensity / Short.MAX_VALUE;
-    if (relativeIntensity > triggerPoint.value) {
-      IntStream.range(0, (int) (max * relativeIntensity))
-        .forEach(i -> {
-          int x = rnd.nextInt(buffer.width);
-          int y = rnd.nextInt(buffer.height);
-          buffer.pixels[buffer.index(x, y)] = (byte) 255;
-        });
-    }
+    // FIXME use FFT DC (0Hz)
   }
 }

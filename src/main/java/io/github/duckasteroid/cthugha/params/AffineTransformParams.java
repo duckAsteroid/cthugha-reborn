@@ -1,11 +1,10 @@
 package io.github.duckasteroid.cthugha.params;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.XYParam;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.geom.AffineTransform;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.function.DoublePredicate;
 
 public class AffineTransformParams extends AbstractNode {

@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+/**
+ * A set of XY coords that form a line joining those points
+ */
 public class Polyline {
   public final int[] xs;
   public final int[] ys;

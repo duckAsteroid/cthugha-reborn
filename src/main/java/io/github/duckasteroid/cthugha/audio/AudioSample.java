@@ -1,7 +1,10 @@
 package io.github.duckasteroid.cthugha.audio;
 
+import io.github.duckasteroid.cthugha.audio.dsp.FastFourierTransform;
+import io.github.duckasteroid.cthugha.audio.dsp.FrequencySpectra;
 import java.nio.ShortBuffer;
 import java.util.Arrays;
+import java.util.function.Supplier;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -14,7 +17,13 @@ public class AudioSample {
   public final int channels;
   private final double amplification;
 
-  public AudioSample(ShortBuffer samples, boolean mono, double amplification) {
+  private FrequencySpectra frequencySpectra = null;
+
+  private final FastFourierTransform fft;
+
+  public AudioSample(ShortBuffer samples, boolean mono, double amplification, FastFourierTransform fft) {
+    if (fft == null) throw new NullPointerException();
+    this.fft = fft;
     this.backBuffer = samples;
     this.channels = mono ? 1 : 2;
     this.amplification = amplification;
@@ -30,6 +39,16 @@ public class AudioSample {
       }
       return new AudioPoint(index, sampleData);
     });
+  }
+
+  /**
+   * The FFT for this sample, this value is cached and only calculated once
+   */
+  public FrequencySpectra fft() {
+    if (frequencySpectra == null) {
+      frequencySpectra = fft.transform(this);
+    }
+    return frequencySpectra;
   }
 
   public Stream<AudioPoint> downsample(int maxLength) {
