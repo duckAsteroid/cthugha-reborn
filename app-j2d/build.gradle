@@ -1,0 +1,23 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':audio')
+    implementation project(':config')
+    implementation project(':debug')
+    implementation(libs.commons.numbers.fraction)
+    implementation(libs.commons.lang3)
+    implementation(libs.commons.imaging)
+}
+
+java {
+    mainClassName ="io.github.duckasteroid.cthugha.JCthugha"
+    //applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
+}
+
+run {
+    workingDir = file("src/dist")
+    systemProperty("cthugha.stats.enabled", "true")
+    systemProperty("sun.java2d.opengl", "true")
+}

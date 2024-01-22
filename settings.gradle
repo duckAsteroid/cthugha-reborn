@@ -1,0 +1,6 @@
+include 'debug'
+include 'audio'
+include 'config'
+include 'app-common'
+include 'app-j2d'
+include 'app-gl'

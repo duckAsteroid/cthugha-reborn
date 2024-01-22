@@ -1,0 +1,10 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api(libs.commons.numbers.fraction)
+
+    api(libs.ini4j)
+
+}

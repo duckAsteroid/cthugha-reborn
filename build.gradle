@@ -1,40 +1,32 @@
 plugins {
-	id 'java'
-	id 'application'
 	id "com.github.ben-manes.versions" version "0.47.0"
 }
 
-repositories {
-	mavenCentral()
+allprojects {
+	version='1.0.0'
+	group='io.github.duckasteroid.cthugha'
 }
 
-dependencies {
-	// Logging API
-	implementation(group: 'org.slf4j', name:'slf4j-api', version: '2.0.7')
-	// Apache imaging for PCX support
-	implementation 'org.apache.commons:commons-imaging:1.0-alpha3'
-	// Fast Fourier Transform
-	implementation 'com.github.wendykierp:JTransforms:3.1:with-dependencies'
-	// Apache lang for primitive array utils
-	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
-	// INI file parsing
-	implementation group: 'org.ini4j', name: 'ini4j', version: '0.5.4'
-	// fractional number utils
-	implementation 'org.apache.commons:commons-numbers-fraction:1.1'
+subprojects {
+	apply plugin: 'java'
 
+	repositories {
+		mavenCentral()
+	}
 
-	implementation 'one.util:streamex:0.6.5'
-	// Open GL libraries
-	def joglVersion = '2.3.2'
-	implementation "org.jogamp.gluegen:gluegen-rt-main:$joglVersion"
-	implementation "org.jogamp.jogl:jogl-all-main:$joglVersion"
+	dependencies {
+		implementation(libs.slf4j.api)
+		testImplementation(libs.junit)
+	}
 
-	// basic logging library for runtime
-	runtimeOnly 'ch.qos.logback:logback-classic:1.4.8'
+	compileJava {
+		options.incremental = true
+		options.fork = true
+	}
 
-	// JUnit5 for testing
-	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.10.0-M1')
-	testImplementation 'org.mockito:mockito-core:5.3.1'
+	test {
+		useJUnitPlatform()
+	}
 }
 
 tasks.register('usbStickify', Copy) {
@@ -43,28 +35,8 @@ tasks.register('usbStickify', Copy) {
 	into "D:\\cthuga-reborn\\lib"
 }
 
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
-	}
-}
 
-compileJava {
-	options.incremental = true
-	options.fork = true
-}
 
-test {
-	useJUnitPlatform()
-}
 
-application {
-	mainClassName = "io.github.duckasteroid.cthugha.JCthugha"
-	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
-}
 
-run {
-	workingDir = file("src/dist")
-	systemProperty("cthugha.stats.enabled", "true")
-	//systemProperty("sun.java2d.opengl", "true")
-}
+

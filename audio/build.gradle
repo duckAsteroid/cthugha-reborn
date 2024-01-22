@@ -1,0 +1,12 @@
+plugins {
+    id 'java'
+    id 'java-library'
+}
+
+dependencies {
+    implementation(project(':debug'))
+    api(project(':config'))
+    api(libs.wendykierp.fft)
+}
+
+description = 'A library for acquiring (and simulating) audio signals'
