@@ -49,8 +49,8 @@ public class JCthughaGL implements GLEventListener {
     window.addGLEventListener(this);
 
     animator = new Animator(window);
-    animator.setUpdateFPSFrames(1, null);
-    animator.setRunAsFastAsPossible(true);
+    animator.setUpdateFPSFrames(1000, null);
+    //animator.setRunAsFastAsPossible(true);
     animator.start();
 
     window.addWindowListener(new WindowAdapter() {
@@ -67,6 +67,12 @@ public class JCthughaGL implements GLEventListener {
         if (KeyEvent.VK_ESCAPE == e.getKeyCode()) {
           System.out.println("Exit via ESC key");
           window.destroy();
+        }
+        else if (KeyEvent.VK_F11 == e.getKeyCode()){
+          window.setFullscreen(!window.isFullscreen());
+        }
+        else if (e.getKeyChar() == 'f') {
+          System.out.println(animator.getLastFPS());
         }
       }
     });

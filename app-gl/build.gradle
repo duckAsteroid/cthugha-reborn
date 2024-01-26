@@ -10,3 +10,7 @@ dependencies {
 java {
     mainClassName = "io.github.duckasteroid.cthugha.gl.JCthughaGL"
 }
+
+run {
+    systemProperty("sun.java2d.opengl", "false")
+}

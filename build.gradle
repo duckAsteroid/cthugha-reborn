@@ -17,6 +17,7 @@ subprojects {
 	dependencies {
 		implementation(libs.slf4j.api)
 		testImplementation(libs.junit)
+		testRuntimeOnly(libs.logback)
 	}
 
 	compileJava {

@@ -3,12 +3,14 @@ plugins {
 }
 
 dependencies {
+    implementation project(':app-common')
     implementation project(':audio')
     implementation project(':config')
     implementation project(':debug')
     implementation(libs.commons.numbers.fraction)
     implementation(libs.commons.lang3)
     implementation(libs.commons.imaging)
+    runtimeOnly(libs.logback)
 }
 
 java {

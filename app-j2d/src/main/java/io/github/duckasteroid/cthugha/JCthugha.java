@@ -14,7 +14,10 @@ import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.flame.Flame;
 import io.github.duckasteroid.cthugha.flame.JavaFlame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
-import io.github.duckasteroid.cthugha.keys.Keybind;
+import io.github.duckasteroid.cthugha.keys.Action;
+import io.github.duckasteroid.cthugha.keys.KeyHandler;
+import io.github.duckasteroid.cthugha.keys.Keybinding;
+import io.github.duckasteroid.cthugha.keys.SpecialKey;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
 import io.github.duckasteroid.cthugha.params.animation.Animator;
@@ -50,8 +53,11 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -59,6 +65,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.sound.sampled.LineUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,7 +134,7 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 
 	}
 
-	public void init(Dimension dims, BufferStrategy bufferStrategy, BufferedImage screenImage, Frame window, List<Keybind> keybinds) throws IOException {
+	public void init(Dimension dims, BufferStrategy bufferStrategy, BufferedImage screenImage, Frame window) throws IOException {
 		this.bufferStrategy = bufferStrategy;
 		this.screenImage = screenImage;
 		this.window = window;
@@ -298,43 +307,52 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		final Frame f = new Frame();
 
 		final JCthugha jCthugha = new JCthugha();
-		final List<Keybind> keybindings = Arrays.asList(
-			new Keybind('!', "Quit", (e)-> jCthugha.stop()),
-			new Keybind('q', "Show a quote on screen", (e) -> jCthugha.showQuote()),
-			new Keybind('a', "Toggle audio source", (e) -> jCthugha.toggleAudioSource()),
-			new Keybind('s', "Toggle speckle wave", (e) -> jCthugha.toggleSpeckle()),
-			new Keybind('n', "Toggle notifications", (e) -> jCthugha.toggleNotifications()),
-			new Keybind('t', 'T', "Randomise the translation. Shift T to really randomise it", (e) -> jCthugha.newTranslation(e.isShiftDown())),
-			new Keybind('p', "Change the palette", (e) -> jCthugha.newPalette()),
-			new Keybind( 'd', "Toggle debug", (e) -> jCthugha.toggleDebug()),
-			new Keybind(',', "Spin waves left", (e) -> jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT)),
-			new Keybind( '.', "Spin waves right", (e) -> jCthugha.wave.autoRotate(AUTO_ROTATE_AMT)),
-			new Keybind('<', "Rotate wave 10 degrees left", (e)-> jCthugha.rotate(-10)),
-			new Keybind('>', "Rotate wave 10 degrees left", (e)-> jCthugha.rotate(10)),
-			new Keybind('x', "Flash fill the screen", (e) -> Arrays.fill(jCthugha.buffer.pixels, (byte)255)),
-			new Keybind( 'i', "Flash a random image", (e) -> jCthugha.flashImage()),
-			new Keybind('u', 'U',"Increase amplitude", (e) -> {
-				if(e.isShiftDown()) jCthugha.changeAmplitude(1.1);
-				else jCthugha.changeAmplitude(1.01);
-			}),
-			new Keybind('j', 'J', "Decrease amplitude", (e) -> {
-				if(e.isShiftDown()) jCthugha.changeAmplitude(0.9);
-				else jCthugha.changeAmplitude(0.99);
-			}),
-			new Keybind( 'f', "Toggle fullscreen (NOT CURRENTLY WORKING)", (e) -> {
-				GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
-				if (graphicsDevice.isFullScreenSupported()) {
-					if (graphicsDevice.getFullScreenWindow() == null) {
-						DisplayMode mode = graphicsDevice.getDisplayMode();
-						f.setSize(mode.getWidth(), mode.getHeight());
-						graphicsDevice.setFullScreenWindow(f.getOwner());
-					} else {
-						graphicsDevice.setFullScreenWindow(null);
-					}
+
+		Action.register("Quit", jCthugha::stop);
+		Action.register("QUOTE", "Show a quote on screen", jCthugha::showQuote);
+		Action.register("AUDIO", "Toggle audio source", jCthugha::toggleAudioSource);
+		Action.register("SPECKLE", "Toggle speckle wave", jCthugha::toggleSpeckle);
+		Action.register("NOTIFY", "Toggle notifications", jCthugha::toggleNotifications);
+		Action.register( "SMALL_TRANSLATE", "Randomise the translation, a bit", () -> jCthugha.newTranslation(false));
+		Action.register( "BIG_TRANSLATE", "Randomise the translation, a lot", () -> jCthugha.newTranslation(true));
+		Action.register("PALETTE", "Change the palette", jCthugha::newPalette);
+		Action.register("DEBUG",  "Toggle debug", jCthugha::toggleDebug);
+		Action.register("SPIN_LEFT", "Spin waves left", () -> jCthugha.wave.autoRotate(-AUTO_ROTATE_AMT));
+		Action.register("SPIN_RIGHT" , "Spin waves right", () -> jCthugha.wave.autoRotate(AUTO_ROTATE_AMT));
+		Action.register("SPIN_BIG_LEFT", "Rotate wave 10 degrees left", ()-> jCthugha.rotate(-10));
+		Action.register("SPIN_BIG_RIGHT", "Rotate wave 10 degrees left", ()-> jCthugha.rotate(10));
+		Action.register("FLASH", "Flash fill the screen", () -> Arrays.fill(jCthugha.buffer.pixels, (byte)255));
+		Action.register("IMAGE","Flash a random image", jCthugha::flashImage);
+		Action.register("AMP_UP_SMALL", "Increase amplitude", () -> jCthugha.changeAmplitude(1.01));
+		Action.register("AMP_UP_BIG", "Increase amplitude", () -> jCthugha.changeAmplitude(1.1));
+		Action.register("AMP_DOWN_SMALL","Decrease amplitude", () ->  jCthugha.changeAmplitude(0.99));
+		Action.register("AMP_DOWN_BIG","Decrease amplitude", () ->  jCthugha.changeAmplitude(0.9));
+		Action.register("FULLSCREEN", "Toggle fullscreen (NOT CURRENTLY WORKING)", () -> {
+			GraphicsDevice graphicsDevice = f.getGraphicsConfiguration().getDevice();
+			if (graphicsDevice.isFullScreenSupported()) {
+				if (graphicsDevice.getFullScreenWindow() == null) {
+					DisplayMode mode = graphicsDevice.getDisplayMode();
+					f.setSize(mode.getWidth(), mode.getHeight());
+					graphicsDevice.setFullScreenWindow(f.getOwner());
 				} else {
-					System.out.println("Full screen not supported");
+					graphicsDevice.setFullScreenWindow(null);
 				}
-			}));
+			} else {
+				System.out.println("Full screen not supported");
+			}
+		});
+
+		//System.out.println(Action.getRegistry().values().stream().map(Action::getId).collect(Collectors.joining("\n")));
+
+		KeyHandler keyHandler;
+		// load key configs
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(
+      Objects.requireNonNull(JCthugha.class.getResourceAsStream("/keys"))))) {
+			keyHandler = new KeyHandler(br.lines());
+		}
+
+		// dump help text
+		System.out.println(keyHandler.getHelpText().stream().map(s -> "\t"+s).collect(Collectors.joining("\n")));
 
 		//ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
 
@@ -362,12 +380,10 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		f.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
-				for(Keybind bind : keybindings) {
-					if (bind.isFired(e)) {
-						bind.handle(e);
-						break;
-					}
-				}
+				Optional<Keybinding> keybinding = keyHandler.match(kb ->
+          kb.getCharacters().stream().anyMatch(c -> c == e.getKeyChar()) ||
+					kb.getSpecialKeys().stream().anyMatch(sk -> specialKeyMatches(sk, e)));
+        keybinding.map(Keybinding::getAction).ifPresent(Action::doAction);
 			}
 		});
 
@@ -378,13 +394,45 @@ public class JCthugha extends AbstractNode implements Runnable, Closeable {
 		BufferedImage screenCompatibleImage =
 			graphicsConfiguration.createCompatibleImage(cthughaBufferSize.width,
 				cthughaBufferSize.height);
-		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f, keybindings);
+		jCthugha.init(cthughaBufferSize, f.getBufferStrategy(), screenCompatibleImage, f);
 
 		Thread mainLoop = new Thread(jCthugha);
 		mainLoop.setPriority(Thread.MAX_PRIORITY);
 		mainLoop.start();
 
 		//executorService.scheduleAtFixedRate(jCthugha, 100, 1000/60, TimeUnit.MILLISECONDS);
+	}
+
+	public static boolean specialKeyMatches(SpecialKey k, KeyEvent event) {
+		switch (k) {
+      case ESC -> {
+				return event.getKeyCode() == KeyEvent.VK_ESCAPE;
+      }
+      case DEL -> {
+	      return event.getKeyCode() == KeyEvent.VK_DELETE;
+      }
+      case ENTER -> {
+	      return event.getKeyCode() == KeyEvent.VK_ENTER;
+      }
+      case SPACE -> {
+	      return event.getKeyCode() == KeyEvent.VK_SPACE;
+      }
+      case FN_11 -> {
+	      return event.getKeyCode() == KeyEvent.VK_F11;
+      }
+      case CTRL -> {
+	      return  event.getKeyCode() == KeyEvent.VK_CONTROL;
+      }
+      case SHIFT -> {
+	      return  event.getKeyCode() == KeyEvent.VK_SHIFT;
+      }
+      case ALT -> {
+	      return  event.getKeyCode() == KeyEvent.VK_ALT;
+      }
+			default -> {
+				return false;
+			}
+    }
 	}
 
 	public void run() {
