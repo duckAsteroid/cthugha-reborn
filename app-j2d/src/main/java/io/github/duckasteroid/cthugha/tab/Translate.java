@@ -1,6 +1,17 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import java.awt.Dimension;
+import java.awt.Point;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.ShortBuffer;
+import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.stream.IntStream;
 
 /**
@@ -61,5 +72,36 @@ public class Translate {
       }
     }
     return source;
+  }
+
+  public static void main(String[] args)
+    throws NoSuchMethodException, InvocationTargetException, InstantiationException,
+    IllegalAccessException, ClassNotFoundException, IOException {
+    if (args.length != 4) {
+      System.out.println("Usage: <type> <width> <height> <filename>");
+      System.exit(1);
+    }
+    int width = Integer.parseInt(args[1]);
+    int height = Integer.parseInt(args[2]);
+    String filename = args[3];
+    String translateType = args[0];
+    Class<?> translateClass = Class.forName("io.github.duckasteroid.cthugha.tab." + translateType);
+    TranslateTableSource source = (TranslateTableSource) translateClass.getConstructor().newInstance();
+    source.randomise();
+    ScreenBuffer screenBuffer = new ScreenBuffer(width, height);
+    int[] table = source.generate(screenBuffer);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ByteBuffer output = ByteBuffer.allocate(4);
+    output.order(ByteOrder.nativeOrder());
+    System.out.println(ByteOrder.nativeOrder());
+    ShortBuffer shortBuffer = output.asShortBuffer();
+    for (int i = 0; i < table.length; i++) {
+      shortBuffer.clear();
+      Point point = screenBuffer.fromIndex(table[i]);
+      shortBuffer.put((short)point.x);
+      shortBuffer.put((short)point.y);
+      baos.write(output.array());
+    }
+    Files.write(java.nio.file.Paths.get(filename), baos.toByteArray());
   }
 }
