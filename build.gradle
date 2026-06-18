@@ -2,15 +2,27 @@ plugins {
 	id 'java'
 	id 'application'
 	id "com.github.ben-manes.versions" version "0.47.0"
+	id 'io.github.duckasteroid.agent-docs' version '1.0.10'
 }
 
 repositories {
+	mavenLocal()
 	mavenCentral()
 }
 
 dependencies {
 	// Logging API
 	implementation(group: 'org.slf4j', name:'slf4j-api', version: '2.0.7')
+	// OpenGL utils
+	implementation('com.asteroid.duck.opengl:render-core:0.0.1')
+	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
+	implementation platform('org.lwjgl:lwjgl-bom:3.4.1')
+	implementation 'org.lwjgl:lwjgl'
+	implementation 'org.lwjgl:lwjgl-opengl'
+	implementation 'org.lwjgl:lwjgl-glfw'
+	// JOML — vector/matrix types used in render-core API
+	implementation 'org.joml:joml:1.10.8'
+
 	// Apache imaging for PCX support
 	implementation 'org.apache.commons:commons-imaging:1.0-alpha3'
 	// Fast Fourier Transform
@@ -26,7 +38,8 @@ dependencies {
 
 	// JUnit5 for testing
 	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.10.0-M1')
-	testImplementation 'org.mockito:mockito-core:5.3.1'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.mockito:mockito-core:5.23.0'
 }
 
 tasks.register('usbStickify', Copy) {
@@ -37,7 +50,7 @@ tasks.register('usbStickify', Copy) {
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -51,7 +64,7 @@ test {
 }
 
 application {
-	mainClassName = "io.github.duckasteroid.cthugha.JCthugha"
+	mainClass = "io.github.duckasteroid.cthugha.display.CthughaWindow"
 	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
 }
 
