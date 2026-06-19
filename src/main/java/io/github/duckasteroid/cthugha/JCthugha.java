@@ -14,13 +14,14 @@ import io.github.duckasteroid.cthugha.flame.JavaFlame;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.notify.NotificationRenderer;
-import io.github.duckasteroid.cthugha.animation.Animator;
 import io.github.duckasteroid.cthugha.animation.AnimatorPool;
-import io.github.duckasteroid.cthugha.animation.SineAnimator;
+import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
-import io.github.duckasteroid.cthugha.strings.StringRenderer;
+import io.github.duckasteroid.cthugha.strings.Constants;
+import io.github.duckasteroid.cthugha.strings.Quote;
+import io.github.duckasteroid.cthugha.strings.RandomStringSource;
 import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
 import io.github.duckasteroid.cthugha.tab.Translate;
 import io.github.duckasteroid.cthugha.wave.RadialWave;
@@ -37,7 +38,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import javax.sound.sampled.LineUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +45,9 @@ import org.slf4j.LoggerFactory;
 public class JCthugha extends AbstractNode implements Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
+
+	private static final Duration QUOTE_DURATION = Config.singleton().getConfigAs(
+		Constants.SECTION, Constants.KEY_DURATION, "PT10S", Duration::parse);
 
 	private final AnimatorPool animatorPool = new AnimatorPool();
 
@@ -76,7 +79,10 @@ public class JCthugha extends AbstractNode implements Closeable {
 
 	RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
 
-	StringRenderer stringRenderer = new StringRenderer();
+	private final RandomStringSource stringSource = new RandomStringSource();
+	private volatile String currentQuoteText = null;
+	private Instant quoteExpiry = null;
+	private volatile String pendingNotification = null;
 
 	public JCthugha() throws LineUnavailableException {
 	}
@@ -91,18 +97,6 @@ public class JCthugha extends AbstractNode implements Closeable {
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
-		Animator sineAnimator = new SineAnimator(0, Duration.ofSeconds(20));
-		Animator sineAnimator2 = new SineAnimator(0, Duration.ofSeconds(10));
-		Animator sineAnimatorStroke = new SineAnimator(0, Duration.ofSeconds(15));
-		Animator sineAnimator3 = new SineAnimator(Math.PI / 2, Duration.ofSeconds(5));
-		sineAnimator2.addTarget(stringRenderer.transformParams.shear.x.projection(-.1, +.1));
-		sineAnimator3.addTarget(stringRenderer.transformParams.shear.y.projection(-.2, +.2));
-		sineAnimator2.addTarget(stringRenderer.transformParams.scale.x.projection(.5, 1.5));
-		sineAnimator3.addTarget(stringRenderer.transformParams.scale.y.projection(.5, 1.5));
-		animatorPool.put("s1", sineAnimator);
-		animatorPool.put("s2", sineAnimator2);
-		animatorPool.put("s3", sineAnimator3);
-		animatorPool.put("s4", sineAnimatorStroke);
 	}
 
 	public synchronized Duration doRenderCPU() {
@@ -117,7 +111,6 @@ public class JCthugha extends AbstractNode implements Closeable {
 			wave2.wave(audioSample, buffer);
 			if (doSpeckles) speckles.wave(audioSample, buffer);
 			if (doFFT) fft.wave(audioSample, buffer);
-			stringRenderer.show(buffer);
 		} catch (Throwable t) {
 			LOG.error("Processing main loop", t);
 		}
@@ -127,7 +120,22 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public void notify(String message) {
 		if (notify) {
 			LOG.info("notify: {}", message);
+			pendingNotification = message;
 		}
+	}
+
+	public String pollNotification() {
+		String n = pendingNotification;
+		pendingNotification = null;
+		return n;
+	}
+
+	public String getCurrentQuote() {
+		if (currentQuoteText != null && Instant.now().isBefore(quoteExpiry)) {
+			return currentQuoteText;
+		}
+		currentQuoteText = null;
+		return null;
 	}
 
 	public void newTranslation(boolean newMap) {
@@ -173,7 +181,9 @@ public class JCthugha extends AbstractNode implements Closeable {
 	}
 
 	public void showQuote() {
-		stringRenderer.begin();
+		Quote q = stringSource.nextQuote();
+		currentQuoteText = q.quote() + "\n  — " + q.author();
+		quoteExpiry = Instant.now().plus(QUOTE_DURATION);
 	}
 
 	public void toggleNotifications() {
