@@ -104,8 +104,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 		try {
 			frameRate.ping();
 			animatorPool.doAnimation(Duration.between(started, start));
-			translate.transform(buffer.pixels, buffer.pixels);
-			flame.flame(buffer, buffer.getWriteableRaster());
+		flame.flame(buffer, buffer.getWriteableRaster());
 			AudioSample audioSample = audioSource.sample(buffer.width);
 			wave.wave(audioSample, buffer);
 			wave2.wave(audioSample, buffer);
@@ -136,6 +135,10 @@ public class JCthugha extends AbstractNode implements Closeable {
 		}
 		currentQuoteText = null;
 		return null;
+	}
+
+	public int[] getTranslateTable() {
+		return translate.getTable();
 	}
 
 	public void newTranslation(boolean newMap) {

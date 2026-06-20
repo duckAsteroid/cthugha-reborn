@@ -44,6 +44,10 @@ public class Translate {
     });
   }
 
+  public int[] getTable() {
+    return table;
+  }
+
   public void changeTable(int[] newTable) {
     table = newTable;
   }
