@@ -4,7 +4,6 @@ import com.asteroid.duck.opengl.util.GLWindow;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
-import com.asteroid.duck.opengl.util.audio.AudioDataSource;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
@@ -98,9 +97,6 @@ public class CthughaWindow extends GLWindow {
     private final TimerImpl timer = new TimerImpl(() -> (double) System.nanoTime() / 1e9);
     private Double desiredUpdatePeriod = null;
 
-    private LineAcquirer lineAcquirer;
-    private AudioDataSource activeAudioSource;
-
     // AudioWave uses its own LineAcquirer (separate from JCthugha's audio to avoid racing reads)
     private LineAcquirer waveLineAcquirer;
     private AudioWave audioWave;
@@ -134,18 +130,12 @@ public class CthughaWindow extends GLWindow {
     public void registerKeys() {
         var kr = getKeyRegistry();
 
-        kr.registerKeyAction(KeyCombination.simple('A'), () -> {
-            if (lineAcquirer != null) switchAudioSource(lineAcquirer.next());
-        }, "Toggle audio source");
         kr.registerKeyAction(KeyCombination.simple('D'), cthugha::toggleDebug, "Toggle debug");
         kr.registerKeyAction(KeyCombination.simple('F'), this::toggleFullscreen, "Toggle fullscreen");
         kr.registerKeyAction(KeyCombination.simple('I'), cthugha::flashImage, "Flash a random image");
-        kr.registerKeyAction(KeyCombination.simple('J'), () -> cthugha.changeAmplitude(0.99), "Decrease amplitude 1%");
-        kr.registerKeyAction(KeyCombination.simpleWithMods('J', "SHIFT"), () -> cthugha.changeAmplitude(0.9), "Decrease amplitude 10%");
         kr.registerKeyAction(KeyCombination.simple('N'), cthugha::toggleNotifications, "Toggle notifications");
         kr.registerKeyAction(KeyCombination.simple('P'), cthugha::newPalette, "Change palette");
         kr.registerKeyAction(KeyCombination.simple('Q'), cthugha::showQuote, "Show a quote on screen");
-        kr.registerKeyAction(KeyCombination.simple('S'), cthugha::toggleSpeckle, "Toggle speckle wave");
         kr.registerKeyAction(KeyCombination.simple('T'), () -> {
             cthugha.newTranslation(false);
             rebuildTranslateMap();
@@ -154,14 +144,8 @@ public class CthughaWindow extends GLWindow {
             cthugha.newTranslation(true);
             rebuildTranslateMap();
         }, "Fully randomise translation");
-        kr.registerKeyAction(KeyCombination.simple('U'), () -> cthugha.changeAmplitude(1.01), "Increase amplitude 1%");
-        kr.registerKeyAction(KeyCombination.simpleWithMods('U', "SHIFT"), () -> cthugha.changeAmplitude(1.1), "Increase amplitude 10%");
         kr.registerKeyAction(KeyCombination.simple('X'), () -> Arrays.fill(cthugha.buffer.pixels, (byte) 255), "Flash fill screen white");
 
-        kr.registerKeyAction(GLFW_KEY_COMMA, 0, () -> cthugha.autoRotateWave(-1), "Spin waves left");
-        kr.registerKeyAction(GLFW_KEY_PERIOD, 0, () -> cthugha.autoRotateWave(1), "Spin waves right");
-        kr.registerKeyAction(GLFW_KEY_COMMA, GLFW_MOD_SHIFT, () -> cthugha.rotate(-10), "Rotate wave -10 degrees");
-        kr.registerKeyAction(GLFW_KEY_PERIOD, GLFW_MOD_SHIFT, () -> cthugha.rotate(10), "Rotate wave +10 degrees");
         kr.registerKeyAction(GLFW_KEY_1, GLFW_MOD_SHIFT, () -> {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
@@ -176,11 +160,6 @@ public class CthughaWindow extends GLWindow {
         int h = win.height;
 
         cthugha.init(new Dimension(w, h));
-
-        // Audio pipeline — initialise after cthugha.init() so audioBuffer is ready
-        lineAcquirer = new LineAcquirer();
-        lineAcquirer.init(this, LineAcquirer.IDEAL);
-        switchAudioSource(lineAcquirer.getSelectedSource());
 
         // Font textures first to avoid disturbing the active texture unit
         FontTexture quoteFont = new FontTextureFactory(new Font("Serif", Font.ITALIC, 28), true).createFontTexture();
@@ -365,27 +344,6 @@ public class CthughaWindow extends GLWindow {
 
     }
 
-    private void switchAudioSource(AudioDataSource ds) {
-        if (activeAudioSource != null) {
-            activeAudioSource.stop();
-            activeAudioSource.close();
-        }
-        activeAudioSource = ds;
-        try {
-            if (!activeAudioSource.isOpen()) {
-                activeAudioSource.open(LineAcquirer.IDEAL, 4096);
-            }
-            if (!activeAudioSource.isRunning()) {
-                activeAudioSource.start();
-            }
-        } catch (javax.sound.sampled.LineUnavailableException e) {
-            LOG.error("Failed to open audio source: {}", ds.getName(), e);
-            activeAudioSource = null;
-        }
-        cthugha.setAudioDataSource(activeAudioSource);
-        cthugha.notify("Audio: " + (activeAudioSource != null ? activeAudioSource.getName() : "none"));
-    }
-
     @Override
     public void dispose() {
         if (quoteRenderer     != null) quoteRenderer.dispose();
@@ -399,7 +357,6 @@ public class CthughaWindow extends GLWindow {
         if (waveOverlayRenderer != null) waveOverlayRenderer.dispose();
         if (audioWave           != null) audioWave.dispose();
         if (waveOverlayFBO      != null) waveOverlayFBO.dispose();
-        if (activeAudioSource != null) { activeAudioSource.stop(); activeAudioSource.close(); }
         // Textures registered with ResourceManager are disposed by super.dispose()
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
