@@ -6,7 +6,7 @@ import static java.lang.Math.sqrt;
 
 import io.github.duckasteroid.cthugha.audio.AudioSample;
 import io.github.duckasteroid.cthugha.audio.PointValueExtractor;
-import io.github.duckasteroid.cthugha.audio.io.AudioValue;
+import io.github.duckasteroid.cthugha.audio.AudioValue;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
 import java.util.ArrayList;

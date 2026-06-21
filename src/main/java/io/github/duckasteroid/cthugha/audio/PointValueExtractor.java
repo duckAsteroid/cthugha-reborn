@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.audio;
 
-import io.github.duckasteroid.cthugha.audio.io.AudioValue;
+import io.github.duckasteroid.cthugha.audio.AudioValue;
 
 /**
  * Reduces a multi dimensional point into a single (1D) point.

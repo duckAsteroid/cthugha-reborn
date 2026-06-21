@@ -2,7 +2,6 @@ package io.github.duckasteroid.cthugha.audio;
 
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.audio.io.LineAcquirer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;

@@ -10,6 +10,9 @@ import java.util.stream.Stream;
  * A batch of audio data read from the IO source
  */
 public class AudioSample {
+  public static final AudioSample EMPTY = new AudioSample(
+      ShortBuffer.allocate(0).asReadOnlyBuffer(), false, 1.0);
+
   public final ShortBuffer backBuffer;
   public final int channels;
   private final double amplification;

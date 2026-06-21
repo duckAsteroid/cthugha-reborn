@@ -1,3 +1,5 @@
 /.gradle/
 /.idea/
 /build/
+/src/dist/
+/.agents/skills/com-asteroid-duck-opengl-render-core-0-0-1/

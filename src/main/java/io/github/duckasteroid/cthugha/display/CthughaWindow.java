@@ -4,6 +4,9 @@ import com.asteroid.duck.opengl.util.GLWindow;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
+import com.asteroid.duck.opengl.util.audio.AudioDataSource;
+import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.geom.Rectangle;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
@@ -18,17 +21,18 @@ import com.asteroid.duck.opengl.util.resources.manager.ResourceManagerImpl;
 import com.asteroid.duck.opengl.util.resources.texture.Filter;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.Wrap;
-import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import com.asteroid.duck.opengl.util.timer.TimerImpl;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
+import org.joml.Vector2f;
+import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sound.sampled.LineUnavailableException;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
@@ -58,25 +62,28 @@ public class CthughaWindow extends GLWindow {
     // CPU overlay: buffer.pixels uploaded here each frame (R8)
     private Texture screenOverlayTex;
 
-    // Ping-pong R8 textures and their FBOs.
-    // Each frame: translate readTex → writeTex (FBO), then bake CPU overlay into writeTex.
-    // writeTex becomes next frame's readTex.
+    // Fixed-role R8 textures:
+    //   pingTex = flame output / translate source / display source (always)
+    //   pongTex = translate output / overlay bake target / flame source (always)
     private Texture pingTex;
     private Texture pongTex;
     private FrameBuffer pingFBO;
     private FrameBuffer pongFBO;
-    private boolean pingIsRead = true; // true: ping=read/pong=write, false: reversed
 
     // RG16UI translation map (x, y coords per pixel as uint16)
     private Texture translateMapTex;
+    private TextureUnit translateMapUnit;
 
-    // TranslateTextureRenderer subclass that exposes the source texture unit for per-frame rebind
-    private PingPongTranslateRenderer translateRenderer;
+    // Pass 1 (pongFBO): translate pingTex → pongTex
+    private TranslateTextureRenderer translateRenderer;
 
-    // Pass 1 (inside writeFBO): bakes CPU overlay onto the translated ping-pong texture
+    // Pass 2 (pongFBO, alpha blend): bake CPU overlay (waves) into pongTex
     private OverlayBakeRenderer overlayBaker;
 
-    // Pass 2 (default FBO): converts the finished R8 ping-pong texture to RGBA via palette LUT
+    // Pass 3 (pingFBO): GPU flame — blur pongTex → pingTex (5-tap average with fade)
+    private FlameRenderer flameRenderer;
+
+    // Pass 4 (default FBO): palette-convert pingTex to RGBA for display
     private PaletteDisplayRenderer paletteDisplay;
 
     // Reused buffer for uploading CPU pixels each frame
@@ -91,7 +98,18 @@ public class CthughaWindow extends GLWindow {
     private final TimerImpl timer = new TimerImpl(() -> (double) System.nanoTime() / 1e9);
     private Double desiredUpdatePeriod = null;
 
-    public CthughaWindow() throws LineUnavailableException {
+    private LineAcquirer lineAcquirer;
+    private AudioDataSource activeAudioSource;
+
+    // AudioWave uses its own LineAcquirer (separate from JCthugha's audio to avoid racing reads)
+    private LineAcquirer waveLineAcquirer;
+    private AudioWave audioWave;
+    // RGBA offscreen texture: AudioWave renders here (its glClear is isolated), then composited on screen
+    private Texture waveOverlayTex;
+    private FrameBuffer waveOverlayFBO;
+    private WaveOverlayRenderer waveOverlayRenderer;
+
+    public CthughaWindow() {
         super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
                 "Cthugha Reborn", 1280, 720, null);
         this.cthugha = new JCthugha();
@@ -116,7 +134,9 @@ public class CthughaWindow extends GLWindow {
     public void registerKeys() {
         var kr = getKeyRegistry();
 
-        kr.registerKeyAction(KeyCombination.simple('A'), cthugha::toggleAudioSource, "Toggle audio source");
+        kr.registerKeyAction(KeyCombination.simple('A'), () -> {
+            if (lineAcquirer != null) switchAudioSource(lineAcquirer.next());
+        }, "Toggle audio source");
         kr.registerKeyAction(KeyCombination.simple('D'), cthugha::toggleDebug, "Toggle debug");
         kr.registerKeyAction(KeyCombination.simple('F'), this::toggleFullscreen, "Toggle fullscreen");
         kr.registerKeyAction(KeyCombination.simple('I'), cthugha::flashImage, "Flash a random image");
@@ -146,6 +166,7 @@ public class CthughaWindow extends GLWindow {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
         }, "Quit");
+        kr.registerKeyAction(GLFW_KEY_F12, 0, this::captureNextFrame, "Capture screenshot");
     }
 
     @Override
@@ -155,6 +176,11 @@ public class CthughaWindow extends GLWindow {
         int h = win.height;
 
         cthugha.init(new Dimension(w, h));
+
+        // Audio pipeline — initialise after cthugha.init() so audioBuffer is ready
+        lineAcquirer = new LineAcquirer();
+        lineAcquirer.init(this, LineAcquirer.IDEAL);
+        switchAudioSource(lineAcquirer.getSelectedSource());
 
         // Font textures first to avoid disturbing the active texture unit
         FontTexture quoteFont = new FontTextureFactory(new Font("Serif", Font.ITALIC, 28), true).createFontTexture();
@@ -189,6 +215,7 @@ public class CthughaWindow extends GLWindow {
         // Translation map (RG16UI: absolute pixel coords per texel)
         translateMapTex = buildTranslateMapTexture(cthugha.getTranslateTable(), w, h);
         getResourceManager().putTexture("translateMap", translateMapTex);
+        translateMapUnit = getResourceManager().nextTextureUnit();
 
         // Palette LUT (256×1 RGBA)
         paletteTex = new Texture();
@@ -203,18 +230,21 @@ public class CthughaWindow extends GLWindow {
         pingFBO = new FrameBuffer(pingTex);
         pongFBO = new FrameBuffer(pongTex);
 
-        // Pass 1: bakes CPU overlay into writeTex (run inside writeFBO with alpha blend)
+        // Pass 1: translate pingTex → pongTex (via pongFBO)
+        translateRenderer = new TranslateTextureRenderer("pingTex", "translateMap");
+        translateRenderer.init(this);
+
+        // Pass 2: bake CPU overlay (waves) into pongTex (via pongFBO, alpha blend)
         overlayBaker = new OverlayBakeRenderer("screenOverlay");
         overlayBaker.init(this);
 
-        // Pass 2: palette-converts writeTex for display (run on default FBO)
-        // Initial writeTex = pongTex (since pingIsRead=true → writeTex=pong)
-        paletteDisplay = new PaletteDisplayRenderer("pongTex", "palette");
-        paletteDisplay.init(this);
+        // Pass 3: GPU flame — blur pongTex → pingTex (via pingFBO)
+        flameRenderer = new FlameRenderer("pongTex");
+        flameRenderer.init(this);
 
-        // Translate renderer reads pingTex initially (readTex when pingIsRead=true)
-        translateRenderer = new PingPongTranslateRenderer("pingTex", "translateMap");
-        translateRenderer.init(this);
+        // Pass 4: palette-convert pingTex → RGBA for display (default FBO)
+        paletteDisplay = new PaletteDisplayRenderer("pingTex", "palette");
+        paletteDisplay.init(this);
 
         overlayBuffer = BufferUtils.createByteBuffer(w * h);
 
@@ -227,16 +257,37 @@ public class CthughaWindow extends GLWindow {
         notifRenderer.init(this);
         notifRenderer.setPosition(new Point(20, 30));
         notifRenderer.setTextColor(StandardColors.YELLOW.color);
+
+        // AudioWave — RGBA offscreen render target so its built-in glClear is isolated
+        waveOverlayTex = new Texture();
+        waveOverlayTex.setInternalFormat(GL_RGBA);
+        waveOverlayTex.setImageFormat(GL_RGBA);
+        waveOverlayTex.setDataType(GL_UNSIGNED_BYTE);
+        waveOverlayTex.setFilter(Filter.LINEAR);
+        waveOverlayTex.generate(w, h, 0L);
+        getResourceManager().putTexture("waveOverlay", waveOverlayTex);
+        waveOverlayFBO = new FrameBuffer(waveOverlayTex);
+
+        waveOverlayRenderer = new WaveOverlayRenderer("waveOverlay");
+        waveOverlayRenderer.init(this);
+
+        waveLineAcquirer = new LineAcquirer();
+        waveLineAcquirer.init(this, LineAcquirer.IDEAL);
+        audioWave = new AudioWave();
+        audioWave.init(this);
+        audioWave.setLine(waveLineAcquirer.getSelectedSource());
+        audioWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
+        audioWave.setLineWidth(2.0f);
     }
 
     @Override
     public void render() throws IOException {
         timer.update();
 
-        // 1. CPU pipeline — translate.transform() removed; translate is on GPU now
+        // 1. CPU pipeline: waves write palette indices into buffer.pixels
         cthugha.doRenderCPU();
 
-        // 2. Upload CPU overlay (palette indices) to screenOverlayTex
+        // 2. Upload CPU overlay (wave palette indices) to screenOverlayTex
         overlayBaker.getOverlayUnit().activate();
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         overlayBuffer.clear();
@@ -252,41 +303,44 @@ public class CthughaWindow extends GLWindow {
         ByteBuffer palBuf = buildPaletteBuffer(cthugha.buffer.paletteMap);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, palBuf);
 
-        // 4. Determine ping-pong read/write for this frame
-        Texture readTex   = pingIsRead ? pingTex  : pongTex;
-        Texture writeTex  = pingIsRead ? pongTex  : pingTex;
-        FrameBuffer writeFBO = pingIsRead ? pongFBO : pingFBO;
+        java.awt.Rectangle win = getWindow();
 
-        // 5. Rebind translate source unit to the current read texture
-        translateRenderer.getSrcUnit().bind(readTex);
-
-        // 6. Rebind palette-display input unit to the current write texture
-        paletteDisplay.getTexUnit().bind(writeTex);
-
-        // 7. GPU translate: readTex → writeTex (FBO)
-        //    Then bake CPU overlay INTO writeTex (same FBO, alpha blend).
-        //    This means old waves from readTex get translated, then new waves are drawn on top.
-        //    The result in writeTex becomes next frame's readTex — true accumulation.
-        writeFBO.bind();
+        // 4. pongFBO: translate pingTex → pongTex, then bake CPU overlay (waves) into pongTex
+        pongFBO.bind();
         translateRenderer.doRender(this);
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         overlayBaker.doRender(this);
         glDisable(GL_BLEND);
-
-        writeFBO.unbind();
-        // FrameBuffer.unbind() does NOT restore the viewport
-        java.awt.Rectangle win = getWindow();
+        pongFBO.unbind();
         glViewport(0, 0, win.width, win.height);
 
-        // 8. Display: R8 writeTex → RGBA via palette LUT → default FBO
+        // 5. pingFBO: GPU flame — blur pongTex → pingTex (5-tap average with fade)
+        pingFBO.bind();
+        flameRenderer.doRender(this);
+        pingFBO.unbind();
+        glViewport(0, 0, win.width, win.height);
+
+        // 6. AudioWave offscreen: render waveform into RGBA overlay texture.
+        //    AudioWave.doRender() calls glClear() before drawing — isolating it here
+        //    prevents it from wiping the palette output.
+        glClearColor(0f, 0f, 0f, 0f);          // transparent so empty pixels are see-through
+        waveOverlayFBO.bind();
+        audioWave.doRender(this);
+        waveOverlayFBO.unbind();
+        glViewport(0, 0, win.width, win.height);
+        glClearColor(0f, 0f, 0f, 1f);          // restore opaque clear for everything else
+
+        // 7. Display: pingTex (R8) → RGBA via palette LUT → default FBO
         paletteDisplay.doRender(this);
 
-        // 9. Advance ping-pong for next frame
-        pingIsRead = !pingIsRead;
+        // 8. Composite AudioWave overlay on top of the palette display
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        waveOverlayRenderer.doRender(this);
+        glDisable(GL_BLEND);
 
-        // 10. Text overlays
+        // 9. Text overlays
         String quote = cthugha.getCurrentQuote();
         if (quote != null) {
             if (!quote.equals(lastQuote)) {
@@ -308,6 +362,28 @@ public class CthughaWindow extends GLWindow {
         } else {
             notifExpiry = null;
         }
+
+    }
+
+    private void switchAudioSource(AudioDataSource ds) {
+        if (activeAudioSource != null) {
+            activeAudioSource.stop();
+            activeAudioSource.close();
+        }
+        activeAudioSource = ds;
+        try {
+            if (!activeAudioSource.isOpen()) {
+                activeAudioSource.open(LineAcquirer.IDEAL, 4096);
+            }
+            if (!activeAudioSource.isRunning()) {
+                activeAudioSource.start();
+            }
+        } catch (javax.sound.sampled.LineUnavailableException e) {
+            LOG.error("Failed to open audio source: {}", ds.getName(), e);
+            activeAudioSource = null;
+        }
+        cthugha.setAudioDataSource(activeAudioSource);
+        cthugha.notify("Audio: " + (activeAudioSource != null ? activeAudioSource.getName() : "none"));
     }
 
     @Override
@@ -315,10 +391,15 @@ public class CthughaWindow extends GLWindow {
         if (quoteRenderer     != null) quoteRenderer.dispose();
         if (notifRenderer     != null) notifRenderer.dispose();
         if (overlayBaker      != null) overlayBaker.dispose();
+        if (flameRenderer     != null) flameRenderer.dispose();
         if (paletteDisplay    != null) paletteDisplay.dispose();
         if (translateRenderer != null) translateRenderer.dispose();
         if (pingFBO           != null) pingFBO.dispose();
         if (pongFBO           != null) pongFBO.dispose();
+        if (waveOverlayRenderer != null) waveOverlayRenderer.dispose();
+        if (audioWave           != null) audioWave.dispose();
+        if (waveOverlayFBO      != null) waveOverlayFBO.dispose();
+        if (activeAudioSource != null) { activeAudioSource.stop(); activeAudioSource.close(); }
         // Textures registered with ResourceManager are disposed by super.dispose()
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
@@ -355,9 +436,8 @@ public class CthughaWindow extends GLWindow {
         int w = cthugha.buffer.width;
         int h = cthugha.buffer.height;
         ByteBuffer data = buildTranslateMapBuffer(cthugha.getTranslateTable(), w, h);
-        // GL_TEXTURE0 is used as a scratch unit; render-core allocates from unit 1 upward
-        glActiveTexture(GL_TEXTURE0);
-        translateMapTex.bind();
+        translateMapUnit.activate();
+        translateMapUnit.bind(translateMapTex);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
                 GL_RG_INTEGER, GL_UNSIGNED_SHORT, data);
     }
@@ -379,25 +459,151 @@ public class CthughaWindow extends GLWindow {
     }
 
     // -------------------------------------------------------------------------
-    // Inner class: PingPongTranslateRenderer
-    // Exposes the source texture unit so CthughaWindow can rebind per frame.
+    // Inner class: WaveOverlayRenderer
+    // Composites the RGBA waveform overlay texture onto the screen with alpha blending.
     // -------------------------------------------------------------------------
 
-    private static class PingPongTranslateRenderer extends TranslateTextureRenderer {
-        private TextureUnit srcUnit;
+    private static class WaveOverlayRenderer implements RenderedItem {
 
-        PingPongTranslateRenderer(String texName, String mapName) {
-            super(texName, mapName);
+        private static final String VERT = """
+                #version 330 core
+                in vec2 screenPosition;
+                in vec2 texturePosition;
+                out vec2 texCoords;
+                void main() {
+                    texCoords = texturePosition;
+                    gl_Position = vec4(screenPosition, 0.0, 1.0);
+                }
+                """;
+
+        private static final String FRAG = """
+                #version 330 core
+                in vec2 texCoords;
+                out vec4 fragColor;
+                uniform sampler2D overlay;
+                void main() {
+                    fragColor = texture(overlay, texCoords);
+                }
+                """;
+
+        private final String overlayName;
+        private ShaderProgram shader;
+        private TextureUnit overlayUnit;
+        private Rectangle quad;
+
+        WaveOverlayRenderer(String overlayName) {
+            this.overlayName = overlayName;
         }
 
         @Override
-        protected TextureUnit initTextureUnit(RenderContext ctx) {
-            srcUnit = super.initTextureUnit(ctx);
-            return srcUnit;
+        public void init(RenderContext ctx) throws IOException {
+            shader = ShaderProgram.compile(
+                    ShaderSource.fromClass(VERT, WaveOverlayRenderer.class),
+                    ShaderSource.fromClass(FRAG, WaveOverlayRenderer.class),
+                    null);
+            shader.use(ctx);
+            ResourceManager rm = ctx.getResourceManager();
+            overlayUnit = rm.nextTextureUnit();
+            overlayUnit.bind(rm.getTexture(overlayName));
+            overlayUnit.useInShader(shader, "overlay");
+            quad = new Rectangle(ctx, "screenPosition", "texturePosition");
+            quad.getVertexArrayObject().bind(ctx);
+            quad.getVertexBufferObject().setup(shader);
         }
 
-        TextureUnit getSrcUnit() {
-            return srcUnit;
+        @Override
+        public void doRender(RenderContext ctx) {
+            shader.use(ctx);
+            quad.render(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            if (quad        != null) quad.destroy();
+            if (shader      != null) shader.dispose();
+            if (overlayUnit != null) overlayUnit.dispose();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Inner class: FlameRenderer
+    // GPU equivalent of JavaFlame: 5-tap box average (N/S/E/W/center) with a
+    // 1-palette-step fade each frame, preventing infinite accumulation.
+    // Reads from pongTex (translate+overlay result), writes to pingTex (via pingFBO).
+    // -------------------------------------------------------------------------
+
+    private static class FlameRenderer implements RenderedItem {
+
+        private static final String VERT = """
+                #version 330 core
+                in vec2 screenPosition;
+                in vec2 texturePosition;
+                out vec2 texCoords;
+                void main() {
+                    texCoords = texturePosition;
+                    gl_Position = vec4(screenPosition, 0.0, 1.0);
+                }
+                """;
+
+        private static final String FRAG = """
+                #version 330 core
+                in vec2 texCoords;
+                out vec4 fragColor;
+                uniform sampler2D src;
+                uniform vec2 texelSize;
+                void main() {
+                    float px = texelSize.x;
+                    float py = texelSize.y;
+                    float c = texture(src, texCoords).r;
+                    float l = texture(src, texCoords + vec2(-px,  0.0)).r;
+                    float r = texture(src, texCoords + vec2(+px,  0.0)).r;
+                    float u = texture(src, texCoords + vec2( 0.0, +py)).r;
+                    float d = texture(src, texCoords + vec2( 0.0, -py)).r;
+                    float avg = (c + l + r + u + d) * 0.2;
+                    fragColor = vec4(max(0.0, avg - 1.0 / 255.0), 0.0, 0.0, 1.0);
+                }
+                """;
+
+        private final String srcName;
+        private ShaderProgram shader;
+        private TextureUnit srcUnit;
+        private com.asteroid.duck.opengl.util.resources.shader.Uniform<Vector2f> uTexelSize;
+        private Rectangle quad;
+
+        FlameRenderer(String srcName) {
+            this.srcName = srcName;
+        }
+
+        @Override
+        public void init(RenderContext ctx) throws IOException {
+            shader = ShaderProgram.compile(
+                    ShaderSource.fromClass(VERT, FlameRenderer.class),
+                    ShaderSource.fromClass(FRAG, FlameRenderer.class),
+                    null);
+            shader.use(ctx);
+            ResourceManager rm = ctx.getResourceManager();
+            srcUnit = rm.nextTextureUnit();
+            Texture t = rm.getTexture(srcName);
+            srcUnit.bind(t);
+            srcUnit.useInShader(shader, "src");
+            uTexelSize = shader.uniforms().get("texelSize", Vector2f.class);
+            uTexelSize.set(new Vector2f(1.0f / t.getWidth(), 1.0f / t.getHeight()));
+            quad = new Rectangle(ctx, "screenPosition", "texturePosition");
+            quad.getVertexArrayObject().bind(ctx);
+            quad.getVertexBufferObject().setup(shader);
+        }
+
+        @Override
+        public void doRender(RenderContext ctx) {
+            shader.use(ctx);
+            quad.render(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            if (quad    != null) quad.destroy();
+            if (shader  != null) shader.dispose();
+            if (srcUnit != null) srcUnit.dispose();
         }
     }
 

@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.audio;
 
+import com.asteroid.duck.opengl.util.audio.AudioDataSource;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.stats.Stats;
 import io.github.duckasteroid.cthugha.stats.StatsFactory;
@@ -8,7 +9,6 @@ import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.time.Duration;
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.TargetDataLine;
 
 /**
  * This class holds our in memory buffer for audio data.
@@ -45,20 +45,22 @@ public class AudioBuffer {
 
 
 
-  public AudioSample readFrom(TargetDataLine line, int length) {
-    // how many samples are available?
-    int available = line.available() / bytesPerSample;
+  public AudioSample readFrom(AudioDataSource ds, int length) {
+    int available = ds.available() / bytesPerSample;
     bufferDepth.add(available);
 
     buffer.clear();
     buffer.limit(Math.min(length * bytesPerSample, buffer.capacity()));
-    int read = line.read(buffer.array(), 0, Math.min(buffer.limit(), line.available()));
-    buffer.position(read);
+    int toRead = Math.min(buffer.limit(), ds.available());
+    if (toRead > 0) {
+      int read = ds.read(buffer.array(), 0, toRead);
+      buffer.position(read);
+    }
     buffer.flip();
     ShortBuffer intBuffer = buffer.asShortBuffer();
     return new AudioSample(intBuffer, isMono(), amplification.value);
   }
 
-
-
+  public double getAmplification() { return amplification.value; }
+  public void setAmplification(double v) { amplification.value = v; }
 }

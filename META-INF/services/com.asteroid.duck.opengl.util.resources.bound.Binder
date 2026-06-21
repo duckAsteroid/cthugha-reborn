@@ -1,4 +1,0 @@
-com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObjectBinder
-com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObjectBinder
-com.asteroid.duck.opengl.util.resources.shader.ShaderProgramBinder
-com.asteroid.duck.opengl.util.resources.texture.TextureBinder

@@ -4,7 +4,7 @@ import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 
 import io.github.duckasteroid.cthugha.audio.AudioPoint;
-import io.github.duckasteroid.cthugha.audio.io.AudioValue;
+import io.github.duckasteroid.cthugha.audio.AudioValue;
 import java.util.stream.DoubleStream;
 
 public abstract class WindowingFunction {
