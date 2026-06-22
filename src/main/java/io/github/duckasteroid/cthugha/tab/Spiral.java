@@ -8,14 +8,11 @@ import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
-import java.awt.Dimension;
 import java.util.ArrayList;
-import java.util.Random;
 
 public class Spiral extends AbstractNode implements TranslateTableSource{
 
@@ -43,24 +40,22 @@ public class Spiral extends AbstractNode implements TranslateTableSource{
   }
 
   @Override
-  public int[] generate(ScreenBuffer buffer) {
-    final Dimension size = buffer.getDimensions();
-
-    ArrayList<Integer> result = new ArrayList<>(size.width * size.height);
+  public int[] generate(int width, int height) {
+    ArrayList<Integer> result = new ArrayList<>(width * height);
     int[] centersX = new int[MAX_NR_SPIRALS];
     int[] centersY = new int[MAX_NR_SPIRALS];
     int[] dir = new int[MAX_NR_SPIRALS];
 
     if(nr_spirals.value == 0) {
-      centersX[0] = size.width / 2;
-      centersY[0] = size.height / 2;
+      centersX[0] = width / 2;
+      centersY[0] = height / 2;
       dir[0] = 1;
       nr_spirals.value = 1;
     } else {
       nr_spirals.value=max(min(nr_spirals.value, MAX_NR_SPIRALS),1);
       for (int i=0; i<nr_spirals.value; i++) {
-        centersX[i]=rand() % size.width;
-        centersY[i]=rand() % size.height;
+        centersX[i]=rand() % width;
+        centersY[i]=rand() % height;
         dir[i]=random.nextBoolean() ? 1 : -1;
       }
     }
@@ -73,9 +68,9 @@ public class Spiral extends AbstractNode implements TranslateTableSource{
     double cent_y,cent_x;
     long l = rand();
 
-    for (int y=0; y<size.height; y++) {
+    for (int y=0; y<height; y++) {
 
-      for (int x=0; x<size.width; x++) {
+      for (int x=0; x<width; x++) {
         closest=0;
         dist=9999999.0;
 
@@ -128,8 +123,8 @@ public class Spiral extends AbstractNode implements TranslateTableSource{
           int map_x=(int)(temp_x+cent_x);
           int map_y=(int)(temp_y+cent_y);
 
-          if ((map_y>=size.height) || (map_y<0) ||
-            (map_x>=size.width) || (map_x<0) ) {
+          if ((map_y>=height) || (map_y<0) ||
+            (map_x>=width) || (map_x<0) ) {
             map_x=0;
             map_y=0;
           }
@@ -137,7 +132,7 @@ public class Spiral extends AbstractNode implements TranslateTableSource{
           map_x=max(map_x,0);
           map_y=max(map_y,0);
 
-          mapValue = map_y * size.width + map_x;
+          mapValue = map_y * width + map_x;
         }
         result.add(mapValue);
       }

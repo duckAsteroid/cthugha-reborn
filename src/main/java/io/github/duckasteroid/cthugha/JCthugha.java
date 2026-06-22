@@ -61,7 +61,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 
 	public void init(Dimension dims) throws IOException {
 		buffer = new ScreenBuffer(dims.width, dims.height);
-		translate = new Translate(dims, translateSource.generate(buffer, true));
+		translate = new Translate(dims, translateSource.generate(dims.width, dims.height, true));
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
@@ -106,7 +106,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 	}
 
 	public void newTranslation(boolean newMap) {
-		translate.changeTable(translateSource.generate(buffer, newMap));
+		translate.changeTable(translateSource.generate(buffer.width, buffer.height, newMap));
 		notify(translateSource.getLastGenerated());
 	}
 

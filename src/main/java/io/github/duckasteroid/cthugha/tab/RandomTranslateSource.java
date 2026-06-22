@@ -1,6 +1,5 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -22,12 +21,12 @@ public class RandomTranslateSource {
     sources.add(new Spiral());
   }
 
-  public int[] generate(ScreenBuffer buffer, boolean newSource) {
+  public int[] generate(int width, int height, boolean newSource) {
     if (selected == null || newSource) {
       selected = sources.get(rnd.nextInt(sources.size()));
     }
     selected.randomise();
-    return selected.generate(buffer);
+    return selected.generate(width, height);
   }
 
   public String getLastGenerated() {

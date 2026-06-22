@@ -2,11 +2,9 @@ package io.github.duckasteroid.cthugha.tab;
 
 import static java.lang.Math.PI;
 
-import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.XYParam;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
-import java.awt.Dimension;
 
 public class BigHalfWheel extends AbstractNode implements TranslateTableSource {
   public XYParam center = new XYParam("Wheel centre location", 0,1, 0.4);
@@ -16,22 +14,21 @@ public class BigHalfWheel extends AbstractNode implements TranslateTableSource {
     initChildren(center);
   }
   @Override
-  public int[] generate(ScreenBuffer buffer) {
-    final Dimension size = buffer.getDimensions();
-    int[] theTab = new int[size.height * size.width];
+  public int[] generate(int width, int height) {
+    int[] theTab = new int[height * width];
     int dx,dy,cx,cy,dist;
     float q, ang, p;
 
-    cx = (int)(size.width * 0.4);
+    cx = (int)(width * 0.4);
     cy = 0;
     q = (float) (PI / 2);
     p = (float) (0 / 180 * PI);
 
-    for (int j=0;j<size.height;j++) {
+    for (int j=0;j<height;j++) {
 
-      for (int i = 0; i < size.width; i++) {
+      for (int i = 0; i < width; i++) {
 
-        if (j == 0 || j == size.height) {
+        if (j == 0 || j == height) {
 
           dx = (int)((float) (cx - i) * 0.75);
           dy = cy - j;
@@ -50,12 +47,12 @@ public class BigHalfWheel extends AbstractNode implements TranslateTableSource {
 
           if (i < cx)
             ang += PI;
-          if (dist < size.height) {
+          if (dist < height) {
             dx = (int)Math.ceil(-Math.sin(ang - p) * dist / 10.0);
             dy = (int)Math.ceil(Math.cos(ang - p) * dist / 10.0);
           } else {
-            dx = (int)Math.ceil(-Math.sin(ang + q) * size.height / 20.0);
-            dy = (int)Math.ceil(Math.cos(ang + q) * size.height / 20.0);
+            dx = (int)Math.ceil(-Math.sin(ang + q) * height / 20.0);
+            dy = (int)Math.ceil(Math.cos(ang + q) * height / 20.0);
             if (i < cx)
               dx = 3;
             else
@@ -63,13 +60,13 @@ public class BigHalfWheel extends AbstractNode implements TranslateTableSource {
             dy = 0;
           }
 
-          if (i == 0 || i == size.width) {
+          if (i == 0 || i == width) {
             dx = cx - i;
             dy = (int)((float) (cy - j) * 0.75);
           }
         }
 
-        theTab[i + j * size.width] = Math.abs(i + dx + ((j + dy) * size.width)) % theTab.length;
+        theTab[i + j * width] = Math.abs(i + dx + ((j + dy) * width)) % theTab.length;
 
       }
     }

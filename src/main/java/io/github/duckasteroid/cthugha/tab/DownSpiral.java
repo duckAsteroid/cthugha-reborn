@@ -8,10 +8,8 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
-import java.awt.Dimension;
 
 public class DownSpiral extends AbstractNode implements TranslateTableSource {
   public DoubleParameter a = new DoubleParameter("A", 0, Float.MAX_VALUE, 0.75);
@@ -23,21 +21,20 @@ public class DownSpiral extends AbstractNode implements TranslateTableSource {
   }
 
   @Override
-  public int[] generate(ScreenBuffer buffer) {
-    final Dimension size = buffer.getDimensions();
-    int[] theTab = new int[size.width * size.height];
+  public int[] generate(int width, int height) {
+    int[] theTab = new int[width * height];
     int dx, dy, dist;
-    int cx = size.width / 2;
-    int cy = size.height / 2;
+    int cx = width / 2;
+    int cy = height / 2;
     float q = 3.14159265399f / 2;
     float p = (float) (45 / 180 * PI);
     float ang;
 
-    for (int j = 0; j < size.height; j++) {
+    for (int j = 0; j < height; j++) {
 
-      for (int i = 0; i < size.width; i++) {
+      for (int i = 0; i < width; i++) {
 
-        if (j == 0 || j == size.height) {
+        if (j == 0 || j == height) {
 
           dx = (int) ((double) (cx - i) * a.value);
           dy = cy - j;
@@ -60,13 +57,13 @@ public class DownSpiral extends AbstractNode implements TranslateTableSource {
           dx = (int) ceil(-sin(ang - p) * dist / b.value);
           dy = (int) ceil(cos(ang - p) * dist / b.value);
 
-          if (i == 0 || i == size.width) {
+          if (i == 0 || i == width) {
             dx = cx - i;
             dy = (int) ((float) (cy - j) * a.value);
           }
         }
 
-        theTab[i + j * size.width] = abs(i + dx + ((j + dy) * size.width)) % theTab.length;
+        theTab[i + j * width] = abs(i + dx + ((j + dy) * width)) % theTab.length;
 
       }
     }

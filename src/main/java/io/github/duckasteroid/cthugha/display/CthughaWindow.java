@@ -9,6 +9,8 @@ import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.geom.Rectangle;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
+import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
+import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
@@ -26,6 +28,8 @@ import com.asteroid.duck.opengl.util.timer.Timer;
 import com.asteroid.duck.opengl.util.timer.TimerImpl;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
+import io.github.duckasteroid.cthugha.tab.TranslateTableSource;
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
@@ -83,7 +87,9 @@ public class CthughaWindow extends GLWindow {
     private FlameRenderer flameRenderer;
 
     // Pass 4 (default FBO): palette-convert pingTex to RGBA for display
-    private PaletteDisplayRenderer paletteDisplay;
+    private PaletteRenderer paletteRenderer;
+    // Dedicated unit for per-frame palette LUT uploads
+    private TextureUnit paletteUploadUnit;
 
     // Reused buffer for uploading CPU pixels each frame
     private ByteBuffer overlayBuffer;
@@ -94,21 +100,33 @@ public class CthughaWindow extends GLWindow {
     private Instant notifExpiry = null;
     private static final Duration NOTIF_DURATION = Duration.ofSeconds(3);
 
+    // Quote render mode: true = baked into the indexed buffer (affected by flame/translate);
+    //                    false = RGBA overlay on top of the palette output (default)
+    private boolean quoteInBuffer = false;
+    private Texture quoteOverlayTex;
+    private FrameBuffer quoteOverlayFBO;
+    private WaveIndexBakeRenderer quoteBaker;
+
     private final TimerImpl timer = new TimerImpl(() -> (double) System.nanoTime() / 1e9);
     private Double desiredUpdatePeriod = null;
+
+    private final RenderActionQueue renderActions = new RenderActionQueue();
+    private final StdinKeyInjector stdinInjector;
 
     // AudioWave uses its own LineAcquirer (separate from JCthugha's audio to avoid racing reads)
     private LineAcquirer waveLineAcquirer;
     private AudioWave audioWave;
-    // RGBA offscreen texture: AudioWave renders here (its glClear is isolated), then composited on screen
+    // RGBA offscreen texture: AudioWave renders here (its glClear is isolated)
     private Texture waveOverlayTex;
     private FrameBuffer waveOverlayFBO;
-    private WaveOverlayRenderer waveOverlayRenderer;
+    // Converts RGBA wave overlay → R8 palette indices baked into pongTex alongside translate/overlay
+    private WaveIndexBakeRenderer waveBaker;
 
-    public CthughaWindow() {
+    public CthughaWindow(boolean stdinEnabled) {
         super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
                 "Cthugha Reborn", 1280, 720, null);
         this.cthugha = new JCthugha();
+        this.stdinInjector = stdinEnabled ? new StdinKeyInjector(renderActions) : null;
     }
 
     @Override
@@ -136,6 +154,10 @@ public class CthughaWindow extends GLWindow {
         kr.registerKeyAction(KeyCombination.simple('N'), cthugha::toggleNotifications, "Toggle notifications");
         kr.registerKeyAction(KeyCombination.simple('P'), cthugha::newPalette, "Change palette");
         kr.registerKeyAction(KeyCombination.simple('Q'), cthugha::showQuote, "Show a quote on screen");
+        kr.registerKeyAction(KeyCombination.simple('B'), () -> {
+            quoteInBuffer = !quoteInBuffer;
+            cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
+        }, "Toggle quote render mode (overlay vs. in-buffer)");
         kr.registerKeyAction(KeyCombination.simple('T'), () -> {
             cthugha.newTranslation(false);
             rebuildTranslateMap();
@@ -151,6 +173,10 @@ public class CthughaWindow extends GLWindow {
             exit();
         }, "Quit");
         kr.registerKeyAction(GLFW_KEY_F12, 0, this::captureNextFrame, "Capture screenshot");
+
+        if (stdinInjector != null) {
+            stdinInjector.start(kr);
+        }
     }
 
     @Override
@@ -222,19 +248,21 @@ public class CthughaWindow extends GLWindow {
         flameRenderer.init(this);
 
         // Pass 4: palette-convert pingTex → RGBA for display (default FBO)
-        paletteDisplay = new PaletteDisplayRenderer("pingTex", "palette");
-        paletteDisplay.init(this);
+        paletteRenderer = new PaletteRenderer("pingTex");
+        paletteRenderer.init(this);
+        paletteUploadUnit = getResourceManager().nextTextureUnit();
+        paletteUploadUnit.bind(paletteTex);
 
         overlayBuffer = BufferUtils.createByteBuffer(w * h);
 
         quoteRenderer = new StringRenderer(quoteFont);
         quoteRenderer.init(this);
-        quoteRenderer.setPosition(new Point(40, h / 2));
+        quoteRenderer.setTransform(new Matrix4f().translate(40.0f, h / 2.0f, 0.0f));
         quoteRenderer.setTextColor(StandardColors.WHITE.color);
 
         notifRenderer = new StringRenderer(notifFont);
         notifRenderer.init(this);
-        notifRenderer.setPosition(new Point(20, 30));
+        notifRenderer.setTransform(new Matrix4f().translate(20.0f, 30.0f, 0.0f));
         notifRenderer.setTextColor(StandardColors.YELLOW.color);
 
         // AudioWave — RGBA offscreen render target so its built-in glClear is isolated
@@ -247,8 +275,21 @@ public class CthughaWindow extends GLWindow {
         getResourceManager().putTexture("waveOverlay", waveOverlayTex);
         waveOverlayFBO = new FrameBuffer(waveOverlayTex);
 
-        waveOverlayRenderer = new WaveOverlayRenderer("waveOverlay");
-        waveOverlayRenderer.init(this);
+        waveBaker = new WaveIndexBakeRenderer("waveOverlay");
+        waveBaker.init(this);
+
+        // Quote in-buffer mode: RGBA offscreen texture baked into pongTex as a palette index
+        quoteOverlayTex = new Texture();
+        quoteOverlayTex.setInternalFormat(GL_RGBA);
+        quoteOverlayTex.setImageFormat(GL_RGBA);
+        quoteOverlayTex.setDataType(GL_UNSIGNED_BYTE);
+        quoteOverlayTex.setFilter(Filter.LINEAR);
+        quoteOverlayTex.generate(w, h, 0L);
+        getResourceManager().putTexture("quoteOverlay", quoteOverlayTex);
+        quoteOverlayFBO = new FrameBuffer(quoteOverlayTex);
+
+        quoteBaker = new WaveIndexBakeRenderer("quoteOverlay");
+        quoteBaker.init(this);
 
         waveLineAcquirer = new LineAcquirer();
         waveLineAcquirer.init(this, LineAcquirer.IDEAL);
@@ -261,6 +302,7 @@ public class CthughaWindow extends GLWindow {
 
     @Override
     public void render() throws IOException {
+        renderActions.processAll(this);
         timer.update();
 
         // 1. CPU pipeline: waves write palette indices into buffer.pixels
@@ -277,58 +319,77 @@ public class CthughaWindow extends GLWindow {
                 GL_RED, GL_UNSIGNED_BYTE, overlayBuffer);
 
         // 3. Upload palette LUT
-        paletteDisplay.getPaletteUnit().activate();
+        paletteUploadUnit.activate();
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         ByteBuffer palBuf = buildPaletteBuffer(cthugha.buffer.paletteMap);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, palBuf);
 
         java.awt.Rectangle win = getWindow();
 
-        // 4. pongFBO: translate pingTex → pongTex, then bake CPU overlay (waves) into pongTex
+        // 4. AudioWave offscreen: render waveform into RGBA overlay texture.
+        //    AudioWave.doRender() calls glClear() before drawing — isolating it here
+        //    prevents it from clearing the indexed pipeline textures.
+        glClearColor(0f, 0f, 0f, 0f);
+        waveOverlayFBO.bind();
+        audioWave.doRender(this);
+        waveOverlayFBO.unbind();
+        glViewport(0, 0, win.width, win.height);
+        glClearColor(0f, 0f, 0f, 1f);
+
+        // Sync quote text whenever it changes
+        String quote = cthugha.getCurrentQuote();
+        if (quote != null && !quote.equals(lastQuote)) {
+            quoteRenderer.setText(quote);
+            lastQuote = quote;
+        } else if (quote == null) {
+            lastQuote = null;
+        }
+
+        // 4b. Quote offscreen (in-buffer mode): render quote text into quoteOverlayFBO so it
+        //     gets baked into the indexed pipeline and is affected by flame and translate.
+        if (quoteInBuffer && quote != null) {
+            glClearColor(0f, 0f, 0f, 0f);
+            quoteOverlayFBO.bind();
+            glClear(GL_COLOR_BUFFER_BIT);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            quoteRenderer.doRender(this);
+            glDisable(GL_BLEND);
+            quoteOverlayFBO.unbind();
+            glViewport(0, 0, win.width, win.height);
+            glClearColor(0f, 0f, 0f, 1f);
+        }
+
+        // 5. pongFBO: translate pingTex → pongTex, then bake wave, optional quote, and CPU overlay.
+        //    waveBaker/quoteBaker read RGBA overlay textures (no feedback loop: pongTex is the FBO).
         pongFBO.bind();
         translateRenderer.doRender(this);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        waveBaker.doRender(this);
+        if (quoteInBuffer && quote != null) {
+            quoteBaker.doRender(this);
+        }
         overlayBaker.doRender(this);
         glDisable(GL_BLEND);
         pongFBO.unbind();
         glViewport(0, 0, win.width, win.height);
 
-        // 5. pingFBO: GPU flame — blur pongTex → pingTex (5-tap average with fade)
+        // 6. pingFBO: GPU flame — blur pongTex → pingTex (5-tap average with fade)
         pingFBO.bind();
         flameRenderer.doRender(this);
         pingFBO.unbind();
         glViewport(0, 0, win.width, win.height);
 
-        // 6. AudioWave offscreen: render waveform into RGBA overlay texture.
-        //    AudioWave.doRender() calls glClear() before drawing — isolating it here
-        //    prevents it from wiping the palette output.
-        glClearColor(0f, 0f, 0f, 0f);          // transparent so empty pixels are see-through
-        waveOverlayFBO.bind();
-        audioWave.doRender(this);
-        waveOverlayFBO.unbind();
-        glViewport(0, 0, win.width, win.height);
-        glClearColor(0f, 0f, 0f, 1f);          // restore opaque clear for everything else
-
         // 7. Display: pingTex (R8) → RGBA via palette LUT → default FBO
-        paletteDisplay.doRender(this);
+        paletteRenderer.doRender(this);
 
-        // 8. Composite AudioWave overlay on top of the palette display
+        // 9. Text overlays — alpha-blend over the palette output (overlay mode only)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        waveOverlayRenderer.doRender(this);
-        glDisable(GL_BLEND);
 
-        // 9. Text overlays
-        String quote = cthugha.getCurrentQuote();
-        if (quote != null) {
-            if (!quote.equals(lastQuote)) {
-                quoteRenderer.setText(quote);
-                lastQuote = quote;
-            }
+        if (!quoteInBuffer && quote != null) {
             quoteRenderer.doRender(this);
-        } else {
-            lastQuote = null;
         }
 
         String notif = cthugha.pollNotification();
@@ -342,6 +403,8 @@ public class CthughaWindow extends GLWindow {
             notifExpiry = null;
         }
 
+        glDisable(GL_BLEND);
+
     }
 
     @Override
@@ -350,33 +413,25 @@ public class CthughaWindow extends GLWindow {
         if (notifRenderer     != null) notifRenderer.dispose();
         if (overlayBaker      != null) overlayBaker.dispose();
         if (flameRenderer     != null) flameRenderer.dispose();
-        if (paletteDisplay    != null) paletteDisplay.dispose();
+        if (paletteRenderer   != null) paletteRenderer.dispose();
+        if (paletteUploadUnit != null) paletteUploadUnit.dispose();
         if (translateRenderer != null) translateRenderer.dispose();
         if (pingFBO           != null) pingFBO.dispose();
         if (pongFBO           != null) pongFBO.dispose();
-        if (waveOverlayRenderer != null) waveOverlayRenderer.dispose();
-        if (audioWave           != null) audioWave.dispose();
-        if (waveOverlayFBO      != null) waveOverlayFBO.dispose();
+        if (waveBaker         != null) waveBaker.dispose();
+        if (quoteBaker        != null) quoteBaker.dispose();
+        if (audioWave         != null) audioWave.dispose();
+        if (waveOverlayFBO    != null) waveOverlayFBO.dispose();
+        if (quoteOverlayFBO   != null) quoteOverlayFBO.dispose();
         // Textures registered with ResourceManager are disposed by super.dispose()
+        if (stdinInjector != null) stdinInjector.close();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
     }
 
     // -------------------------------------------------------------------------
-    // Translation map helpers
+    // Translation map helper
     // -------------------------------------------------------------------------
-
-    private ByteBuffer buildTranslateMapBuffer(int[] table, int w, int h) {
-        int maxIdx = w * h - 1;
-        ByteBuffer bb = BufferUtils.createByteBuffer(w * h * 4); // 2 × uint16 per pixel
-        for (int t : table) {
-            int src = Math.max(0, Math.min(t, maxIdx));
-            bb.putShort((short) (src % w)); // srcX
-            bb.putShort((short) (src / w)); // srcY
-        }
-        bb.flip();
-        return bb;
-    }
 
     private Texture buildTranslateMapTexture(int[] table, int w, int h) {
         Texture t = new Texture();
@@ -385,14 +440,14 @@ public class CthughaWindow extends GLWindow {
         t.setDataType(GL_UNSIGNED_SHORT);
         t.setFilter(Filter.NEAREST); // integer textures must not use LINEAR
         t.setWrap(Wrap.REPEAT);
-        t.generate(w, h, buildTranslateMapBuffer(table, w, h));
+        t.generate(w, h, TranslateTableSource.tableToRG16Buffer(table, w, h));
         return t;
     }
 
     private void rebuildTranslateMap() {
         int w = cthugha.buffer.width;
         int h = cthugha.buffer.height;
-        ByteBuffer data = buildTranslateMapBuffer(cthugha.getTranslateTable(), w, h);
+        ByteBuffer data = TranslateTableSource.tableToRG16Buffer(cthugha.getTranslateTable(), w, h);
         translateMapUnit.activate();
         translateMapUnit.bind(translateMapTex);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
@@ -416,11 +471,14 @@ public class CthughaWindow extends GLWindow {
     }
 
     // -------------------------------------------------------------------------
-    // Inner class: WaveOverlayRenderer
-    // Composites the RGBA waveform overlay texture onto the screen with alpha blending.
+    // Inner class: WaveIndexBakeRenderer
+    // Reads the RGBA waveform overlay and writes palette index 200 (as a normalised
+    // R8 value) wherever the wave alpha exceeds 0.1. Rendered into pongFBO with
+    // GL_SRC_ALPHA blending so transparent pixels preserve the translated content
+    // while opaque wave pixels overwrite with the palette index.
     // -------------------------------------------------------------------------
 
-    private static class WaveOverlayRenderer implements RenderedItem {
+    private static class WaveIndexBakeRenderer implements RenderedItem {
 
         private static final String VERT = """
                 #version 330 core
@@ -437,9 +495,11 @@ public class CthughaWindow extends GLWindow {
                 #version 330 core
                 in vec2 texCoords;
                 out vec4 fragColor;
-                uniform sampler2D overlay;
+                uniform sampler2D waveOverlay;
                 void main() {
-                    fragColor = texture(overlay, texCoords);
+                    float a = texture(waveOverlay, texCoords).a;
+                    float idx = 200.0 / 255.0;
+                    fragColor = vec4(idx, 0.0, 0.0, a > 0.1 ? 1.0 : 0.0);
                 }
                 """;
 
@@ -448,21 +508,21 @@ public class CthughaWindow extends GLWindow {
         private TextureUnit overlayUnit;
         private Rectangle quad;
 
-        WaveOverlayRenderer(String overlayName) {
+        WaveIndexBakeRenderer(String overlayName) {
             this.overlayName = overlayName;
         }
 
         @Override
         public void init(RenderContext ctx) throws IOException {
             shader = ShaderProgram.compile(
-                    ShaderSource.fromClass(VERT, WaveOverlayRenderer.class),
-                    ShaderSource.fromClass(FRAG, WaveOverlayRenderer.class),
+                    ShaderSource.fromClass(VERT, WaveIndexBakeRenderer.class),
+                    ShaderSource.fromClass(FRAG, WaveIndexBakeRenderer.class),
                     null);
             shader.use(ctx);
             ResourceManager rm = ctx.getResourceManager();
             overlayUnit = rm.nextTextureUnit();
             overlayUnit.bind(rm.getTexture(overlayName));
-            overlayUnit.useInShader(shader, "overlay");
+            overlayUnit.useInShader(shader, "waveOverlay");
             quad = new Rectangle(ctx, "screenPosition", "texturePosition");
             quad.getVertexArrayObject().bind(ctx);
             quad.getVertexBufferObject().setup(shader);
@@ -640,86 +700,8 @@ public class CthughaWindow extends GLWindow {
         TextureUnit getOverlayUnit() { return overlayUnit; }
     }
 
-    // -------------------------------------------------------------------------
-    // Inner class: PaletteDisplayRenderer
-    // Converts the finished R8 ping-pong texture to RGBA via palette LUT for display.
-    // -------------------------------------------------------------------------
-
-    private static class PaletteDisplayRenderer implements RenderedItem {
-
-        private static final String VERT = """
-                #version 330 core
-                in vec2 screenPosition;
-                in vec2 texturePosition;
-                out vec2 texCoords;
-                void main() {
-                    texCoords = texturePosition;
-                    gl_Position = vec4(screenPosition, 0.0, 1.0);
-                }
-                """;
-
-        private static final String FRAG = """
-                #version 330 core
-                in vec2 texCoords;
-                out vec4 fragColor;
-                uniform sampler2D tex;
-                uniform sampler2D palette;
-                void main() {
-                    float idx = texture(tex, texCoords).r;
-                    fragColor = texture(palette, vec2(idx, 0.5));
-                }
-                """;
-
-        private final String texName;
-        private final String paletteName;
-        private ShaderProgram shader;
-        private TextureUnit texUnit;
-        private TextureUnit paletteUnit;
-        private Rectangle quad;
-
-        PaletteDisplayRenderer(String texName, String paletteName) {
-            this.texName     = texName;
-            this.paletteName = paletteName;
-        }
-
-        @Override
-        public void init(RenderContext ctx) throws IOException {
-            shader = ShaderProgram.compile(
-                    ShaderSource.fromClass(VERT, PaletteDisplayRenderer.class),
-                    ShaderSource.fromClass(FRAG, PaletteDisplayRenderer.class),
-                    null);
-            shader.use(ctx);
-            ResourceManager rm = ctx.getResourceManager();
-            texUnit = rm.nextTextureUnit();
-            texUnit.bind(rm.getTexture(texName));
-            texUnit.useInShader(shader, "tex");
-            paletteUnit = rm.nextTextureUnit();
-            paletteUnit.bind(rm.getTexture(paletteName));
-            paletteUnit.useInShader(shader, "palette");
-            quad = new Rectangle(ctx, "screenPosition", "texturePosition");
-            quad.getVertexArrayObject().bind(ctx);
-            quad.getVertexBufferObject().setup(shader);
-        }
-
-        @Override
-        public void doRender(RenderContext ctx) {
-            shader.use(ctx);
-            quad.render(ctx);
-        }
-
-        @Override
-        public void dispose() {
-            if (quad        != null) quad.destroy();
-            if (shader      != null) shader.dispose();
-            if (texUnit     != null) texUnit.dispose();
-            if (paletteUnit != null) paletteUnit.dispose();
-        }
-
-        TextureUnit getTexUnit()     { return texUnit; }
-        TextureUnit getPaletteUnit() { return paletteUnit; }
-    }
-
     public static void main(String[] args) throws Exception {
-        new CthughaWindow().displayLoop();
+        boolean stdinEnabled = Arrays.asList(args).contains("--stdin");
+        new CthughaWindow(stdinEnabled).displayLoop();
     }
 }

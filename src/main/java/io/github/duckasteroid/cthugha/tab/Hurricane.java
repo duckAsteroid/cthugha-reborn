@@ -1,13 +1,10 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.XYParam;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;
-import java.awt.Dimension;
-import java.util.Random;
 
 public class Hurricane extends AbstractNode implements TranslateTableSource {
 
@@ -23,13 +20,12 @@ public class Hurricane extends AbstractNode implements TranslateTableSource {
     initChildren(Randomness, speed, slowY, slowX, reverse, center);
   }
   @Override
-  public int[] generate(ScreenBuffer buffer) {
-    final Dimension size = buffer.getDimensions();
-    int[] result = new int[size.width * size.height];
-    int xCenter = (int)(size.width * this.center.x.value);
-    int yCenter = (int)(size.height * this.center.y.value);
-    for (int y = 0; y < size.height; y++) {
-      for (int x = 0; x < size.width; x++) {
+  public int[] generate(int width, int height) {
+    int[] result = new int[width * height];
+    int xCenter = (int)(width * this.center.x.value);
+    int yCenter = (int)(height * this.center.y.value);
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
         int  speedFactor;
         long sp;
 
@@ -60,13 +56,13 @@ public class Hurricane extends AbstractNode implements TranslateTableSource {
         int map_y = (int)(y - (dx * sp) / 700);
 
         while (map_y < 0)
-          map_y += size.height;
+          map_y += height;
         while (map_x < 0)
-          map_x += size.width;
-        map_y = map_y % size.height;
-        map_x = map_x % size.width;
+          map_x += width;
+        map_y = map_y % height;
+        map_x = map_x % width;
 
-        result[x + (size.width * y)] = map_y * size.width + map_x;
+        result[x + (width * y)] = map_y * width + map_x;
       }
     }
     return result;
