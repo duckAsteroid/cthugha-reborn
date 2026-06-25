@@ -226,7 +226,7 @@ public class CthughaWindow extends GLWindow {
             cthugha.notify(String.format("fade: %.3f", fadeMultiplier));
         }, "Increase fade (slower decay)");
 
-        kr.registerKeyAction(GLFW_KEY_1, GLFW_MOD_SHIFT, () -> {
+        kr.registerKeyAction(GLFW_KEY_ESCAPE, () -> {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
         }, "Quit");

@@ -76,4 +76,15 @@ run {
 	workingDir = file("src/dist")
 	systemProperty("cthugha.png.stats.enabled", "true")
 	//systemProperty("sun.java2d.opengl", "true")
+	environment '__NV_PRIME_RENDER_OFFLOAD', '1'
+	environment '__GLX_VENDOR_LIBRARY_NAME', 'nvidia'
+}
+
+startScripts {
+	doLast {
+		unixScript.text = unixScript.text.replace(
+			'exec "$JAVACMD"',
+			'export __NV_PRIME_RENDER_OFFLOAD=1\nexport __GLX_VENDOR_LIBRARY_NAME=nvidia\nexec "$JAVACMD"'
+		)
+	}
 }
