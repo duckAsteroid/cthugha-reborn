@@ -2,19 +2,21 @@ package io.github.duckasteroid.cthugha.display;
 
 import com.asteroid.duck.opengl.util.GLWindow;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
+import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
+import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
+import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
+import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
+import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
+import com.asteroid.duck.opengl.util.audio.AudioReader;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
-import com.asteroid.duck.opengl.util.geom.Rectangle;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
-import com.asteroid.duck.opengl.util.resources.manager.ResourceManager;
-import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.resources.io.PathBasedLoader;
@@ -27,10 +29,10 @@ import com.asteroid.duck.opengl.util.text.StringRenderer;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import com.asteroid.duck.opengl.util.timer.TimerImpl;
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.tab.TranslateTableSource;
 import org.joml.Matrix4f;
-import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
@@ -39,12 +41,14 @@ import org.slf4j.LoggerFactory;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -84,7 +88,14 @@ public class CthughaWindow extends GLWindow {
     private OverlayBakeRenderer overlayBaker;
 
     // Pass 3 (pingFBO): GPU flame — blur pongTex → pingTex (5-tap average with fade)
-    private FlameRenderer flameRenderer;
+    // Two-pass separable Gaussian blur replacing the old FlameRenderer.
+    // Multiplier applied only in the Y pass so fade occurs exactly once per frame.
+    private BlurTextureRenderer xBlur;
+    private BlurTextureRenderer yBlur;
+    private Texture flameTex;      // R32F intermediate between X and Y blur passes
+    private FrameBuffer flameFBO;
+    private volatile float fadeMultiplier = 0.99f;
+    private static final int DEFAULT_KERNEL_SIZE = 29;
 
     // Pass 4 (default FBO): palette-convert pingTex to RGBA for display
     private PaletteRenderer paletteRenderer;
@@ -100,6 +111,13 @@ public class CthughaWindow extends GLWindow {
     private Instant notifExpiry = null;
     private static final Duration NOTIF_DURATION = Duration.ofSeconds(3);
 
+    // Texture flash: one-shot bake of an RGBA texture into pongTex as palette indices
+    private final RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
+    private TextureBakeRenderer textureBaker;
+    private Texture flashWhiteTex;   // 1×1 R=0xFF A=0xFF — palette index 255 full-screen
+    private Texture flashImageTex;   // last loaded PCX image (greyscale → palette index)
+    private boolean flashPending = false;
+
     // Quote render mode: true = baked into the indexed buffer (affected by flame/translate);
     //                    false = RGBA overlay on top of the palette output (default)
     private boolean quoteInBuffer = false;
@@ -113,8 +131,11 @@ public class CthughaWindow extends GLWindow {
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final StdinKeyInjector stdinInjector;
 
-    // AudioWave uses its own LineAcquirer (separate from JCthugha's audio to avoid racing reads)
+    // AudioWave pipeline: LineAcquirer → AudioReader (background thread) → PboAudioSink (GL texture) → AudioWave
     private LineAcquirer waveLineAcquirer;
+    private PboAudioSink audioSink;
+    private AudioReader audioReader;
+    private Thread audioThread;
     private AudioWave audioWave;
     // RGBA offscreen texture: AudioWave renders here (its glClear is isolated)
     private Texture waveOverlayTex;
@@ -150,7 +171,7 @@ public class CthughaWindow extends GLWindow {
 
         kr.registerKeyAction(KeyCombination.simple('D'), cthugha::toggleDebug, "Toggle debug");
         kr.registerKeyAction(KeyCombination.simple('F'), this::toggleFullscreen, "Toggle fullscreen");
-        kr.registerKeyAction(KeyCombination.simple('I'), cthugha::flashImage, "Flash a random image");
+        kr.registerKeyAction(KeyCombination.simple('I'), this::flashImage, "Flash a random image");
         kr.registerKeyAction(KeyCombination.simple('N'), cthugha::toggleNotifications, "Toggle notifications");
         kr.registerKeyAction(KeyCombination.simple('P'), cthugha::newPalette, "Change palette");
         kr.registerKeyAction(KeyCombination.simple('Q'), cthugha::showQuote, "Show a quote on screen");
@@ -166,7 +187,44 @@ public class CthughaWindow extends GLWindow {
             cthugha.newTranslation(true);
             rebuildTranslateMap();
         }, "Fully randomise translation");
-        kr.registerKeyAction(KeyCombination.simple('X'), () -> Arrays.fill(cthugha.buffer.pixels, (byte) 255), "Flash fill screen white");
+        kr.registerKeyAction(KeyCombination.simple('X'), () -> {
+            textureBaker.setTexture(flashWhiteTex);
+            flashPending = true;
+        }, "Flash fill screen white");
+
+        kr.registerKeyAction(GLFW_KEY_COMMA, GLFW_MOD_SHIFT, () -> {
+            if (xBlur.isBlur() && xBlur.getKernelSize() <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
+                xBlur.setBlur(false);
+                yBlur.setBlur(false);
+                cthugha.notify("blur: OFF");
+            } else if (xBlur.isBlur()) {
+                xBlur.decreaseKernelSize();
+                yBlur.setKernelSize(xBlur.getKernelSize());
+                cthugha.notify("blur kernel: " + xBlur.getKernelSize());
+            }
+        }, "Decrease blur kernel size (OFF at minimum)");
+        kr.registerKeyAction(GLFW_KEY_PERIOD, GLFW_MOD_SHIFT, () -> {
+            if (!xBlur.isBlur()) {
+                xBlur.setBlur(true);
+                yBlur.setBlur(true);
+                xBlur.setKernelSize(BlurTextureRenderer.MIN_KERNEL_SIZE);
+                yBlur.setKernelSize(BlurTextureRenderer.MIN_KERNEL_SIZE);
+                cthugha.notify("blur kernel: " + xBlur.getKernelSize());
+            } else {
+                xBlur.increaseKernelSize();
+                yBlur.setKernelSize(xBlur.getKernelSize());
+                cthugha.notify("blur kernel: " + xBlur.getKernelSize());
+            }
+        }, "Increase blur kernel size (ON from OFF)");
+
+        kr.registerKeyAction(GLFW_KEY_COMMA, 0, () -> {
+            fadeMultiplier = Math.max(0.0f, fadeMultiplier - 0.005f);
+            cthugha.notify(String.format("fade: %.3f", fadeMultiplier));
+        }, "Decrease fade (faster decay)");
+        kr.registerKeyAction(GLFW_KEY_PERIOD, 0, () -> {
+            fadeMultiplier = Math.min(1.0f, fadeMultiplier + 0.005f);
+            cthugha.notify(String.format("fade: %.3f", fadeMultiplier));
+        }, "Increase fade (slower decay)");
 
         kr.registerKeyAction(GLFW_KEY_1, GLFW_MOD_SHIFT, () -> {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
@@ -244,8 +302,23 @@ public class CthughaWindow extends GLWindow {
         overlayBaker.init(this);
 
         // Pass 3: GPU flame — blur pongTex → pingTex (via pingFBO)
-        flameRenderer = new FlameRenderer("pongTex");
-        flameRenderer.init(this);
+        // Flame: two-pass separable Gaussian blur with a per-frame fade on the Y pass
+        TextureOptions flameOpts = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
+        flameTex = TextureFactory.createTexture(new java.awt.Rectangle(w, h), null, flameOpts);
+        getResourceManager().putTexture("flameTex", flameTex);
+        flameFBO = new FrameBuffer(flameTex);
+
+        xBlur = new BlurTextureRenderer("pongTex");
+        xBlur.setXAxis(true);
+        xBlur.setKernelSize(DEFAULT_KERNEL_SIZE);
+        xBlur.addVariable(ShaderVariable.floatVariable("multiplier", () -> 1.0f));
+        xBlur.init(this);
+
+        yBlur = new BlurTextureRenderer("flameTex");
+        yBlur.setXAxis(false);
+        yBlur.setKernelSize(DEFAULT_KERNEL_SIZE);
+        yBlur.addVariable(ShaderVariable.floatVariable("multiplier", () -> fadeMultiplier));
+        yBlur.init(this);
 
         // Pass 4: palette-convert pingTex → RGBA for display (default FBO)
         paletteRenderer = new PaletteRenderer("pingTex");
@@ -291,13 +364,31 @@ public class CthughaWindow extends GLWindow {
         quoteBaker = new WaveIndexBakeRenderer("quoteOverlay");
         quoteBaker.init(this);
 
-        waveLineAcquirer = new LineAcquirer();
-        waveLineAcquirer.init(this, LineAcquirer.IDEAL);
-        audioWave = new AudioWave();
+        // 1×1 white flash texture: R=0xFF maps to palette index 255, A=0xFF fully opaque
+        ByteBuffer whitePx = BufferUtils.createByteBuffer(4);
+        whitePx.put((byte) 0xFF).put((byte) 0).put((byte) 0).put((byte) 0xFF).flip();
+        flashWhiteTex = new Texture();
+        flashWhiteTex.setInternalFormat(GL_RGBA);
+        flashWhiteTex.setImageFormat(GL_RGBA);
+        flashWhiteTex.setDataType(GL_UNSIGNED_BYTE);
+        flashWhiteTex.setFilter(Filter.NEAREST);
+        flashWhiteTex.generate(1, 1, whitePx);
+
+        textureBaker = new TextureBakeRenderer();
+        textureBaker.init(this);
+        textureBaker.setTexture(flashWhiteTex);
+
+        audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, this);
+        audioWave = new AudioWave(audioSink);
         audioWave.init(this);
-        audioWave.setLine(waveLineAcquirer.getSelectedSource());
         audioWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
         audioWave.setLineWidth(2.0f);
+
+        waveLineAcquirer = new LineAcquirer();
+        waveLineAcquirer.init(this, LineAcquirer.IDEAL);
+        audioReader = new AudioReader(List.of(audioSink));
+        audioReader.setLine(waveLineAcquirer.getSelectedSource());
+        audioThread = Thread.ofVirtual().start(audioReader);
     }
 
     @Override
@@ -331,6 +422,7 @@ public class CthughaWindow extends GLWindow {
         //    prevents it from clearing the indexed pipeline textures.
         glClearColor(0f, 0f, 0f, 0f);
         waveOverlayFBO.bind();
+        audioSink.upload();
         audioWave.doRender(this);
         waveOverlayFBO.unbind();
         glViewport(0, 0, win.width, win.height);
@@ -370,14 +462,25 @@ public class CthughaWindow extends GLWindow {
         if (quoteInBuffer && quote != null) {
             quoteBaker.doRender(this);
         }
+        if (flashPending) {
+            textureBaker.doRender(this);
+            flashPending = false;
+        }
         overlayBaker.doRender(this);
         glDisable(GL_BLEND);
         pongFBO.unbind();
         glViewport(0, 0, win.width, win.height);
 
-        // 6. pingFBO: GPU flame — blur pongTex → pingTex (5-tap average with fade)
+        // 6. Flame: two-pass Gaussian blur with fade.
+        //    X pass: pongTex → flameTex (multiplier=1.0, no fade)
+        //    Y pass: flameTex → pingTex (multiplier=0.99, fade applied once)
+        flameFBO.bind();
+        xBlur.doRender(this);
+        flameFBO.unbind();
+        glViewport(0, 0, win.width, win.height);
+
         pingFBO.bind();
-        flameRenderer.doRender(this);
+        yBlur.doRender(this);
         pingFBO.unbind();
         glViewport(0, 0, win.width, win.height);
 
@@ -412,7 +515,9 @@ public class CthughaWindow extends GLWindow {
         if (quoteRenderer     != null) quoteRenderer.dispose();
         if (notifRenderer     != null) notifRenderer.dispose();
         if (overlayBaker      != null) overlayBaker.dispose();
-        if (flameRenderer     != null) flameRenderer.dispose();
+        if (xBlur             != null) xBlur.dispose();
+        if (yBlur             != null) yBlur.dispose();
+        if (flameFBO          != null) flameFBO.dispose();
         if (paletteRenderer   != null) paletteRenderer.dispose();
         if (paletteUploadUnit != null) paletteUploadUnit.dispose();
         if (translateRenderer != null) translateRenderer.dispose();
@@ -420,6 +525,11 @@ public class CthughaWindow extends GLWindow {
         if (pongFBO           != null) pongFBO.dispose();
         if (waveBaker         != null) waveBaker.dispose();
         if (quoteBaker        != null) quoteBaker.dispose();
+        if (textureBaker      != null) textureBaker.dispose();
+        if (flashWhiteTex     != null) flashWhiteTex.dispose();
+        if (flashImageTex     != null) flashImageTex.dispose();
+        if (audioReader       != null) { audioReader.setRunning(false); }
+        if (audioThread       != null) { audioThread.interrupt(); }
         if (audioWave         != null) audioWave.dispose();
         if (waveOverlayFBO    != null) waveOverlayFBO.dispose();
         if (quoteOverlayFBO   != null) quoteOverlayFBO.dispose();
@@ -427,6 +537,50 @@ public class CthughaWindow extends GLWindow {
         if (stdinInjector != null) stdinInjector.close();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
+    }
+
+    // -------------------------------------------------------------------------
+    // Flash image helper
+    // -------------------------------------------------------------------------
+
+    private void flashImage() {
+        try {
+            BufferedImage img = imageSource.nextImage();
+            if (flashImageTex != null) {
+                flashImageTex.dispose();
+            }
+            flashImageTex = new Texture();
+            flashImageTex.setInternalFormat(GL_RGBA);
+            flashImageTex.setImageFormat(GL_RGBA);
+            flashImageTex.setDataType(GL_UNSIGNED_BYTE);
+            flashImageTex.setFilter(Filter.LINEAR);
+            flashImageTex.generate(img.getWidth(), img.getHeight(), imageToRGBA(img));
+            textureBaker.setTexture(flashImageTex);
+            flashPending = true;
+        } catch (IOException e) {
+            LOG.error("Error loading flash image", e);
+        }
+    }
+
+    private ByteBuffer imageToRGBA(BufferedImage img) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        ByteBuffer buf = BufferUtils.createByteBuffer(w * h * 4);
+        for (int y = h - 1; y >= 0; y--) {
+            for (int x = 0; x < w; x++) {
+                int rgb = img.getRGB(x, y);
+                int r = (rgb >> 16) & 0xFF;
+                int g = (rgb >> 8) & 0xFF;
+                int b = rgb & 0xFF;
+                int luma = (r * 299 + g * 587 + b * 114) / 1000;
+                buf.put((byte) luma); // R → palette index
+                buf.put((byte) 0);
+                buf.put((byte) 0);
+                buf.put((byte) 0xFF); // fully opaque
+            }
+        }
+        buf.flip();
+        return buf;
     }
 
     // -------------------------------------------------------------------------
@@ -468,236 +622,6 @@ public class CthughaWindow extends GLWindow {
         }
         buf.flip();
         return buf;
-    }
-
-    // -------------------------------------------------------------------------
-    // Inner class: WaveIndexBakeRenderer
-    // Reads the RGBA waveform overlay and writes palette index 200 (as a normalised
-    // R8 value) wherever the wave alpha exceeds 0.1. Rendered into pongFBO with
-    // GL_SRC_ALPHA blending so transparent pixels preserve the translated content
-    // while opaque wave pixels overwrite with the palette index.
-    // -------------------------------------------------------------------------
-
-    private static class WaveIndexBakeRenderer implements RenderedItem {
-
-        private static final String VERT = """
-                #version 330 core
-                in vec2 screenPosition;
-                in vec2 texturePosition;
-                out vec2 texCoords;
-                void main() {
-                    texCoords = texturePosition;
-                    gl_Position = vec4(screenPosition, 0.0, 1.0);
-                }
-                """;
-
-        private static final String FRAG = """
-                #version 330 core
-                in vec2 texCoords;
-                out vec4 fragColor;
-                uniform sampler2D waveOverlay;
-                void main() {
-                    float a = texture(waveOverlay, texCoords).a;
-                    float idx = 200.0 / 255.0;
-                    fragColor = vec4(idx, 0.0, 0.0, a > 0.1 ? 1.0 : 0.0);
-                }
-                """;
-
-        private final String overlayName;
-        private ShaderProgram shader;
-        private TextureUnit overlayUnit;
-        private Rectangle quad;
-
-        WaveIndexBakeRenderer(String overlayName) {
-            this.overlayName = overlayName;
-        }
-
-        @Override
-        public void init(RenderContext ctx) throws IOException {
-            shader = ShaderProgram.compile(
-                    ShaderSource.fromClass(VERT, WaveIndexBakeRenderer.class),
-                    ShaderSource.fromClass(FRAG, WaveIndexBakeRenderer.class),
-                    null);
-            shader.use(ctx);
-            ResourceManager rm = ctx.getResourceManager();
-            overlayUnit = rm.nextTextureUnit();
-            overlayUnit.bind(rm.getTexture(overlayName));
-            overlayUnit.useInShader(shader, "waveOverlay");
-            quad = new Rectangle(ctx, "screenPosition", "texturePosition");
-            quad.getVertexArrayObject().bind(ctx);
-            quad.getVertexBufferObject().setup(shader);
-        }
-
-        @Override
-        public void doRender(RenderContext ctx) {
-            shader.use(ctx);
-            quad.render(ctx);
-        }
-
-        @Override
-        public void dispose() {
-            if (quad        != null) quad.destroy();
-            if (shader      != null) shader.dispose();
-            if (overlayUnit != null) overlayUnit.dispose();
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Inner class: FlameRenderer
-    // GPU equivalent of JavaFlame: 5-tap box average (N/S/E/W/center) with a
-    // 1-palette-step fade each frame, preventing infinite accumulation.
-    // Reads from pongTex (translate+overlay result), writes to pingTex (via pingFBO).
-    // -------------------------------------------------------------------------
-
-    private static class FlameRenderer implements RenderedItem {
-
-        private static final String VERT = """
-                #version 330 core
-                in vec2 screenPosition;
-                in vec2 texturePosition;
-                out vec2 texCoords;
-                void main() {
-                    texCoords = texturePosition;
-                    gl_Position = vec4(screenPosition, 0.0, 1.0);
-                }
-                """;
-
-        private static final String FRAG = """
-                #version 330 core
-                in vec2 texCoords;
-                out vec4 fragColor;
-                uniform sampler2D src;
-                uniform vec2 texelSize;
-                void main() {
-                    float px = texelSize.x;
-                    float py = texelSize.y;
-                    float c = texture(src, texCoords).r;
-                    float l = texture(src, texCoords + vec2(-px,  0.0)).r;
-                    float r = texture(src, texCoords + vec2(+px,  0.0)).r;
-                    float u = texture(src, texCoords + vec2( 0.0, +py)).r;
-                    float d = texture(src, texCoords + vec2( 0.0, -py)).r;
-                    float avg = (c + l + r + u + d) * 0.2;
-                    fragColor = vec4(max(0.0, avg - 1.0 / 255.0), 0.0, 0.0, 1.0);
-                }
-                """;
-
-        private final String srcName;
-        private ShaderProgram shader;
-        private TextureUnit srcUnit;
-        private com.asteroid.duck.opengl.util.resources.shader.Uniform<Vector2f> uTexelSize;
-        private Rectangle quad;
-
-        FlameRenderer(String srcName) {
-            this.srcName = srcName;
-        }
-
-        @Override
-        public void init(RenderContext ctx) throws IOException {
-            shader = ShaderProgram.compile(
-                    ShaderSource.fromClass(VERT, FlameRenderer.class),
-                    ShaderSource.fromClass(FRAG, FlameRenderer.class),
-                    null);
-            shader.use(ctx);
-            ResourceManager rm = ctx.getResourceManager();
-            srcUnit = rm.nextTextureUnit();
-            Texture t = rm.getTexture(srcName);
-            srcUnit.bind(t);
-            srcUnit.useInShader(shader, "src");
-            uTexelSize = shader.uniforms().get("texelSize", Vector2f.class);
-            uTexelSize.set(new Vector2f(1.0f / t.getWidth(), 1.0f / t.getHeight()));
-            quad = new Rectangle(ctx, "screenPosition", "texturePosition");
-            quad.getVertexArrayObject().bind(ctx);
-            quad.getVertexBufferObject().setup(shader);
-        }
-
-        @Override
-        public void doRender(RenderContext ctx) {
-            shader.use(ctx);
-            quad.render(ctx);
-        }
-
-        @Override
-        public void dispose() {
-            if (quad    != null) quad.destroy();
-            if (shader  != null) shader.dispose();
-            if (srcUnit != null) srcUnit.dispose();
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Inner class: OverlayBakeRenderer
-    // Renders CPU overlay (R8) into the currently bound FBO using alpha blending:
-    // non-zero palette indices overwrite the underlying translated content;
-    // zero indices (background) are transparent, preserving the translated pixel.
-    // -------------------------------------------------------------------------
-
-    private static class OverlayBakeRenderer implements RenderedItem {
-
-        private static final String VERT = """
-                #version 330 core
-                in vec2 screenPosition;
-                in vec2 texturePosition;
-                out vec2 texCoords;
-                void main() {
-                    texCoords = texturePosition;
-                    gl_Position = vec4(screenPosition, 0.0, 1.0);
-                }
-                """;
-
-        // Writes the palette index to R; alpha=1 for foreground, alpha=0 for background (index 0).
-        // With GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA blending on the R8 FBO:
-        //   dest.R = src.R * src.A + dest.R * (1 - src.A)
-        // Background (alpha=0): keeps existing translated pixel. Foreground (alpha=1): overwrites.
-        private static final String FRAG = """
-                #version 330 core
-                in vec2 texCoords;
-                out vec4 fragColor;
-                uniform sampler2D overlay;
-                void main() {
-                    float idx = texture(overlay, texCoords).r;
-                    fragColor = vec4(idx, 0.0, 0.0, idx > 0.0 ? 1.0 : 0.0);
-                }
-                """;
-
-        private final String overlayName;
-        private ShaderProgram shader;
-        private TextureUnit overlayUnit;
-        private Rectangle quad;
-
-        OverlayBakeRenderer(String overlayName) {
-            this.overlayName = overlayName;
-        }
-
-        @Override
-        public void init(RenderContext ctx) throws IOException {
-            shader = ShaderProgram.compile(
-                    ShaderSource.fromClass(VERT, OverlayBakeRenderer.class),
-                    ShaderSource.fromClass(FRAG, OverlayBakeRenderer.class),
-                    null);
-            shader.use(ctx);
-            ResourceManager rm = ctx.getResourceManager();
-            overlayUnit = rm.nextTextureUnit();
-            overlayUnit.bind(rm.getTexture(overlayName));
-            overlayUnit.useInShader(shader, "overlay");
-            quad = new Rectangle(ctx, "screenPosition", "texturePosition");
-            quad.getVertexArrayObject().bind(ctx);
-            quad.getVertexBufferObject().setup(shader);
-        }
-
-        @Override
-        public void doRender(RenderContext ctx) {
-            shader.use(ctx);
-            quad.render(ctx);
-        }
-
-        @Override
-        public void dispose() {
-            if (quad        != null) quad.destroy();
-            if (shader      != null) shader.dispose();
-            if (overlayUnit != null) overlayUnit.dispose();
-        }
-
-        TextureUnit getOverlayUnit() { return overlayUnit; }
     }
 
     public static void main(String[] args) throws Exception {

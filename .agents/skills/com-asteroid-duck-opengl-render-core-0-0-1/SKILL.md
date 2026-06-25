@@ -14,7 +14,6 @@ key input, and audio capture.
 **Gradle coordinate:** `com.asteroid.duck.opengl:render-core:0.0.1`
 **Java version:** 25 with `--enable-preview`
 
-All source code for `render-core` is already available in the `src/` subdirectory of this skill.
 ---
 
 ## Core lifecycle
@@ -135,3 +134,4 @@ ctx.getKeyRegistry().registerKeyAction(
 | **GL thread only** | Every GL call, `init()`, `doRender()`, and `dispose()` must execute on the GL/render thread. Use `RenderActionQueue` to submit work from other threads. |
 | **init() before everything** | GL handles are `0`/`null` until `init()` completes. Never call `doRender()` or use a `Uniform` before `init()`. |
 | **dispose() cleans everything** | Call `vao.dispose()`, `shader.dispose()`, `glDeleteBuffers()`, `glDeleteTextures()` explicitly. Native memory (`MemoryUtil.memAlloc`) is not GC-collected. |
+| **Audio ownership** | `AudioWave` and `RadialWave` are pure renderers — they own no threads and no PBO. The experiment creates `PboAudioSink` and `AudioReader`, passes the sink to the renderer(s), and calls `audioSink.upload()` once per frame. See [audio.md](audio.md). |

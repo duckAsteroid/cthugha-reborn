@@ -3,7 +3,6 @@ package io.github.duckasteroid.cthugha;
 
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.ScreenBuffer;
-import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.animation.AnimatorPool;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
@@ -15,8 +14,6 @@ import io.github.duckasteroid.cthugha.strings.RandomStringSource;
 import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
 import io.github.duckasteroid.cthugha.tab.Translate;
 import java.awt.Dimension;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -48,8 +45,6 @@ public class JCthugha extends AbstractNode implements Closeable {
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
 
 	RandomTranslateSource translateSource = new RandomTranslateSource();
-
-	RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
 
 	private final RandomStringSource stringSource = new RandomStringSource();
 	private volatile String currentQuoteText = null;
@@ -138,14 +133,4 @@ public class JCthugha extends AbstractNode implements Closeable {
 		LOG.info("notifications={}", notify);
 	}
 
-	public void flashImage() {
-		try {
-			BufferedImage flash = imageSource.nextImage();
-			Graphics2D graphics = buffer.getBufferedImageView().createGraphics();
-			graphics.drawImage(flash, 0, 0, buffer.width, buffer.height, null);
-			graphics.dispose();
-		} catch (IOException e) {
-			LOG.error("Error flash image", e);
-		}
-	}
 }

@@ -228,7 +228,7 @@ Rename the project interface to `CthughaRenderItem`:
   
   ```groovy
   application {
-  mainClass = "io.github.duckasteroid.cthugha.display.CthughaWindow"
+  mainClass = "io.github.duckasteroid.cthugha.png.display.CthughaWindow"
   }
   ```
 
