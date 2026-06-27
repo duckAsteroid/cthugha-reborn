@@ -8,10 +8,12 @@ import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
+import com.asteroid.duck.opengl.util.audio.AudioDataSource;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
+import com.asteroid.duck.opengl.util.wave.RadialWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
@@ -131,13 +133,17 @@ public class CthughaWindow extends GLWindow {
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final StdinKeyInjector stdinInjector;
 
-    // AudioWave pipeline: LineAcquirer → AudioReader (background thread) → PboAudioSink (GL texture) → AudioWave
+    private enum WaveMode { OSCILLOSCOPE, RADIAL, BOTH }
+
+    // AudioWave pipeline: LineAcquirer → AudioReader (background thread) → PboAudioSink (GL texture) → AudioWave/RadialWave
     private LineAcquirer waveLineAcquirer;
     private PboAudioSink audioSink;
     private AudioReader audioReader;
     private Thread audioThread;
     private AudioWave audioWave;
-    // RGBA offscreen texture: AudioWave renders here (its glClear is isolated)
+    private RadialWave radialWave;
+    private volatile WaveMode waveMode = WaveMode.OSCILLOSCOPE;
+    // RGBA offscreen texture: wave renderers draw here (glClear is isolated)
     private Texture waveOverlayTex;
     private FrameBuffer waveOverlayFBO;
     // Converts RGBA wave overlay → R8 palette indices baked into pongTex alongside translate/overlay
@@ -187,6 +193,17 @@ public class CthughaWindow extends GLWindow {
             cthugha.newTranslation(true);
             rebuildTranslateMap();
         }, "Fully randomise translation");
+        kr.registerKeyAction(KeyCombination.simple('A'), () -> {
+            waveLineAcquirer.next();
+            AudioDataSource src = waveLineAcquirer.getSelectedSource();
+            audioReader.setLine(src);
+            cthugha.notify("audio: " + src.getName());
+        }, "Cycle audio input");
+        kr.registerKeyAction(KeyCombination.simple('W'), () -> {
+            WaveMode next = WaveMode.values()[(waveMode.ordinal() + 1) % WaveMode.values().length];
+            waveMode = next;
+            cthugha.notify("wave: " + next.name().toLowerCase());
+        }, "Cycle wave mode (oscilloscope / radial / both)");
         kr.registerKeyAction(KeyCombination.simple('X'), () -> {
             textureBaker.setTexture(flashWhiteTex);
             flashPending = true;
@@ -384,6 +401,11 @@ public class CthughaWindow extends GLWindow {
         audioWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
         audioWave.setLineWidth(2.0f);
 
+        radialWave = new RadialWave(audioSink);
+        radialWave.init(this);
+        radialWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
+        radialWave.setLineWidth(2.0f);
+
         waveLineAcquirer = new LineAcquirer();
         waveLineAcquirer.init(this, LineAcquirer.IDEAL);
         audioReader = new AudioReader(List.of(audioSink));
@@ -417,13 +439,21 @@ public class CthughaWindow extends GLWindow {
 
         java.awt.Rectangle win = getWindow();
 
-        // 4. AudioWave offscreen: render waveform into RGBA overlay texture.
-        //    AudioWave.doRender() calls glClear() before drawing — isolating it here
-        //    prevents it from clearing the indexed pipeline textures.
+        // 4. Wave offscreen: render active waveform(s) into RGBA overlay texture.
+        //    The first renderer clears the FBO; in BOTH mode the second draws on top without clearing.
         glClearColor(0f, 0f, 0f, 0f);
         waveOverlayFBO.bind();
         audioSink.upload();
-        audioWave.doRender(this);
+        WaveMode currentWaveMode = waveMode;
+        boolean cleared = false;
+        if (currentWaveMode == WaveMode.OSCILLOSCOPE || currentWaveMode == WaveMode.BOTH) {
+            audioWave.doRender(this);
+            cleared = true;
+        }
+        if (currentWaveMode == WaveMode.RADIAL || currentWaveMode == WaveMode.BOTH) {
+            radialWave.setClearBeforeRender(!cleared);
+            radialWave.doRender(this);
+        }
         waveOverlayFBO.unbind();
         glViewport(0, 0, win.width, win.height);
         glClearColor(0f, 0f, 0f, 1f);
@@ -531,6 +561,7 @@ public class CthughaWindow extends GLWindow {
         if (audioReader       != null) { audioReader.setRunning(false); }
         if (audioThread       != null) { audioThread.interrupt(); }
         if (audioWave         != null) audioWave.dispose();
+        if (radialWave        != null) radialWave.dispose();
         if (waveOverlayFBO    != null) waveOverlayFBO.dispose();
         if (quoteOverlayFBO   != null) quoteOverlayFBO.dispose();
         // Textures registered with ResourceManager are disposed by super.dispose()
