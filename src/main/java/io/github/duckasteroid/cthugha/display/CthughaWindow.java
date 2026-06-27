@@ -12,6 +12,7 @@ import com.asteroid.duck.opengl.util.audio.AudioDataSource;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
+import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.wave.RadialWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
@@ -135,6 +136,10 @@ public class CthughaWindow extends GLWindow {
 
     private enum WaveMode { OSCILLOSCOPE, RADIAL, BOTH }
 
+    private static final float AUDIO_AMP_BASE  = 10f;
+    private static final float RADIAL_AMP_BASE = 1f;
+    private volatile float waveAmplitude = 1.0f;
+
     // AudioWave pipeline: LineAcquirer → AudioReader (background thread) → PboAudioSink (GL texture) → AudioWave/RadialWave
     private LineAcquirer waveLineAcquirer;
     private PboAudioSink audioSink;
@@ -143,6 +148,9 @@ public class CthughaWindow extends GLWindow {
     private AudioWave audioWave;
     private RadialWave radialWave;
     private volatile WaveMode waveMode = WaveMode.OSCILLOSCOPE;
+
+    private enum EllipseMode { NONE, AUDIO_WAVE, BOTH, RADIAL_WAVE }
+    private volatile EllipseMode ellipseMode = EllipseMode.NONE;
     // RGBA offscreen texture: wave renderers draw here (glClear is isolated)
     private Texture waveOverlayTex;
     private FrameBuffer waveOverlayFBO;
@@ -204,6 +212,22 @@ public class CthughaWindow extends GLWindow {
             waveMode = next;
             cthugha.notify("wave: " + next.name().toLowerCase());
         }, "Cycle wave mode (oscilloscope / radial / both)");
+        kr.registerKeyAction(KeyCombination.simple('E'), () -> {
+            EllipseMode next = EllipseMode.values()[(ellipseMode.ordinal() + 1) % EllipseMode.values().length];
+            ellipseMode = next;
+            applyEllipseMode(next);
+            cthugha.notify("ellipse: " + next.name().toLowerCase().replace('_', ' '));
+        }, "Cycle ellipse envelope (none / audio wave / both / radial wave)");
+        kr.registerKeyAction(GLFW_KEY_UP, 0, () -> {
+            waveAmplitude = Math.min(3.0f, waveAmplitude + 0.1f);
+            applyEllipseMode(ellipseMode);
+            cthugha.notify(String.format("amplitude: %.1f", waveAmplitude));
+        }, "Increase wave amplitude");
+        kr.registerKeyAction(GLFW_KEY_DOWN, 0, () -> {
+            waveAmplitude = Math.max(0.1f, waveAmplitude - 0.1f);
+            applyEllipseMode(ellipseMode);
+            cthugha.notify(String.format("amplitude: %.1f", waveAmplitude));
+        }, "Decrease wave amplitude");
         kr.registerKeyAction(KeyCombination.simple('X'), () -> {
             textureBaker.setTexture(flashWhiteTex);
             flashPending = true;
@@ -400,14 +424,16 @@ public class CthughaWindow extends GLWindow {
         audioWave.init(this);
         audioWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
         audioWave.setLineWidth(2.0f);
-
         radialWave = new RadialWave(audioSink);
         radialWave.init(this);
         radialWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
         radialWave.setLineWidth(2.0f);
 
+        applyEllipseMode(ellipseMode);
+
         waveLineAcquirer = new LineAcquirer();
         waveLineAcquirer.init(this, LineAcquirer.IDEAL);
+        selectPreferredSource(waveLineAcquirer, "pipewire");
         audioReader = new AudioReader(List.of(audioSink));
         audioReader.setLine(waveLineAcquirer.getSelectedSource());
         audioThread = Thread.ofVirtual().start(audioReader);
@@ -568,6 +594,38 @@ public class CthughaWindow extends GLWindow {
         if (stdinInjector != null) stdinInjector.close();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
+    }
+
+    // -------------------------------------------------------------------------
+    // Audio source selection helper
+    // -------------------------------------------------------------------------
+
+    private static void selectPreferredSource(LineAcquirer acquirer, String nameFragment) {
+        AudioDataSource first = acquirer.getSelectedSource();
+        if (first.getName().toLowerCase().contains(nameFragment)) return;
+        do {
+            acquirer.next();
+            AudioDataSource s = acquirer.getSelectedSource();
+            if (s == first) return; // full cycle, not found — keep original
+            if (s.getName().toLowerCase().contains(nameFragment)) return;
+        } while (true);
+    }
+
+    // -------------------------------------------------------------------------
+    // Ellipse amplitude helper
+    // -------------------------------------------------------------------------
+
+    private void applyEllipseMode(EllipseMode mode) {
+        float aw = AUDIO_AMP_BASE * waveAmplitude;
+        float rw = RADIAL_AMP_BASE * waveAmplitude;
+        audioWave.setAmplitudeFunction(
+                (mode == EllipseMode.AUDIO_WAVE || mode == EllipseMode.BOTH)
+                        ? AmplitudeFunction.ellipse(aw)
+                        : AmplitudeFunction.constant(aw));
+        radialWave.setAmplitudeFunction(
+                (mode == EllipseMode.RADIAL_WAVE || mode == EllipseMode.BOTH)
+                        ? AmplitudeFunction.ellipse(rw)
+                        : AmplitudeFunction.constant(rw));
     }
 
     // -------------------------------------------------------------------------
