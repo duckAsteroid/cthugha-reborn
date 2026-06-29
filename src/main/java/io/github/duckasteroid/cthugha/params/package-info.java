@@ -26,9 +26,9 @@
  * <ul>
  *   <li>{@link io.github.duckasteroid.cthugha.params.XYParam} – a pair of {@code DoubleParameter}s
  *       representing a 2-D coordinate or scale factor.</li>
- *   <li>{@link io.github.duckasteroid.cthugha.params.AffineTransformParams} – a full affine
- *       transform (scale, shear, translate, rotate) expressed as named child parameters and
- *       convertible to a {@link java.awt.geom.AffineTransform}.</li>
+ *   <li>{@link io.github.duckasteroid.cthugha.params.TransformParams} – a full transform
+ *       (optional perspective, scale, shear, translate, rotate) expressed as named child
+ *       parameters and applicable to a JOML {@link org.joml.Matrix4f}.</li>
  * </ul>
  *
  * <h2>Typical usage</h2>

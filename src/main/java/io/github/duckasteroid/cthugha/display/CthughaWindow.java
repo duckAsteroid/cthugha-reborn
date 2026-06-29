@@ -1,20 +1,17 @@
 package io.github.duckasteroid.cthugha.display;
 
 import com.asteroid.duck.opengl.util.GLWindow;
-import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
+import com.asteroid.duck.opengl.util.wave.AudioWave;
+import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
+import com.asteroid.duck.opengl.util.wave.RadialWave;
+import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
-import com.asteroid.duck.opengl.util.audio.AudioDataSource;
-import com.asteroid.duck.opengl.util.audio.AudioReader;
-import com.asteroid.duck.opengl.util.audio.LineAcquirer;
-import com.asteroid.duck.opengl.util.audio.PboAudioSink;
-import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
-import com.asteroid.duck.opengl.util.wave.AudioWave;
-import com.asteroid.duck.opengl.util.wave.RadialWave;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
@@ -29,12 +26,13 @@ import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
-import com.asteroid.duck.opengl.util.timer.Timer;
-import com.asteroid.duck.opengl.util.timer.TimerImpl;
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
+import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
+import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
+import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
-import io.github.duckasteroid.cthugha.tab.TranslateTableSource;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
@@ -43,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -51,11 +48,9 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL30.GL_R8;
 import static org.lwjgl.opengl.GL30.GL_RG16UI;
 import static org.lwjgl.opengl.GL30.GL_RG_INTEGER;
@@ -84,22 +79,19 @@ public class CthughaWindow extends GLWindow {
     // Pass 1 (pongFBO): translate pingTex → pongTex
     private TranslateTextureRenderer translateRenderer;
 
-    // Pass 3 (pingFBO): GPU flame — blur pongTex → pingTex (5-tap average with fade)
-    // Two-pass separable Gaussian blur replacing the old FlameRenderer.
-    // Multiplier applied only in the Y pass so fade occurs exactly once per frame.
+    // Pass 3 (pingFBO): GPU flame — two-pass separable Gaussian blur with fade
     private BlurTextureRenderer xBlur;
     private BlurTextureRenderer yBlur;
-    private Texture flameTex;      // R32F intermediate between X and Y blur passes
+    private Texture flameTex;
     private FrameBuffer flameFBO;
     private volatile float fadeMultiplier = 0.99f;
-    private static final int DEFAULT_KERNEL_SIZE = 29;
+    private static final int DEFAULT_KERNEL_SIZE = 5;
 
     // Pass 4 (default FBO): palette-convert pingTex to RGBA for display
     private PaletteRenderer paletteRenderer;
-    // Dedicated unit for per-frame palette LUT uploads
     private TextureUnit paletteUploadUnit;
 
-    // Pre-allocated palette LUT upload buffer (256 RGBA entries); refilled only when palette changes
+    // Pre-allocated palette LUT upload buffer (256 RGBA entries)
     private final ByteBuffer palBuf = BufferUtils.createByteBuffer(256 * 4);
     private boolean paletteDirty = false;
 
@@ -112,53 +104,39 @@ public class CthughaWindow extends GLWindow {
     // Texture flash: one-shot bake of an RGBA texture into pongTex as palette indices
     private final RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
     private TextureBakeRenderer textureBaker;
-    private Texture flashWhiteTex;   // 1×1 R=0xFF A=0xFF — palette index 255 full-screen
-    private Texture flashImageTex;   // last loaded PCX image (greyscale → palette index)
+    private Texture flashWhiteTex;
+    private Texture flashImageTex;
     private boolean flashPending = false;
 
-    // Quote render mode: true = baked into the indexed buffer (affected by flame/translate);
-    //                    false = RGBA overlay on top of the palette output (default)
+    // Quote render mode: true = baked into the indexed buffer; false = RGBA overlay (default)
     private boolean quoteInBuffer = false;
 
-    private final TimerImpl timer = new TimerImpl(() -> (double) System.nanoTime() / 1e9);
     private Double desiredUpdatePeriod = null;
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final StdinKeyInjector stdinInjector;
 
-    private enum WaveMode { OSCILLOSCOPE, RADIAL, BOTH }
-
-    private static final float AUDIO_AMP_BASE  = 10f;
-    private static final float RADIAL_AMP_BASE = 1f;
-    private volatile float waveAmplitude = 1.0f;
-
-    // AudioWave pipeline: LineAcquirer → AudioReader (background thread) → PboAudioSink (GL texture) → AudioWave/RadialWave
-    private LineAcquirer waveLineAcquirer;
-    private PboAudioSink audioSink;
-    private AudioReader audioReader;
-    private Thread audioThread;
-    private AudioWave audioWave;
-    private RadialWave radialWave;
-    private volatile WaveMode waveMode = WaveMode.OSCILLOSCOPE;
-
-    private enum EllipseMode { NONE, AUDIO_WAVE, BOTH, RADIAL_WAVE }
-    private volatile EllipseMode ellipseMode = EllipseMode.NONE;
-    // RGBA offscreen texture: wave renderers draw here (glClear is isolated)
+    // RGBA offscreen texture: all wave renderers draw here
     private Texture waveOverlayTex;
     private FrameBuffer waveOverlayFBO;
-    // Converts RGBA wave overlay → R8 palette indices baked into pongTex alongside translate/overlay
+    // Converts RGBA wave overlay → R8 palette indices baked into pongTex
     private WaveIndexBakeRenderer waveBaker;
+
+    // Audio pipeline — owns LineAcquirer, AudioReader, PboAudioSink, FrequencyProcessor
+    private AudioPipeline audioPipeline;
+
+    // Fixed wave/spectrum GL renderers — always initialized, rendered only when model.enabled
+    private static final Vector4f WAVE_COLOUR = new Vector4f(1f, 1f, 1f, 0.85f);
+    private AudioWave oscWave;
+    private RadialWave radWave;
+    private SpectrumAnalyser specAnalyser;
+    private RadialSpectrumAnalyser radSpecAnalyser;
 
     public CthughaWindow(boolean stdinEnabled) {
         super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
                 "Cthugha Reborn", 1280, 720, null);
         this.cthugha = new JCthugha();
         this.stdinInjector = stdinEnabled ? new StdinKeyInjector(renderActions) : null;
-    }
-
-    @Override
-    public Timer getTimer() {
-        return timer;
     }
 
     @Override
@@ -193,33 +171,19 @@ public class CthughaWindow extends GLWindow {
             cthugha.newTranslation(true, getRandom());
             rebuildTranslateMap();
         }, "Fully randomise translation");
-        kr.registerKeyAction(KeyCombination.simple('A'), () -> {
-            waveLineAcquirer.next();
-            AudioDataSource src = waveLineAcquirer.getSelectedSource();
-            audioReader.setLine(src);
-            cthugha.notify("audio: " + src.getName());
-        }, "Cycle audio input");
-        kr.registerKeyAction(KeyCombination.simple('W'), () -> {
-            WaveMode next = WaveMode.values()[(waveMode.ordinal() + 1) % WaveMode.values().length];
-            waveMode = next;
-            cthugha.notify("wave: " + next.name().toLowerCase());
-        }, "Cycle wave mode (oscilloscope / radial / both)");
-        kr.registerKeyAction(KeyCombination.simple('E'), () -> {
-            EllipseMode next = EllipseMode.values()[(ellipseMode.ordinal() + 1) % EllipseMode.values().length];
-            ellipseMode = next;
-            applyEllipseMode(next);
-            cthugha.notify("ellipse: " + next.name().toLowerCase().replace('_', ' '));
-        }, "Cycle ellipse envelope (none / audio wave / both / radial wave)");
-        kr.registerKeyAction(GLFW_KEY_UP, 0, () -> {
-            waveAmplitude = Math.min(3.0f, waveAmplitude + 0.1f);
-            applyEllipseMode(ellipseMode);
-            cthugha.notify(String.format("amplitude: %.1f", waveAmplitude));
-        }, "Increase wave amplitude");
-        kr.registerKeyAction(GLFW_KEY_DOWN, 0, () -> {
-            waveAmplitude = Math.max(0.1f, waveAmplitude - 0.1f);
-            applyEllipseMode(ellipseMode);
-            cthugha.notify(String.format("amplitude: %.1f", waveAmplitude));
-        }, "Decrease wave amplitude");
+        kr.registerKeyAction(GLFW_KEY_RIGHT_BRACKET, 0, () -> {
+            cthugha.stepTranslation(+1, getRandom());
+            rebuildTranslateMap();
+        }, "Next translation type");
+        kr.registerKeyAction(GLFW_KEY_LEFT_BRACKET, 0, () -> {
+            cthugha.stepTranslation(-1, getRandom());
+            rebuildTranslateMap();
+        }, "Previous translation type");
+
+        kr.registerKeyAction(KeyCombination.simple('A'), () ->
+            cthugha.notify("audio: " + audioPipeline.cycleSource().getName()),
+            "Cycle audio input");
+
         kr.registerKeyAction(KeyCombination.simple('X'), () -> {
             textureBaker.setTexture(flashWhiteTex);
             flashPending = true;
@@ -263,7 +227,8 @@ public class CthughaWindow extends GLWindow {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
         }, "Quit");
-        kr.registerKeyAction(GLFW_KEY_F12, 0, this::captureNextFrame, "Capture screenshot");
+        kr.registerKeyAction(KeyCombination.named("PRINT_SCREEN"), this::captureNextFrame, "Capture screenshot");
+        kr.registerKeyAction(KeyCombination.namedWithMods("PRINT_SCREEN", "SHIFT"), () -> startRecording(Duration.ofSeconds(5)), "Record 5s video");
 
         if (stdinInjector != null) {
             stdinInjector.start(kr);
@@ -300,7 +265,7 @@ public class CthughaWindow extends GLWindow {
         getResourceManager().putTexture("pongTex", pongTex);
 
         // Translation map (RG16UI: absolute pixel coords per texel)
-        translateMapTex = buildTranslateMapTexture(cthugha.getTranslateTable(), w, h);
+        translateMapTex = buildTranslateMapTexture(cthugha.getTranslateBuffer(), w, h);
         getResourceManager().putTexture("translateMap", translateMapTex);
         translateMapUnit = getResourceManager().nextTextureUnit();
 
@@ -321,8 +286,7 @@ public class CthughaWindow extends GLWindow {
         translateRenderer = new TranslateTextureRenderer("pingTex", "translateMap");
         translateRenderer.init(this);
 
-        // Pass 3: GPU flame — blur pongTex → pingTex (via pingFBO)
-        // Flame: two-pass separable Gaussian blur with a per-frame fade on the Y pass
+        // Pass 3: GPU flame — two-pass separable Gaussian blur with fade
         TextureOptions flameOpts = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
         flameTex = TextureFactory.createTexture(new java.awt.Rectangle(w, h), null, flameOpts);
         getResourceManager().putTexture("flameTex", flameTex);
@@ -356,7 +320,7 @@ public class CthughaWindow extends GLWindow {
         notifRenderer.setTransform(new Matrix4f().translate(20.0f, 30.0f, 0.0f));
         notifRenderer.setTextColor(StandardColors.YELLOW.color);
 
-        // AudioWave — RGBA offscreen render target so its built-in glClear is isolated
+        // Wave overlay — RGBA offscreen FBO shared by all wave/spectrum renderers
         waveOverlayTex = new Texture();
         waveOverlayTex.setInternalFormat(GL_RGBA);
         waveOverlayTex.setImageFormat(GL_RGBA);
@@ -369,7 +333,7 @@ public class CthughaWindow extends GLWindow {
         waveBaker = new WaveIndexBakeRenderer("waveOverlay");
         waveBaker.init(this);
 
-        // 1×1 white flash texture: R=0xFF maps to palette index 255, A=0xFF fully opaque
+        // 1×1 white flash texture
         ByteBuffer whitePx = BufferUtils.createByteBuffer(4);
         whitePx.put((byte) 0xFF).put((byte) 0).put((byte) 0).put((byte) 0xFF).flip();
         flashWhiteTex = new Texture();
@@ -383,30 +347,37 @@ public class CthughaWindow extends GLWindow {
         textureBaker.init(this);
         textureBaker.setTexture(flashWhiteTex);
 
-        audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, this);
-        audioWave = new AudioWave(audioSink);
-        audioWave.init(this);
-        audioWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
-        audioWave.setLineWidth(2.0f);
-        radialWave = new RadialWave(audioSink);
-        radialWave.init(this);
-        radialWave.setLineColour(new Vector4f(1f, 1f, 1f, 0.85f));
-        radialWave.setLineWidth(2.0f);
+        // Audio pipeline
+        audioPipeline = new AudioPipeline();
+        audioPipeline.init(this);
 
-        applyEllipseMode(ellipseMode);
+        // GL wave renderers — all 4 fixed slots always initialized
+        oscWave = new AudioWave(audioPipeline.getPboSink());
+        oscWave.setLineColour(WAVE_COLOUR);
+        oscWave.setLineWidth(2.0f);
+        oscWave.setClearBeforeRender(false);
+        oscWave.init(this);
 
-        waveLineAcquirer = new LineAcquirer();
-        waveLineAcquirer.init(this, LineAcquirer.IDEAL);
-        selectPreferredSource(waveLineAcquirer, "pipewire");
-        audioReader = new AudioReader(List.of(audioSink));
-        audioReader.setLine(waveLineAcquirer.getSelectedSource());
-        audioThread = Thread.ofVirtual().start(audioReader);
+        radWave = new RadialWave(audioPipeline.getPboSink());
+        radWave.setLineColour(WAVE_COLOUR);
+        radWave.setLineWidth(2.0f);
+        radWave.setClearBeforeRender(false);
+        radWave.init(this);
+
+        specAnalyser = new SpectrumAnalyser(audioPipeline.getFreqProc());
+        specAnalyser.setClearBeforeRender(false);
+        audioPipeline.getFreqProc().addSink(specAnalyser);
+        specAnalyser.init(this);
+
+        radSpecAnalyser = new RadialSpectrumAnalyser(audioPipeline.getFreqProc());
+        radSpecAnalyser.setClearBeforeRender(false);
+        audioPipeline.getFreqProc().addSink(radSpecAnalyser);
+        radSpecAnalyser.init(this);
     }
 
     @Override
     public void render() throws IOException {
         renderActions.processAll(this);
-        timer.update();
 
         // 1. CPU pipeline: advance parameter animators
         cthugha.doRenderCPU();
@@ -431,21 +402,37 @@ public class CthughaWindow extends GLWindow {
             lastQuote = null;
         }
 
-        // 4. Wave offscreen: render waveform(s) and optional in-buffer quote into the shared RGBA
-        //    overlay texture. Wave renderers own the clear; quote is blended on top within the same
-        //    FBO, so a single waveBaker draw covers both in the pongFBO pass.
-        glClearColor(0f, 0f, 0f, 0f);
+        // 3. Upload audio data once for all renderers this frame
+        audioPipeline.update();
+
+        // 4. Wave offscreen: render enabled waves into shared RGBA overlay texture
         waveOverlayFBO.bind();
-        audioSink.upload();
-        WaveMode currentWaveMode = waveMode;
-        boolean cleared = false;
-        if (currentWaveMode == WaveMode.OSCILLOSCOPE || currentWaveMode == WaveMode.BOTH) {
-            audioWave.doRender(this);
-            cleared = true;
+        glClearColor(0f, 0f, 0f, 0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        OscilloscopeModel om = cthugha.oscilloscope;
+        if (om.enabled.value) {
+            float amp = (float) om.amplitude.value;
+            oscWave.setAmplitudeFunction(om.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
+            oscWave.setTransform(om.transform.applyTo(new Matrix4f()));
+            oscWave.doRender(this);
         }
-        if (currentWaveMode == WaveMode.RADIAL || currentWaveMode == WaveMode.BOTH) {
-            radialWave.setClearBeforeRender(!cleared);
-            radialWave.doRender(this);
+        RadialWaveModel rm = cthugha.radialWave;
+        if (rm.enabled.value) {
+            float amp = (float) rm.amplitude.value;
+            radWave.setAmplitudeFunction(rm.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
+            radWave.setTransform(rm.transform.applyTo(new Matrix4f()));
+            radWave.doRender(this);
+        }
+        SpectrumModel sm = cthugha.spectrum;
+        if (sm.enabled.value) {
+            specAnalyser.setTransform(sm.transform.applyTo(new Matrix4f()));
+            specAnalyser.doRender(this);
+        }
+        RadialSpectrumModel rsm = cthugha.radialSpectrum;
+        if (rsm.enabled.value) {
+            radSpecAnalyser.withRepeats(rsm.repeats.value);
+            radSpecAnalyser.setTransform(rsm.transform.applyTo(new Matrix4f()));
+            radSpecAnalyser.doRender(this);
         }
         if (quoteInBuffer && quote != null) {
             glEnable(GL_BLEND);
@@ -457,8 +444,7 @@ public class CthughaWindow extends GLWindow {
         glViewport(0, 0, win.width, win.height);
         glClearColor(0f, 0f, 0f, 1f);
 
-        // 5. pongFBO: translate pingTex → pongTex, then bake combined wave+quote overlay and flash.
-        //    waveBaker samples waveOverlay which already contains both waveform and any in-buffer quote.
+        // 5. pongFBO: translate pingTex → pongTex, bake wave overlay and flash
         pongFBO.bind();
         translateRenderer.doRender(this);
         glEnable(GL_BLEND);
@@ -472,9 +458,7 @@ public class CthughaWindow extends GLWindow {
         pongFBO.unbind();
         glViewport(0, 0, win.width, win.height);
 
-        // 6. Flame: two-pass Gaussian blur with fade.
-        //    X pass: pongTex → flameTex (multiplier=1.0, no fade)
-        //    Y pass: flameTex → pingTex (multiplier=0.99, fade applied once)
+        // 6. Flame: two-pass Gaussian blur with fade
         flameFBO.bind();
         xBlur.doRender(this);
         flameFBO.unbind();
@@ -488,7 +472,7 @@ public class CthughaWindow extends GLWindow {
         // 7. Display: pingTex (R8) → RGBA via palette LUT → default FBO
         paletteRenderer.doRender(this);
 
-        // 9. Text overlays — alpha-blend over the palette output (overlay mode only)
+        // 8. Text overlays — alpha-blend over the palette output (overlay mode only)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -508,11 +492,15 @@ public class CthughaWindow extends GLWindow {
         }
 
         glDisable(GL_BLEND);
-
     }
 
     @Override
     public void dispose() {
+        if (oscWave           != null) oscWave.dispose();
+        if (radWave           != null) radWave.dispose();
+        if (specAnalyser      != null) specAnalyser.dispose();
+        if (radSpecAnalyser   != null) radSpecAnalyser.dispose();
+        if (audioPipeline     != null) audioPipeline.dispose();
         if (quoteRenderer     != null) quoteRenderer.dispose();
         if (notifRenderer     != null) notifRenderer.dispose();
         if (xBlur             != null) xBlur.dispose();
@@ -527,47 +515,10 @@ public class CthughaWindow extends GLWindow {
         if (textureBaker      != null) textureBaker.dispose();
         if (flashWhiteTex     != null) flashWhiteTex.dispose();
         if (flashImageTex     != null) flashImageTex.dispose();
-        if (audioReader       != null) { audioReader.setRunning(false); }
-        if (audioThread       != null) { audioThread.interrupt(); }
-        if (audioWave         != null) audioWave.dispose();
-        if (radialWave        != null) radialWave.dispose();
         if (waveOverlayFBO    != null) waveOverlayFBO.dispose();
-        // Textures registered with ResourceManager are disposed by super.dispose()
-        if (stdinInjector != null) stdinInjector.close();
+        if (stdinInjector     != null) stdinInjector.close();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
-    }
-
-    // -------------------------------------------------------------------------
-    // Audio source selection helper
-    // -------------------------------------------------------------------------
-
-    private static void selectPreferredSource(LineAcquirer acquirer, String nameFragment) {
-        AudioDataSource first = acquirer.getSelectedSource();
-        if (first.getName().toLowerCase().contains(nameFragment)) return;
-        do {
-            acquirer.next();
-            AudioDataSource s = acquirer.getSelectedSource();
-            if (s == first) return; // full cycle, not found — keep original
-            if (s.getName().toLowerCase().contains(nameFragment)) return;
-        } while (true);
-    }
-
-    // -------------------------------------------------------------------------
-    // Ellipse amplitude helper
-    // -------------------------------------------------------------------------
-
-    private void applyEllipseMode(EllipseMode mode) {
-        float aw = AUDIO_AMP_BASE * waveAmplitude;
-        float rw = RADIAL_AMP_BASE * waveAmplitude;
-        audioWave.setAmplitudeFunction(
-                (mode == EllipseMode.AUDIO_WAVE || mode == EllipseMode.BOTH)
-                        ? AmplitudeFunction.ellipse(aw)
-                        : AmplitudeFunction.constant(aw));
-        radialWave.setAmplitudeFunction(
-                (mode == EllipseMode.RADIAL_WAVE || mode == EllipseMode.BOTH)
-                        ? AmplitudeFunction.ellipse(rw)
-                        : AmplitudeFunction.constant(rw));
     }
 
     // -------------------------------------------------------------------------
@@ -604,10 +555,10 @@ public class CthughaWindow extends GLWindow {
                 int g = (rgb >> 8) & 0xFF;
                 int b = rgb & 0xFF;
                 int luma = (r * 299 + g * 587 + b * 114) / 1000;
-                buf.put((byte) luma); // R → palette index
+                buf.put((byte) luma);
                 buf.put((byte) 0);
                 buf.put((byte) 0);
-                buf.put((byte) 0xFF); // fully opaque
+                buf.put((byte) 0xFF);
             }
         }
         buf.flip();
@@ -615,28 +566,29 @@ public class CthughaWindow extends GLWindow {
     }
 
     // -------------------------------------------------------------------------
-    // Translation map helper
+    // Translation map helpers
     // -------------------------------------------------------------------------
 
-    private Texture buildTranslateMapTexture(int[] table, int w, int h) {
+    private Texture buildTranslateMapTexture(ByteBuffer data, int w, int h) {
         Texture t = new Texture();
         t.setInternalFormat(GL_RG16UI);
         t.setImageFormat(GL_RG_INTEGER);
         t.setDataType(GL_UNSIGNED_SHORT);
-        t.setFilter(Filter.NEAREST); // integer textures must not use LINEAR
+        t.setFilter(Filter.NEAREST);
         t.setWrap(Wrap.REPEAT);
-        t.generate(w, h, TranslateTableSource.tableToRG16Buffer(table, w, h));
+        t.generate(w, h, data);
         return t;
     }
 
     private void rebuildTranslateMap() {
         int w = cthugha.buffer.width;
         int h = cthugha.buffer.height;
-        ByteBuffer data = TranslateTableSource.tableToRG16Buffer(cthugha.getTranslateTable(), w, h);
+        ByteBuffer data = cthugha.getTranslateBuffer();
         translateMapUnit.activate();
         translateMapUnit.bind(translateMapTex);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
                 GL_RG_INTEGER, GL_UNSIGNED_SHORT, data);
+        data.rewind();
     }
 
     // -------------------------------------------------------------------------

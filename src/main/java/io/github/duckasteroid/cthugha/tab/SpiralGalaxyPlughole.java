@@ -8,6 +8,8 @@ import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
 import io.github.duckasteroid.cthugha.params.AbstractNode;
+import java.nio.ShortBuffer;
+import java.util.Random;
 import io.github.duckasteroid.cthugha.params.XYParam;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -48,40 +50,24 @@ public class SpiralGalaxyPlughole extends AbstractNode implements TranslateTable
   }
 
   @Override
-  public int[] generate(int width, int height) {
-    int[] tab = new int[width * height];
-    double cx = width * center.x.value;
+  public PixelMapper generate(int width, int height, Random rng) {
+    double cx = width  * center.x.value;
     double cy = height * center.y.value;
-
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        double dx = x - cx;
-        double dy = y - cy;
-        double r = sqrt(dx * dx + dy * dy);
-        double theta = atan2(dy, dx);
-
-        double dTheta;
-        if (plughole.value) {
-          // Vortex: inner pixels spin much faster — classic drain/plughole look
-          dTheta = angularSpeed.value * 20.0 / max(r, 1.0);
-        } else {
-          dTheta = angularSpeed.value;
-        }
-
-        // Multi-arm: cos modulation bunches the angular shift into arm-shaped bands
-        if (arms.value > 1) {
-          dTheta *= 0.5 + 0.5 * abs(cos(arms.value * theta / 2.0));
-        }
-
-        double newR = r + radialSpeed.value;
-        double newTheta = theta + dTheta;
-
-        int sx = TranslateTableSource.clamp((int) (cx + newR * cos(newTheta)), 0, width - 1);
-        int sy = TranslateTableSource.clamp((int) (cy + newR * sin(newTheta)), 0, height - 1);
-
-        tab[x + y * width] = TranslateTableSource.index(sx, sy, width);
-      }
-    }
-    return tab;
+    double angSpd = angularSpeed.value;
+    double radSpd = radialSpeed.value;
+    boolean ph = plughole.value;
+    int numArms = arms.value;
+    return (dstX, dstY, dst, dstOffset, r) -> {
+      double dx = dstX - cx;
+      double dy = dstY - cy;
+      double radius = sqrt(dx * dx + dy * dy);
+      double theta = atan2(dy, dx);
+      double dTheta = ph ? angSpd * 20.0 / max(radius, 1.0) : angSpd;
+      if (numArms > 1) dTheta *= 0.5 + 0.5 * abs(cos(numArms * theta / 2.0));
+      double newR = radius + radSpd;
+      double newTheta = theta + dTheta;
+      dst.put(dstOffset,     (short) TranslateTableSource.clamp((int)(cx + newR * cos(newTheta)), 0, width  - 1));
+      dst.put(dstOffset + 1, (short) TranslateTableSource.clamp((int)(cy + newR * sin(newTheta)), 0, height - 1));
+    };
   }
 }

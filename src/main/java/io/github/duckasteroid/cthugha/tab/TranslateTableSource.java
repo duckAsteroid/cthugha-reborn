@@ -1,7 +1,5 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Random;
 
 
@@ -11,12 +9,16 @@ import java.util.Random;
 public interface TranslateTableSource {
 
   /**
-   * Generate this translation table for the given screen dimensions
+   * Capture current parameter state, perform any randomised setup, and return a
+   * {@link PixelMapper} that maps each destination pixel to its source pixel.
+   * The returned mapper holds all state it needs and may be invoked in parallel.
+   *
    * @param width  screen width in pixels
    * @param height screen height in pixels
-   * @return flat-index translation table: result[dstIdx] = srcIdx
+   * @param rng    random source for both setup and per-pixel noise
+   * @return a configured mapper ready for filling a ShortBuffer
    */
-  int[] generate(int width, int height);
+  PixelMapper generate(int width, int height, Random rng);
 
   /**
    * Randomise the generating parameters of this translation.
@@ -24,15 +26,6 @@ public interface TranslateTableSource {
    * @param rng the random source to use (typically {@code ctx.getRandom()})
    */
   void randomise(Random rng);
-
-  Random random = new Random();
-
-  default int Random(int range) {
-    if (range > 0) {
-      return random.nextInt(range);
-    }
-    return 0;
-  }
 
   // -------------------------------------------------------------------------
   // Static geometry helpers
@@ -52,27 +45,5 @@ public interface TranslateTableSource {
   /** Clamp v to [lo, hi]. */
   static int clamp(int v, int lo, int hi) {
     return Math.max(lo, Math.min(hi, v));
-  }
-
-  // -------------------------------------------------------------------------
-  // Texture data helpers
-  // -------------------------------------------------------------------------
-
-  /**
-   * Pack a flat-index translation table into a RG16UI ByteBuffer (2 × uint16 per pixel).
-   * Each element table[i] is a flat pixel index; this encodes it as (srcX, srcY) uint16 pairs
-   * suitable for upload to an OpenGL RG16UI texture.
-   */
-  static ByteBuffer tableToRG16Buffer(int[] table, int width, int height) {
-    int maxIdx = width * height - 1;
-    ByteBuffer bb = ByteBuffer.allocateDirect(table.length * 4);
-    bb.order(ByteOrder.nativeOrder());
-    for (int t : table) {
-      int src = clamp(t, 0, maxIdx);
-      bb.putShort((short) (src % width));  // srcX
-      bb.putShort((short) (src / width));  // srcY
-    }
-    bb.flip();
-    return bb;
   }
 }

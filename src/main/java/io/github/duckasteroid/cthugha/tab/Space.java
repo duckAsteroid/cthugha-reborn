@@ -3,6 +3,8 @@ package io.github.duckasteroid.cthugha.tab;
 import static java.lang.Math.abs;
 
 import io.github.duckasteroid.cthugha.params.AbstractNode;
+import java.nio.ShortBuffer;
+import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;
@@ -19,39 +21,30 @@ public class Space extends AbstractNode implements TranslateTableSource {
   }
 
   @Override
-  public int[] generate(int width, int height) {
-    int map_x, map_y;
-    int[] result = new int[width * height];
-
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        int dx = x - (width / 2);
-        int dy = y - (height / 2);
-
-        if (!reverse.value && abs(dx) < 30 && abs(dy) < 20 &&
-          Random(abs(dx) + abs(dy)) < 4) {
-          map_x = Random(width);
-          map_y = Random(height);
-        } else {
-          long sp = speed.value;
-
-          if (reverse.value)
-            sp = (-sp);
-
-          map_x = (int) (x - (dx * sp) / 700);
-          map_y = (int) (y - (dy * sp) / 700);
-        }
-
-        if (map_y >= height || map_y < 0 ||
-          map_x >= width || map_x < 0) {
-          map_x = 0;
-          map_y = 0;
-        }
-
-        result[x + y * width] = map_y * width + map_x;
-
+  public PixelMapper generate(int width, int height, Random rng) {
+    boolean rev = reverse.value;
+    int zone = randomness.value / 8;
+    long sp = rev ? -speed.value : speed.value;
+    int halfW = width / 2;
+    int halfH = height / 2;
+    return (dstX, dstY, dst, dstOffset, r) -> {
+      int dx = dstX - halfW;
+      int dy = dstY - halfH;
+      int map_x, map_y;
+      if (!rev && zone > 0 && abs(dx) < zone && abs(dy) < zone * 2 / 3 &&
+          r.nextInt(abs(dx) + abs(dy) + 1) < 4) {
+        map_x = r.nextInt(width);
+        map_y = r.nextInt(height);
+      } else {
+        map_x = (int)(dstX - (dx * sp) / 700);
+        map_y = (int)(dstY - (dy * sp) / 700);
       }
-    }
-    return result;
+      if (map_y >= height || map_y < 0 || map_x >= width || map_x < 0) {
+        map_x = 0;
+        map_y = 0;
+      }
+      dst.put(dstOffset,     (short) map_x);
+      dst.put(dstOffset + 1, (short) map_y);
+    };
   }
 }

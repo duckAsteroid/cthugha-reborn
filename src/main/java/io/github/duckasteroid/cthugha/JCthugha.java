@@ -2,7 +2,11 @@ package io.github.duckasteroid.cthugha;
 
 
 import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
+import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
+import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.ScreenBuffer;
+import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import com.asteroid.duck.opengl.util.stats.Stats;
@@ -15,6 +19,7 @@ import io.github.duckasteroid.cthugha.tab.Translate;
 import java.awt.Dimension;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -32,6 +37,11 @@ public class JCthugha extends AbstractNode implements Closeable {
 
 	private boolean notify = true;
 
+	public OscilloscopeModel oscilloscope = new OscilloscopeModel();
+	public RadialWaveModel radialWave = new RadialWaveModel();
+	public SpectrumModel spectrum = new SpectrumModel();
+	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
+
 	public ScreenBuffer buffer;
 
 	MapFileReader reader;
@@ -48,11 +58,13 @@ public class JCthugha extends AbstractNode implements Closeable {
 	private volatile String pendingNotification = null;
 
 	public JCthugha() {
+		initFields(getClass());
 	}
 
 	public void init(Dimension dims, Random rng) throws IOException {
 		buffer = new ScreenBuffer(dims.width, dims.height);
-		translate = new Translate(dims, translateSource.generate(dims.width, dims.height, true, rng));
+		translate = new Translate(dims);
+		translate.fill(translateSource.generate(dims.width, dims.height, true, rng), rng);
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
@@ -91,12 +103,17 @@ public class JCthugha extends AbstractNode implements Closeable {
 		return null;
 	}
 
-	public int[] getTranslateTable() {
-		return translate.getTable();
+	public ByteBuffer getTranslateBuffer() {
+		return translate.getBuffer();
 	}
 
 	public void newTranslation(boolean newMap, Random rng) {
-		translate.changeTable(translateSource.generate(buffer.width, buffer.height, newMap, rng));
+		translate.fill(translateSource.generate(buffer.width, buffer.height, newMap, rng), rng);
+		notify(translateSource.getLastGenerated());
+	}
+
+	public void stepTranslation(int delta, Random rng) {
+		translate.fill(translateSource.step(delta, buffer.width, buffer.height, rng), rng);
 		notify(translateSource.getLastGenerated());
 	}
 

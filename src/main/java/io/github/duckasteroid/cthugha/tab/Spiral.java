@@ -12,7 +12,8 @@ import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
-import java.util.ArrayList;
+import java.nio.ShortBuffer;
+import java.util.Random;
 
 public class Spiral extends AbstractNode implements TranslateTableSource{
 
@@ -35,108 +36,61 @@ public class Spiral extends AbstractNode implements TranslateTableSource{
 
   private static final int MAX_NR_SPIRALS = 64;
 
-  private final int rand() {
-    return random.nextInt(Short.MAX_VALUE);
-  }
-
   @Override
-  public int[] generate(int width, int height) {
-    ArrayList<Integer> result = new ArrayList<>(width * height);
+  public PixelMapper generate(int width, int height, Random rng) {
     int[] centersX = new int[MAX_NR_SPIRALS];
     int[] centersY = new int[MAX_NR_SPIRALS];
     int[] dir = new int[MAX_NR_SPIRALS];
-
-    if(nr_spirals.value == 0) {
+    final int nSpirals;
+    if (nr_spirals.value == 0) {
       centersX[0] = width / 2;
       centersY[0] = height / 2;
       dir[0] = 1;
-      nr_spirals.value = 1;
+      nSpirals = 1;
     } else {
-      nr_spirals.value=max(min(nr_spirals.value, MAX_NR_SPIRALS),1);
-      for (int i=0; i<nr_spirals.value; i++) {
-        centersX[i]=rand() % width;
-        centersY[i]=rand() % height;
-        dir[i]=random.nextBoolean() ? 1 : -1;
+      nSpirals = max(min(nr_spirals.value, MAX_NR_SPIRALS), 1);
+      for (int i = 0; i < nSpirals; i++) {
+        centersX[i] = rng.nextInt(Short.MAX_VALUE) % width;
+        centersY[i] = rng.nextInt(Short.MAX_VALUE) % height;
+        dir[i] = rng.nextBoolean() ? 1 : -1;
       }
     }
-
-    int closest;
-    double dist;
-    double polar_r,polar_a;
-
-    double temp_y,temp_x;
-    double cent_y,cent_x;
-    long l = rand();
-
-    for (int y=0; y<height; y++) {
-
-      for (int x=0; x<width; x++) {
-        closest=0;
-        dist=9999999.0;
-
-        temp_x=x;
-        temp_y=y;
-        for (int i=0; i<nr_spirals.value; i++) {
-          if(dist>(sqrt((temp_x-centersX[i])*(temp_x-centersX[i])+
-            (temp_y-centersY[i])*(temp_y-centersY[i])))){
-            closest=i;
-            dist=sqrt((temp_x-centersX[i])*(temp_x-centersX[i])+
-              (temp_y-centersY[i])*(temp_y-centersY[i]));
-          }
-        }
-        int mapValue ;
-        if ((x==centersX[closest]) && (y==centersY[closest])) {
-          mapValue = 0;
+    double dr = delta_r.value;
+    double da = delta_a.value;
+    boolean yy = yinyang.value;
+    double yyw = yywidth.value;
+    return (dstX, dstY, dst, dstOffset, r) -> {
+      int closest = 0;
+      double dist = 9999999.0;
+      for (int i = 0; i < nSpirals; i++) {
+        double d = sqrt((double)(dstX - centersX[i]) * (dstX - centersX[i]) +
+                        (double)(dstY - centersY[i]) * (dstY - centersY[i]));
+        if (d < dist) { dist = d; closest = i; }
+      }
+      int map_x, map_y;
+      if (dstX == centersX[closest] && dstY == centersY[closest]) {
+        map_x = 0; map_y = 0;
+      } else {
+        double cent_x = centersX[closest];
+        double cent_y = centersY[closest];
+        double tx = abs(dstX - cent_x);
+        double ty = abs(dstY - cent_y);
+        double polar_r = sqrt(tx * tx + ty * ty);
+        double polar_a = atan2(dstX - cent_x, dstY - cent_y);
+        polar_r += (dr + r.nextInt(10) * 0.01) * dir[closest];
+        if (polar_r < 0) polar_r = 0.0;
+        if (yy) {
+          polar_a -= da * 3.0 * (5 - (int)(polar_r / 11) % 11) / 5.0;
+          polar_a += ((int)(polar_r / yyw) % 2) != 0 ? da : -da;
         } else {
-          cent_y=centersY[closest];
-          cent_x=centersX[closest];
-          temp_x=abs(x-cent_x);
-          temp_y=abs(y-cent_y);
-
-          polar_r=sqrt(temp_x*temp_x + temp_y*temp_y);
-          polar_a=atan2(x-cent_x, y-cent_y);
-
-          polar_r += (delta_r.value+(rand()%10)*0.01)*(double)dir[closest];
-
-          if (polar_r<0)
-            polar_r=0.0;
-
-          if ( yinyang.value ) {
-
-            polar_a -= delta_a.value * 3.0 *
-              (float)(5-(int)(polar_r/11) % 11)/5.0;
-
-            if (((int)(polar_r/yywidth.value)%2) != 0) {
-              polar_a += delta_a.value;
-            } else {
-              polar_a -= delta_a.value;
-            }
-          } else {
-
-            polar_a += (delta_a.value+(rand()%10)*0.01)
-              *(double)dir[closest];
-          }
-
-          temp_y=polar_r*(cos(polar_a));
-          temp_x=polar_r*(sin(polar_a));
-
-          int map_x=(int)(temp_x+cent_x);
-          int map_y=(int)(temp_y+cent_y);
-
-          if ((map_y>=height) || (map_y<0) ||
-            (map_x>=width) || (map_x<0) ) {
-            map_x=0;
-            map_y=0;
-          }
-
-          map_x=max(map_x,0);
-          map_y=max(map_y,0);
-
-          mapValue = map_y * width + map_x;
+          polar_a += (da + r.nextInt(10) * 0.01) * dir[closest];
         }
-        result.add(mapValue);
+        map_x = max((int)(polar_r * sin(polar_a) + cent_x), 0);
+        map_y = max((int)(polar_r * cos(polar_a) + cent_y), 0);
+        if (map_y >= height || map_x >= width) { map_x = 0; map_y = 0; }
       }
-    }
-    return result.stream().mapToInt(Integer::intValue).toArray();
+      dst.put(dstOffset,     (short) map_x);
+      dst.put(dstOffset + 1, (short) map_y);
+    };
   }
 }

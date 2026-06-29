@@ -1,10 +1,8 @@
 package io.github.duckasteroid.cthugha.params;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
-import java.awt.Dimension;
-import java.awt.Point;
-import java.util.Collection;
-import java.util.List;
+import org.joml.Vector2f;
+
 import java.util.function.DoublePredicate;
 import java.util.stream.Stream;
 
@@ -14,9 +12,8 @@ import java.util.stream.Stream;
  * <p>Both the {@code x} and {@code y} components share the same min/max range.  Typical uses
  * include scale factors, shear amounts, translation offsets, and rotation centre points.</p>
  *
- * <p>{@link #pixelLocation(Dimension)} converts the normalised {@code [0, 1]} values to
- * absolute pixel coordinates by multiplying against the supplied screen dimensions, which is
- * convenient for specifying anchor points in a resolution-independent way.</p>
+ * <p>Values are stored normalised in {@code [0, 1]} by convention; callers multiply against
+ * screen dimensions to obtain pixel coordinates.</p>
  */
 public class XYParam extends AbstractNode {
 
@@ -63,24 +60,8 @@ public class XYParam extends AbstractNode {
       .anyMatch(test);
   }
 
-  /**
-   * Sets both components to the centre of {@code dims} in pixels.
-   *
-   * @param dims the screen or component dimensions
-   */
-  public void setCenterOf(Dimension dims) {
-    x.setValue(dims.width / 2);
-    y.setValue(dims.height / 2);
-  }
-
-  /**
-   * Converts this XY parameter to an absolute pixel position by multiplying the normalised
-   * {@code x}/{@code y} values by the width and height of {@code d} respectively.
-   *
-   * @param d the reference dimensions (typically the screen or render surface)
-   * @return the corresponding pixel-space {@link Point}
-   */
-  public Point pixelLocation(Dimension d) {
-    return new Point((int) (d.width * x.value), (int) (d.height * y.value));
+  /** Returns the current x/y values as a JOML {@link Vector2f}. */
+  public Vector2f toVector2f() {
+    return new Vector2f((float) x.value, (float) y.value);
   }
 }

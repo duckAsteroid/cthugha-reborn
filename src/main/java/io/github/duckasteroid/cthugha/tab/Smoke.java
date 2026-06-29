@@ -1,6 +1,8 @@
 package io.github.duckasteroid.cthugha.tab;
 
 import io.github.duckasteroid.cthugha.params.AbstractNode;
+import java.nio.ShortBuffer;
+import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 
 public class Smoke extends AbstractNode implements TranslateTableSource {
@@ -21,27 +23,19 @@ public class Smoke extends AbstractNode implements TranslateTableSource {
     initChildren(this.speed, this.randomness, directionVectorX, directionVectorY);
   }
 
-  public int[] generate(int width, int height) {
-    int map_x, map_y;
-    int[] directionVector = new int[] {directionVectorX.value, directionVectorY.value};
-
-    int[] result = new int[width * height];
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        map_x = x - (directionVector[0]);
-        map_y = y - (directionVector[1]);
-
-        if (map_y >= height || map_y < 0  ||
-          map_x >= width  || map_x < 0 ) {
-          map_x = 0;
-          map_y = 0;
-        }
-
-        result[x + y * width] = map_y * width + map_x;
-
+  public PixelMapper generate(int width, int height, Random rng) {
+    int dvX = directionVectorX.value;
+    int dvY = directionVectorY.value;
+    return (dstX, dstY, dst, dstOffset, r) -> {
+      int map_x = dstX - dvX;
+      int map_y = dstY - dvY;
+      if (map_y >= height || map_y < 0 || map_x >= width || map_x < 0) {
+        map_x = 0;
+        map_y = 0;
       }
-    }
-    return result;
+      dst.put(dstOffset,     (short) map_x);
+      dst.put(dstOffset + 1, (short) map_y);
+    };
   }
 
   @Override

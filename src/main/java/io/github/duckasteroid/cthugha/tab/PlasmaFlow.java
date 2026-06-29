@@ -1,0 +1,43 @@
+package io.github.duckasteroid.cthugha.tab;
+
+import static java.lang.Math.sin;
+
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+import java.nio.ShortBuffer;
+import java.util.Random;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+
+/**
+ * Organic turbulence from summed non-radial sine waves: unlike {@link WaveInterference}
+ * (which radiates from fixed source points) this warp has no centre — the displacement
+ * field tiles smoothly and varies everywhere. Produces a lava-lamp or slow-liquid flow
+ * look. Two frequency parameters let you dial from smooth swells (low freq) to tight
+ * rippling turbulence (high freq). The phase offsets between axes prevent the grid symmetry
+ * that a single-frequency field would show.
+ */
+public class PlasmaFlow extends AbstractNode implements TranslateTableSource {
+
+  /** Primary spatial frequency — controls coarseness of the flow pattern. */
+  public DoubleParameter freqA = new DoubleParameter("Freq A", 0.001, 0.08, 0.015);
+  /** Secondary frequency — cross-couples the axes and breaks grid symmetry. */
+  public DoubleParameter freqB = new DoubleParameter("Freq B", 0.001, 0.08, 0.022);
+  public DoubleParameter amplitude = new DoubleParameter("Amplitude", 0, 60, 18);
+
+  public PlasmaFlow() {
+    super("Plasma Flow");
+    initChildren(freqA, freqB, amplitude);
+  }
+
+  @Override
+  public PixelMapper generate(int width, int height, Random rng) {
+    double fa = freqA.value;
+    double fb = freqB.value;
+    double amp = amplitude.value;
+    return (dstX, dstY, dst, dstOffset, r) -> {
+      double srcX = dstX + (sin(dstX * fa + dstY * fb) + 0.5 * sin(dstY * fa)) * amp;
+      double srcY = dstY + (sin(dstY * fa - dstX * fb) + 0.5 * sin(dstX * fa)) * amp;
+      dst.put(dstOffset,     (short) TranslateTableSource.wrap((int) srcX, width));
+      dst.put(dstOffset + 1, (short) TranslateTableSource.wrap((int) srcY, height));
+    };
+  }
+}
