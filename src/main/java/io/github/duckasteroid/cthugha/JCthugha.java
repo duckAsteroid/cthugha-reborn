@@ -4,10 +4,9 @@ package io.github.duckasteroid.cthugha;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
-import io.github.duckasteroid.cthugha.animation.AnimatorPool;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
-import io.github.duckasteroid.cthugha.stats.Stats;
-import io.github.duckasteroid.cthugha.stats.StatsFactory;
+import com.asteroid.duck.opengl.util.stats.Stats;
+import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.Constants;
 import io.github.duckasteroid.cthugha.strings.Quote;
 import io.github.duckasteroid.cthugha.strings.RandomStringSource;
@@ -20,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +30,6 @@ public class JCthugha extends AbstractNode implements Closeable {
 	private static final Duration QUOTE_DURATION = Config.singleton().getConfigAs(
 		Constants.SECTION, Constants.KEY_DURATION, "PT10S", Duration::parse);
 
-	private final AnimatorPool animatorPool = new AnimatorPool();
-
 	private boolean notify = true;
 
 	public ScreenBuffer buffer;
@@ -39,8 +37,6 @@ public class JCthugha extends AbstractNode implements Closeable {
 	MapFileReader reader;
 
 	Translate translate;
-
-	final Instant started = Instant.now();
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
 
@@ -54,9 +50,9 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public JCthugha() {
 	}
 
-	public void init(Dimension dims) throws IOException {
+	public void init(Dimension dims, Random rng) throws IOException {
 		buffer = new ScreenBuffer(dims.width, dims.height);
-		translate = new Translate(dims, translateSource.generate(dims.width, dims.height, true));
+		translate = new Translate(dims, translateSource.generate(dims.width, dims.height, true, rng));
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
@@ -68,7 +64,6 @@ public class JCthugha extends AbstractNode implements Closeable {
 		final Instant start = Instant.now();
 		try {
 			frameRate.ping();
-			animatorPool.doAnimation(Duration.between(started, start));
 		} catch (Throwable t) {
 			LOG.error("Processing main loop", t);
 		}
@@ -100,8 +95,8 @@ public class JCthugha extends AbstractNode implements Closeable {
 		return translate.getTable();
 	}
 
-	public void newTranslation(boolean newMap) {
-		translate.changeTable(translateSource.generate(buffer.width, buffer.height, newMap));
+	public void newTranslation(boolean newMap, Random rng) {
+		translate.changeTable(translateSource.generate(buffer.width, buffer.height, newMap, rng));
 		notify(translateSource.getLastGenerated());
 	}
 

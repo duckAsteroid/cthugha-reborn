@@ -27,14 +27,15 @@ public class DownSpiral extends AbstractNode implements TranslateTableSource {
     int cx = width / 2;
     int cy = height / 2;
     float q = 3.14159265399f / 2;
-    float p = (float) (45 / 180 * PI);
+    // Bug fix: was (45 / 180 * PI) — integer division made p = 0; intended π/4 (45°)
+    float p = (float) (PI / 4);
     float ang;
 
     for (int j = 0; j < height; j++) {
 
       for (int i = 0; i < width; i++) {
 
-        if (j == 0 || j == height) {
+        if (j == 0 || j == height - 1) {
 
           dx = (int) ((double) (cx - i) * a.value);
           dy = cy - j;
@@ -44,7 +45,8 @@ public class DownSpiral extends AbstractNode implements TranslateTableSource {
           dist = (int) sqrt((i - cx) * (i - cx) + (j - cy) * (j - cy));
 
           if (i == cx) {
-            if (j > cx)
+            // Bug fix: was (j > cx) — compared y-coord against x-center; should be cy
+            if (j > cy)
               ang = q;
             else
               ang = -q;
@@ -57,7 +59,8 @@ public class DownSpiral extends AbstractNode implements TranslateTableSource {
           dx = (int) ceil(-sin(ang - p) * dist / b.value);
           dy = (int) ceil(cos(ang - p) * dist / b.value);
 
-          if (i == 0 || i == width) {
+          // Bug fix: was (i == width) — off by one, never triggered; corrected to width - 1
+          if (i == 0 || i == width - 1) {
             dx = cx - i;
             dy = (int) ((float) (cy - j) * a.value);
           }

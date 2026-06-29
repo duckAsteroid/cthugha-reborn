@@ -69,9 +69,6 @@ public class CthughaWindow extends GLWindow {
     // Palette LUT (256×1 RGBA)
     private Texture paletteTex;
 
-    // CPU overlay: buffer.pixels uploaded here each frame (R8)
-    private Texture screenOverlayTex;
-
     // Fixed-role R8 textures:
     //   pingTex = flame output / translate source / display source (always)
     //   pongTex = translate output / overlay bake target / flame source (always)
@@ -86,9 +83,6 @@ public class CthughaWindow extends GLWindow {
 
     // Pass 1 (pongFBO): translate pingTex → pongTex
     private TranslateTextureRenderer translateRenderer;
-
-    // Pass 2 (pongFBO, alpha blend): bake CPU overlay (waves) into pongTex
-    private OverlayBakeRenderer overlayBaker;
 
     // Pass 3 (pingFBO): GPU flame — blur pongTex → pingTex (5-tap average with fade)
     // Two-pass separable Gaussian blur replacing the old FlameRenderer.
@@ -105,8 +99,9 @@ public class CthughaWindow extends GLWindow {
     // Dedicated unit for per-frame palette LUT uploads
     private TextureUnit paletteUploadUnit;
 
-    // Reused buffer for uploading CPU pixels each frame
-    private ByteBuffer overlayBuffer;
+    // Pre-allocated palette LUT upload buffer (256 RGBA entries); refilled only when palette changes
+    private final ByteBuffer palBuf = BufferUtils.createByteBuffer(256 * 4);
+    private boolean paletteDirty = false;
 
     private StringRenderer quoteRenderer;
     private StringRenderer notifRenderer;
@@ -187,18 +182,18 @@ public class CthughaWindow extends GLWindow {
         kr.registerKeyAction(KeyCombination.simple('F'), this::toggleFullscreen, "Toggle fullscreen");
         kr.registerKeyAction(KeyCombination.simple('I'), this::flashImage, "Flash a random image");
         kr.registerKeyAction(KeyCombination.simple('N'), cthugha::toggleNotifications, "Toggle notifications");
-        kr.registerKeyAction(KeyCombination.simple('P'), cthugha::newPalette, "Change palette");
+        kr.registerKeyAction(KeyCombination.simple('P'), () -> { cthugha.newPalette(); paletteDirty = true; }, "Change palette");
         kr.registerKeyAction(KeyCombination.simple('Q'), cthugha::showQuote, "Show a quote on screen");
         kr.registerKeyAction(KeyCombination.simple('B'), () -> {
             quoteInBuffer = !quoteInBuffer;
             cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
         }, "Toggle quote render mode (overlay vs. in-buffer)");
         kr.registerKeyAction(KeyCombination.simple('T'), () -> {
-            cthugha.newTranslation(false);
+            cthugha.newTranslation(false, getRandom());
             rebuildTranslateMap();
         }, "Randomise translation");
         kr.registerKeyAction(KeyCombination.simpleWithMods('T', "SHIFT"), () -> {
-            cthugha.newTranslation(true);
+            cthugha.newTranslation(true, getRandom());
             rebuildTranslateMap();
         }, "Fully randomise translation");
         kr.registerKeyAction(KeyCombination.simple('A'), () -> {
@@ -284,20 +279,11 @@ public class CthughaWindow extends GLWindow {
         int w = win.width;
         int h = win.height;
 
-        cthugha.init(new Dimension(w, h));
+        cthugha.init(new Dimension(w, h), getRandom());
 
         // Font textures first to avoid disturbing the active texture unit
         FontTexture quoteFont = new FontTextureFactory(new Font("Serif", Font.ITALIC, 28), true).createFontTexture();
         FontTexture notifFont = new FontTextureFactory(new Font("Monospaced", Font.BOLD, 18), true).createFontTexture();
-
-        // CPU overlay texture (R8)
-        screenOverlayTex = new Texture();
-        screenOverlayTex.setInternalFormat(GL_R8);
-        screenOverlayTex.setImageFormat(GL_RED);
-        screenOverlayTex.setDataType(GL_UNSIGNED_BYTE);
-        screenOverlayTex.setFilter(Filter.NEAREST);
-        screenOverlayTex.generate(w, h, 0L);
-        getResourceManager().putTexture("screenOverlay", screenOverlayTex);
 
         // Ping-pong R8 textures
         pingTex = new Texture();
@@ -327,7 +313,7 @@ public class CthughaWindow extends GLWindow {
         paletteTex.setImageFormat(GL_RGBA);
         paletteTex.setDataType(GL_UNSIGNED_BYTE);
         paletteTex.setFilter(Filter.NEAREST);
-        paletteTex.generate(256, 1, buildPaletteBuffer(cthugha.buffer.paletteMap));
+        paletteTex.generate(256, 1, fillPaletteBuffer(cthugha.buffer.paletteMap));
         getResourceManager().putTexture("palette", paletteTex);
 
         // FBOs — constructor immediately does GL setup, must be on GL thread
@@ -337,10 +323,6 @@ public class CthughaWindow extends GLWindow {
         // Pass 1: translate pingTex → pongTex (via pongFBO)
         translateRenderer = new TranslateTextureRenderer("pingTex", "translateMap");
         translateRenderer.init(this);
-
-        // Pass 2: bake CPU overlay (waves) into pongTex (via pongFBO, alpha blend)
-        overlayBaker = new OverlayBakeRenderer("screenOverlay");
-        overlayBaker.init(this);
 
         // Pass 3: GPU flame — blur pongTex → pingTex (via pingFBO)
         // Flame: two-pass separable Gaussian blur with a per-frame fade on the Y pass
@@ -366,8 +348,6 @@ public class CthughaWindow extends GLWindow {
         paletteRenderer.init(this);
         paletteUploadUnit = getResourceManager().nextTextureUnit();
         paletteUploadUnit.bind(paletteTex);
-
-        overlayBuffer = BufferUtils.createByteBuffer(w * h);
 
         quoteRenderer = new StringRenderer(quoteFont);
         quoteRenderer.init(this);
@@ -444,24 +424,17 @@ public class CthughaWindow extends GLWindow {
         renderActions.processAll(this);
         timer.update();
 
-        // 1. CPU pipeline: waves write palette indices into buffer.pixels
+        // 1. CPU pipeline: advance parameter animators
         cthugha.doRenderCPU();
 
-        // 2. Upload CPU overlay (wave palette indices) to screenOverlayTex
-        overlayBaker.getOverlayUnit().activate();
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        overlayBuffer.clear();
-        overlayBuffer.put(cthugha.buffer.pixels);
-        overlayBuffer.flip();
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                cthugha.buffer.width, cthugha.buffer.height,
-                GL_RED, GL_UNSIGNED_BYTE, overlayBuffer);
-
-        // 3. Upload palette LUT
-        paletteUploadUnit.activate();
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        ByteBuffer palBuf = buildPaletteBuffer(cthugha.buffer.paletteMap);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, palBuf);
+        // 2. Upload palette LUT only when changed
+        if (paletteDirty) {
+            paletteDirty = false;
+            paletteUploadUnit.activate();
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                    fillPaletteBuffer(cthugha.buffer.paletteMap));
+        }
 
         java.awt.Rectangle win = getWindow();
 
@@ -508,7 +481,7 @@ public class CthughaWindow extends GLWindow {
             glClearColor(0f, 0f, 0f, 1f);
         }
 
-        // 5. pongFBO: translate pingTex → pongTex, then bake wave, optional quote, and CPU overlay.
+        // 5. pongFBO: translate pingTex → pongTex, then bake wave and optional quote/flash.
         //    waveBaker/quoteBaker read RGBA overlay textures (no feedback loop: pongTex is the FBO).
         pongFBO.bind();
         translateRenderer.doRender(this);
@@ -522,7 +495,6 @@ public class CthughaWindow extends GLWindow {
             textureBaker.doRender(this);
             flashPending = false;
         }
-        overlayBaker.doRender(this);
         glDisable(GL_BLEND);
         pongFBO.unbind();
         glViewport(0, 0, win.width, win.height);
@@ -570,7 +542,6 @@ public class CthughaWindow extends GLWindow {
     public void dispose() {
         if (quoteRenderer     != null) quoteRenderer.dispose();
         if (notifRenderer     != null) notifRenderer.dispose();
-        if (overlayBaker      != null) overlayBaker.dispose();
         if (xBlur             != null) xBlur.dispose();
         if (yBlur             != null) yBlur.dispose();
         if (flameFBO          != null) flameFBO.dispose();
@@ -701,16 +672,16 @@ public class CthughaWindow extends GLWindow {
     // Palette buffer builder
     // -------------------------------------------------------------------------
 
-    private ByteBuffer buildPaletteBuffer(PaletteMap pm) {
-        ByteBuffer buf = BufferUtils.createByteBuffer(256 * 4);
+    private ByteBuffer fillPaletteBuffer(PaletteMap pm) {
+        palBuf.clear();
         for (int c : pm.colors) {
-            buf.put((byte) ((c >> 16) & 0xFF)); // R
-            buf.put((byte) ((c >> 8) & 0xFF));  // G
-            buf.put((byte) (c & 0xFF));          // B
-            buf.put((byte) 0xFF);               // A
+            palBuf.put((byte) ((c >> 16) & 0xFF));
+            palBuf.put((byte) ((c >> 8) & 0xFF));
+            palBuf.put((byte) (c & 0xFF));
+            palBuf.put((byte) 0xFF);
         }
-        buf.flip();
-        return buf;
+        palBuf.flip();
+        return palBuf;
     }
 
     public static void main(String[] args) throws Exception {

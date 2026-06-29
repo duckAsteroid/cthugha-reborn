@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
 
+
 /**
  * Interface to an object that produces pixel translation tables
  */
@@ -18,9 +19,11 @@ public interface TranslateTableSource {
   int[] generate(int width, int height);
 
   /**
-   * Randomise the generating parameters of this translation
+   * Randomise the generating parameters of this translation.
+   *
+   * @param rng the random source to use (typically {@code ctx.getRandom()})
    */
-  void randomise();
+  void randomise(Random rng);
 
   Random random = new Random();
 

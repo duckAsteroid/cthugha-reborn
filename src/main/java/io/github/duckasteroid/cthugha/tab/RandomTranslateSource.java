@@ -5,9 +5,7 @@ import java.util.List;
 import java.util.Random;
 
 public class RandomTranslateSource {
-  private static Random rnd = new Random();
-
-  private static List<TranslateTableSource> sources = new ArrayList<>();
+  private static final List<TranslateTableSource> sources = new ArrayList<>();
 
   private TranslateTableSource selected;
 
@@ -19,13 +17,14 @@ public class RandomTranslateSource {
     sources.add(new Smoke());
     sources.add(new Space());
     sources.add(new Spiral());
+    sources.add(new SpiralGalaxyPlughole());
   }
 
-  public int[] generate(int width, int height, boolean newSource) {
+  public int[] generate(int width, int height, boolean newSource, Random rng) {
     if (selected == null || newSource) {
-      selected = sources.get(rnd.nextInt(sources.size()));
+      selected = sources.get(rng.nextInt(sources.size()));
     }
-    selected.randomise();
+    selected.randomise(rng);
     return selected.generate(width, height);
   }
 

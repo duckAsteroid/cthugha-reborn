@@ -6,12 +6,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Basic implementation of a composite parameter node, most nodes extend this rather than implement
- * the raw interface.
+ * Standard implementation of {@link Node} for interior (grouping) nodes.
+ *
+ * <p>Most components in Cthugha Reborn extend this class rather than implement {@link Node}
+ * directly.  Subclasses declare their child parameters as {@code public} fields of type
+ * {@link Node} and then register them in one of two ways:</p>
+ * <ol>
+ *   <li>Call {@link #initChildren(Node...)} or {@link #initChildren(List)} explicitly.</li>
+ *   <li>Use the no-arg constructor, which calls {@link #initFields(Class)} to discover all
+ *       {@code public} {@link Node}-typed fields via reflection.</li>
+ * </ol>
+ *
+ * <p>The node's {@link #getName()} defaults to the simple class name when the no-arg
+ * constructor is used, or to the {@code name} passed to the string constructor.</p>
  */
 public abstract class AbstractNode implements Node {
 
@@ -21,32 +33,50 @@ public abstract class AbstractNode implements Node {
 
   private List<Node> children;
 
+  /**
+   * Creates a node whose name is the simple class name and whose children are all
+   * {@code public} {@link Node}-typed fields discovered via {@link #initFields(Class)}.
+   */
   public AbstractNode() {
     this.name = getClass().getSimpleName();
     initFields(getClass());
   }
 
+  /**
+   * Creates a node with an explicit name and an initially empty child list.
+   * Subclasses must call one of the {@code initChildren} methods after construction.
+   *
+   * @param name display name for this node
+   */
   public AbstractNode(String name) {
     this.name = name;
     this.children = new ArrayList<>();
   }
 
   /**
-   * Set the children of this node using a collection
+   * Replaces this node's child list with the given collection.
+   *
+   * @param children ordered list of child nodes
    */
   protected void initChildren(List<Node> children) {
     this.children = children;
   }
 
   /**
-   * Set the children of this node using varargs
+   * Replaces this node's child list with the given varargs, wrapped in an unmodifiable list.
+   *
+   * @param children child nodes in display order
    */
   protected void initChildren(Node ... children) {
     this.children = Collections.unmodifiableList(Arrays.asList(children));
   }
 
   /**
-   * Find all the fields in a given class that are parameters - use these as the children
+   * Discovers child parameters by reflecting over the {@code public} fields of {@code clazz}
+   * that are assignable to {@link Node}, then calls {@link #initChildren(List)} with them.
+   * Fields that are {@code null} at the time of the call are silently skipped.
+   *
+   * @param clazz the class whose fields are inspected (typically {@code getClass()})
    */
   protected void initFields(Class<?> clazz) {
     List<Node> list = Arrays.stream(clazz.getFields())
@@ -80,6 +110,12 @@ public abstract class AbstractNode implements Node {
     return parent.orElse(null);
   }
 
+  /**
+   * Sets or clears this node's parent.  Called automatically by {@link #addChild} and
+   * {@link #removeChild} on the parent node; avoid calling directly.
+   *
+   * @param parent the new parent, or {@code null} to detach
+   */
   public void setParent(Node parent) {
     this.parent = Optional.ofNullable(parent);
   }
@@ -118,8 +154,8 @@ public abstract class AbstractNode implements Node {
   }
 
   @Override
-  public void randomise() {
-    children.forEach(Node::randomise);
+  public void randomise(Random rng) {
+    children.forEach(child -> child.randomise(rng));
   }
 
   @Override

@@ -1,63 +1,93 @@
 package io.github.duckasteroid.cthugha.params;
 
 import java.util.Random;
-import org.apache.commons.numbers.fraction.Fraction;
 
 /**
- * The base interface for all {@link Node}s that are actually a modifiable value. We use Number
- * as the foundation for all values.
+ * Base class for all leaf parameter nodes that hold a bounded, mutable numeric value.
+ *
+ * <p>Every value has a {@link #getMin() minimum} and {@link #getMax() maximum}.  The current
+ * value must always lie within this range.  Concrete subclasses store the value in a
+ * type-appropriate primitive field and implement {@link #getValue()}/{@link #setValue(Number)}
+ * accordingly.</p>
+ *
+ * <h2>Driving from normalised values</h2>
+ * <p>{@link #setNormalisedValue(double)} accepts a normalised fraction in {@code [0, 1]}, maps
+ * it linearly to {@code [min, max]}, and delegates to {@link #setValue(Number)}.  This is the
+ * natural entry point for render-core timer functions ({@code WaveFunction}, {@code LinearFunction},
+ * etc.) which produce normalised {@code double} outputs.</p>
+ *
+ * <h2>Randomisation</h2>
+ * <p>{@link #randomise()} picks a uniform random value within {@code [min, max]}, which is
+ * useful for generative effect variation.</p>
  */
 public abstract class AbstractValue extends AbstractNode {
-  /**
-   * random number generator for {@link #randomise()}
-   */
-  protected final static Random random = new Random();
 
+
+  /**
+   * @param description display name and description of this parameter
+   */
   public AbstractValue(String description) {
     super(description);
   }
 
   /**
-   * The current value of this parameter
+   * Returns the current value of this parameter.
+   *
+   * @return current value; never {@code null}
    */
   public abstract Number getValue();
 
   /**
-   * Set the current value of this
+   * Sets the current value, clamping or coercing to the concrete type as needed.
+   *
+   * @param d new value; the concrete type determines how it is stored
    */
   public abstract void setValue(Number d);
 
   /**
-   * The minimum of this value
+   * Returns the minimum allowed value for this parameter.
+   *
+   * @return lower bound; never {@code null}
    */
   public abstract Number getMin();
 
   /**
-   * The maximum of this value
+   * Returns the maximum allowed value for this parameter.
+   *
+   * @return upper bound; never {@code null}
    */
   public abstract Number getMax();
 
   /**
-   * Select a new random value somewhere between {@link #getMin()} and {@link #getMax()}
+   * Sets this parameter to a uniformly random value in {@code [min, max]}.
+   *
+   * @param rng the random source to use (typically {@code ctx.getRandom()})
    */
-  public void randomise() {
-    double value = random.nextDouble() * getScale();
-    setValue(getMin().doubleValue() + value);
+  @Override
+  public void randomise(Random rng) {
+    setValue(getMin().doubleValue() + rng.nextDouble() * getScale());
   }
 
   /**
-   * The difference between min and max
+   * Returns the range of this parameter: {@code max - min}.
+   *
+   * @return the distance between min and max
    */
   public Double getScale() {
     return getMax().doubleValue() - getMin().doubleValue();
   }
 
   /**
-   * Set the value as a fraction (0-1) of the {@link #getScale()}
+   * Sets the value from a normalised fraction in {@code [0, 1]}, mapping it linearly to
+   * {@code [min, max]}.  Suitable for use with render-core timer functions such as
+   * {@code WaveFunction} and {@code LinearFunction} which produce normalised {@code double}
+   * outputs.
+   *
+   * @param normalisedValue normalised fraction in {@code [0, 1]}; 0 maps to {@link #getMin()},
+   *                        1 maps to {@link #getMax()}
    */
-  public void setValue(Fraction f) {
-    final double value = getMin().doubleValue() + (getScale() * f.doubleValue());
-    setValue(value);
+  public void setNormalisedValue(double normalisedValue) {
+    setValue(getMin().doubleValue() + (getScale() * normalisedValue));
   }
 
   @Override

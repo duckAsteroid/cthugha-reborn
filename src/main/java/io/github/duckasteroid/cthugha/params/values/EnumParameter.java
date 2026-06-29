@@ -9,24 +9,36 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * An object parameter that uses the integer index of objects in an
- * enumerated list to map to an integer
- * @param <T> the type of object enumerated
+ * An {@link ObjectParameter} whose valid values are the elements of an ordered list (or a
+ * Java {@link Enum}).
+ *
+ * <p>The list index is the stored integer.  {@link #getEnumeration()} and
+ * {@link #setEnumeration(Object)} provide type-safe access to the current element.
+ * {@link #forType(Class)} is a convenience factory that builds an instance from any Java
+ * enum type via reflection.</p>
+ *
+ * @param <T> the enumerated element type
  */
 public class EnumParameter<T> extends ObjectParameter<T> {
 
   private final List<T> values;
 
+  /**
+   * @param description display name
+   * @param values      ordered list of allowed values; the list index is the stored integer
+   */
   public EnumParameter(String description, final List<T> values) {
     super(description, 0, values.size(), values::get, values::indexOf);
     this.values = values;
   }
 
   /**
-   * Create from a Java {@link Enum} type
+   * Creates an {@link EnumParameter} for all constants of the given Java enum type, in their
+   * declaration order.
+   *
    * @param enumType the enum class
-   * @return an {@link EnumParameter} instance for the enum type
-   * @param <T> the type of enum wrapped
+   * @param <T>      the enum type
+   * @return an {@link EnumParameter} whose values are the enum's constants
    */
   public static <T extends Enum> EnumParameter<T> forType(Class<T> enumType) {
     try {
@@ -42,10 +54,16 @@ public class EnumParameter<T> extends ObjectParameter<T> {
     return NodeType.ENUM;
   }
 
+  /** Returns the currently selected element. */
   public T getEnumeration() {
     return getObjectValue();
   }
 
+  /**
+   * Selects the given element; its index in the list becomes the stored integer value.
+   *
+   * @param value the element to select
+   */
   public void setEnumeration(T value) {
     setObjectValue(value);
   }

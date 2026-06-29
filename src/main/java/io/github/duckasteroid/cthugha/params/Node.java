@@ -6,22 +6,36 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * This is a basic composite pattern for a DOM-like tree of parameters that can be tweaked.
+ * A node in the hierarchical parameter tree.
+ *
+ * <p>Nodes follow the <em>Composite</em> design pattern: interior nodes group child nodes
+ * and delegate operations (e.g. {@link #randomise()}) to them, while leaf nodes hold actual
+ * parameter values.  Every node has a name, an optional parent, and zero or more children.</p>
+ *
+ * <p>The primary implementations are:</p>
+ * <ul>
+ *   <li>{@link AbstractNode} – base class for interior nodes (type = {@link NodeType#CONTAINER}).</li>
+ *   <li>{@link AbstractValue} – base class for leaf value nodes.</li>
+ * </ul>
  */
 public interface Node {
 
+  /** Returns the kind of value this node holds (or {@link NodeType#CONTAINER} for grouping nodes). */
   NodeType getNodeType();
 
   /**
-   * Attempt to cast to a given type
-   * @param clazz the desired type
-   * @return this as that type
-   * @param <T> desired type parameter
+   * Casts this node to the given {@link AbstractValue} subtype.
+   *
+   * @param clazz the target leaf-node class
+   * @param <T>   the target type
+   * @return this node cast to {@code T}
+   * @throws ClassCastException if this node is not an instance of {@code clazz}
    */
   default <T extends AbstractValue> T asParam(Class<T> clazz) {
     if (getClass().isAssignableFrom(clazz)) {
@@ -30,16 +44,26 @@ public interface Node {
     throw new ClassCastException("Cannot cast "+getClass()+ " to "+clazz);
   }
 
+  /** Returns the display name of this node. */
   String getName();
 
+  /** Returns the parent node, or {@code null} if this is the root. */
   Node getParent();
 
+  /** Returns {@code true} if this node has a parent (i.e. is not the root). */
   boolean hasParent();
 
-  void randomise();
+  /**
+   * Sets this node's value (or all descendant values) to a random value within their
+   * respective min/max ranges, using the supplied {@link Random} instance.
+   *
+   * @param rng the random source to use (typically {@code ctx.getRandom()})
+   */
+  void randomise(Random rng);
 
   /**
-   * Provides a stream view of the path from this node via its parents
+   * Returns a stream of ancestor nodes from this node's immediate parent up to the root,
+   * in bottom-up order (parent first, root last).
    */
   default Stream<Node> getPath() {
     Iterator<Node> iter = new Iterator<Node>() {
@@ -58,18 +82,38 @@ public interface Node {
     return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iter, 0), false);
   }
 
+  /** Returns a stream over this node's direct children. */
   Stream<Node> getChildren();
 
+  /**
+   * Finds the first direct child whose {@link #getName()} equals {@code name}.
+   *
+   * @param name the child's name
+   * @return the matching child, or empty if not found
+   */
   default Optional<Node> getChild(String name) {
     return getChildren().filter(child -> child.getName().equals(name)).findFirst();
   }
 
+  /**
+   * Walks a path expressed as a name array, descending from this node.
+   *
+   * @param path ordered names of nodes to traverse, outermost first
+   * @return the node at the end of the path, or empty if any segment is not found
+   */
   default Optional<Node> getChild(String[] path) {
     ArrayDeque<String> pathQ = new ArrayDeque<>(path.length);
     pathQ.addAll(Arrays.asList(path));
     return getChild(pathQ);
   }
 
+  /**
+   * Walks a path expressed as a deque of names, consuming entries as it descends.
+   * Returns {@code Optional.of(this)} when the deque is empty (base case).
+   *
+   * @param path remaining path segments to traverse
+   * @return the node at the end of the path, or empty if any segment is not found
+   */
   default Optional<Node> getChild(Deque<String> path) {
     if (path == null || path.isEmpty()) {
       return Optional.of(this);
@@ -82,9 +126,21 @@ public interface Node {
     return Optional.empty();
   }
 
+  /** Returns {@code true} if this node has no children. */
   boolean isLeaf();
 
+  /**
+   * Adds {@code child} as a direct child of this node and sets this node as its parent.
+   *
+   * @param child the node to attach
+   */
   void addChild(Node child);
+
+  /**
+   * Removes {@code child} from this node's children and clears its parent reference.
+   *
+   * @param child the node to detach
+   */
   void removeChild(Node child);
 
 
