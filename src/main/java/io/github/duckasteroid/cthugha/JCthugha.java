@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha;
 
 
+import io.github.duckasteroid.cthugha.animation.AnimationSystem;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
@@ -41,6 +42,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public RadialWaveModel radialWave = new RadialWaveModel();
 	public SpectrumModel spectrum = new SpectrumModel();
 	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
+	public AnimationSystem animation = new AnimationSystem();
 
 	public ScreenBuffer buffer;
 
@@ -70,12 +72,16 @@ public class JCthugha extends AbstractNode implements Closeable {
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
 		buffer.paletteMap = reader.random();
+
+		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, 0.05);
+		animation.addBinding("radial rotation", radialWave.transform.rotate, 0.07);
 	}
 
 	public synchronized Duration doRenderCPU() {
 		final Instant start = Instant.now();
 		try {
 			frameRate.ping();
+			animation.tick();
 		} catch (Throwable t) {
 			LOG.error("Processing main loop", t);
 		}

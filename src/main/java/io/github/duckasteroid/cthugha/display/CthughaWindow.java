@@ -242,6 +242,7 @@ public class CthughaWindow extends GLWindow {
         int h = win.height;
 
         cthugha.init(new Dimension(w, h), getRandom());
+        cthugha.animation.init(getClock());
 
         // Font textures first to avoid disturbing the active texture unit
         FontTexture quoteFont = new FontTextureFactory(new Font("Serif", Font.ITALIC, 28), true).createFontTexture();
