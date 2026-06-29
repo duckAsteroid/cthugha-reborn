@@ -1,277 +1,185 @@
-# Plan: Migrate Cthugha Reborn from AWT to OpenGL (Phase 1)
+# Remote Control — Implementation Plan
 
-## Context
+Full spec: [REMOTE_CONTROL.md](REMOTE_CONTROL.md)
 
-The project renders a 256-colour palettized pixel buffer using AWT (`Frame` + `BufferStrategy`).
-`render-core` (LWJGL 3 / GLFW) is already declared in `build.gradle`. Phase 1 keeps all CPU
-computation intact and replaces only the display path: AWT window → GLFW window, AWT blit →
-palette-lookup shader.
-
-### Caveat on render-core API
-
-The `render-core 0.0.1` jar is not cached locally (Maven local/Gradle cache both empty), so the
-API surface below is based on the draft plan. The implementer must verify class names and method
-signatures against the actual jar or its source before coding. The structural logic is sound; exact
-API spelling may need adjustment.
+Work is split into six phases, each independently buildable and testable. Phases 3 and 5 can be developed in parallel once Phase 1 is complete.
 
 ---
 
-## Architecture (Phase 1)
+## Phase 1 — Gradle Multi-project Restructure
 
-```
-CPU side (unchanged) GPU side (new)
-──────────────────── ──────────────────────────────────────
-ScreenBuffer.pixels (byte[]) ──► screenTexture (GL_R8, GL_RED)
-PaletteMap.colors (int[] ARGB) ──► paletteTexture (1×256 RGBA)
- │
- PaletteRenderer.doRender()
- │
- GLFW window / swapBuffers
-```
+_Prerequisite for everything. No functional change._
 
-```
-CthughaWindow (new, extends GLWindow)
- ├── init() ─► cthugha.init(Dimension) + create GL textures
- ├── render() ─► cthugha.doRenderCPU() + upload + PaletteRenderer
- ├── registerKeys() ─► Keybind list → GLFW char callback
- └── main()
-JCthugha (modified)
- ├── init(Dimension) ─► CPU-only setup (removed AWT args)
- ├── doRenderCPU() ─► translate + flame + audio + waves + strings
- └── (removed) ─► run/stop thread loop, main(), AWT display fields
-```
+| # | Task |
+|---|------|
+| 1.1 | Create `settings.gradle` at repo root: `include ':app', ':remote-ui'` |
+| 1.2 | Create `app/` directory; move `src/`, `build.gradle`, `src/dist/` into it |
+| 1.3 | Update paths in `app/build.gradle` (workingDir, startScripts, etc.) |
+| 1.4 | Move `gradlew`, `gradle/` wrapper files to root (they already live there — verify) |
+| 1.5 | Create `remote-ui/` skeleton with a stub `build.gradle` that defines empty `npmInstall` and `npmBuild` tasks |
+| 1.6 | Add `processResources` wiring in `app/build.gradle` to depend on `:remote-ui:npmBuild` and copy `remote-ui/dist/` → `resources/remote/` |
+| 1.7 | Verify `./gradlew :app:run` still works end-to-end |
 
 ---
 
-## Step-by-step changes
+## Phase 2 — Parameter Model Extensions
 
-### 1. Rename naming conflict
+_Adds `controlled` flag and `uiHint` to `AbstractValue`. No UI or server work yet._
 
-`io.github.duckasteroid.cthugha.display.RenderedItem` (line 5: `render(Display, AudioSample)`)
-conflicts with `com.asteroid.duck.opengl.util.RenderedItem` from render-core.
-Rename the project interface to `CthughaRenderItem`:
-
-- Rename file `display/RenderedItem.java` → `display/CthughaRenderItem.java`
-- Update interface name and any implementors (currently no known implementors, interface is unused)
-  
-  ### 2. Refactor `JCthugha.java`
-  
-  **Remove AWT display fields** (lines 111–119):
-  
-  ```java
-  // Remove these:
-  BufferStrategy bufferStrategy;
-  private BufferedImage screenImage;
-  private Frame window;
-  private boolean debug = true;
-  private Color debugColor = Color.GREEN;
-  private Font debugFont = new Font("Courier New", Font.PLAIN, 12);
-  private final NotificationRenderer notificationRenderer = new NotificationRenderer();
-  ```
-  
-  Keep `notify` boolean and make `notificationRenderer` calls no-ops for now (or keep the
-  `notify` field as a flag but remove its AWT-dependent renderer).
-  **Change `init()` signature** (currently lines 125–154):
-  
-  ```java
-  // Before:
-  public void init(Dimension dims, BufferStrategy bufferStrategy,
-  BufferedImage screenImage, Frame window, List<Keybind> keybinds)
-  // After:
-  public void init(Dimension dims) throws IOException
-  ```
-  
-  Remove all assignments to the dropped fields. Keep the animator setup and map loading intact.
-  **Rename `doRender()` → `doRenderCPU()`** and truncate at line 185 (before the AWT blit):
-  
-  ```java
-  public synchronized Duration doRenderCPU() {
-  final Instant start = Instant.now();
-  try {
-  frameRate.ping();
-  animatorPool.doAnimation(Duration.between(started, start));
-  translate.transform(buffer.pixels, buffer.pixels);
-  flame.flame(buffer, buffer.getWriteableRaster()); // WritableRaster still fine
-  AudioSample audioSample = audioSource.sample(buffer.width);
-  wave.wave(audioSample, buffer);
-  wave2.wave(audioSample, buffer);
-  if (doSpeckles) speckles.wave(audioSample, buffer);
-  if (doFFT) fft.wave(audioSample, buffer);
-  stringRenderer.show(buffer); // AWT Graphics2D into byte[]
-  // STOP HERE — everything after is AWT display
-  } catch (Throwable t) { LOG.error("Processing main loop", t); }
-  return Duration.between(start, Instant.now());
-  }
-  ```
-  
-  Note: `StringRenderer.show()` and wave renderers use `buffer.getBufferedImageView()` and
-  `buffer.getGraphics()` — these create AWT `BufferedImage`/`Graphics2D` backed by `byte[] pixels`
-  with `IndexColorModel`. This is pure CPU-side color-index painting; it is independent of the
-  display path and can stay unchanged in Phase 1.
-  **Remove `run()`, `stop()`, `main()`** (lines 281–404). Keep `close()`.
-  **Make action methods public** (they already are package/public; verify): `newTranslation()`,
-  `newPalette()`, `showQuote()`, `toggleAudioSource()`, `toggleSpeckle()`, `changeAmplitude()`,
-  `rotate()`, `flashImage()`, `toggleNotifications()`.
-  **AWT imports to keep in JCthugha**: `java.awt.Dimension`, `java.awt.Graphics2D` (for
-  `flashImage()`). Remove: `Frame`, `BufferStrategy`, `BufferedImage` (screen), `Color` (debug),
-  `Font` (debug), `Graphics` (debug), AWT display imports.
-  
-  ### 3. Create `display/CthughaWindow.java`
-  
-  New class extending `com.asteroid.duck.opengl.util.GLWindow` (verify exact FQCN).
-  **Constructor:**
-  
-  ```java
-  public CthughaWindow() throws LineUnavailableException {
-  super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
-  "Cthugha Reborn", 1280, 720, null);
-  this.cthugha = new JCthugha();
-  }
-  ```
-  
-  Working dir at runtime is `src/dist/` (set in `build.gradle` `run { workingDir }`) so
-  `Paths.get(".")` resolves to the correct resource root for maps/config.
-  **`init()` (GL thread):**
-1. Get dims from `getWindow()` (GLWindow method)
-2. `cthugha.init(new Dimension(w, h))`
-3. Create screen texture (`GL_R8` / `GL_RED` / `GL_UNSIGNED_BYTE`, `NEAREST` filter):
-   
-   ```java
-   Texture screenTex = new Texture();
-   screenTex.setInternalFormat(GL_R8);
-   screenTex.setImageFormat(GL_RED);
-   screenTex.setDataType(GL_UNSIGNED_BYTE);
-   screenTex.setFilter(Filter.NEAREST);
-   screenTex.generate(w, h, 0L);
-   getResourceManager().putTexture("screen", screenTex);
-   ```
-4. Create palette texture from `cthugha.buffer.paletteMap.colors` (`int[]` ARGB → RGBA bytes):
-   
-   ```java
-   ByteBuffer palBuf = buildPaletteBuffer(cthugha.buffer.paletteMap);
-   // palTex is 256×1, GL_RGBA
-   getResourceManager().putTexture("palette", palTex);
-   ```
-   
-   `buildPaletteBuffer` converts each `int` (0xAARRGGBB) → 4 bytes (R, G, B, A=255):
-   
-   ```java
-   private ByteBuffer buildPaletteBuffer(PaletteMap pm) {
-   ByteBuffer buf = BufferUtils.createByteBuffer(256 * 4);
-   for (int c : pm.colors) {
-   buf.put((byte)((c >> 16) & 0xFF)); // R
-   buf.put((byte)((c >> 8) & 0xFF)); // G
-   buf.put((byte)( c & 0xFF)); // B
-   buf.put((byte) 0xFF); // A
-   }
-   buf.flip();
-   return buf;
-   }
-   ```
-5. `paletteRenderer = new PaletteRenderer("screen"); paletteRenderer.init(this);`
-6. Allocate `pixelBuffer = BufferUtils.createByteBuffer(w * h);`
-   **`render()` (GL thread):**
-7. `cthugha.doRenderCPU()`
-8. Upload screen pixels:
-   
-   ```java
-   pixelBuffer.clear();
-   pixelBuffer.put(cthugha.buffer.pixels);
-   pixelBuffer.flip();
-   screenTex.bind();
-   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, pixelBuffer);
-   ```
-9. Re-upload palette (1 KB, negligible cost) when it may have changed:
-   
-   ```java
-   ByteBuffer palBuf = buildPaletteBuffer(cthugha.buffer.paletteMap);
-   palTex.bind();
-   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, palBuf);
-   ```
-10. `paletteRenderer.doRender(this);`
-    **`registerKeys()` — GLFW key binding:**
-    `Keybind.isFired(KeyEvent)` checks `event.getKeyChar()`. GLFW's character callback supplies a
-    Unicode codepoint. Bridge with a GLFW `glfwSetCharCallback` loop:
-    
-    ```java
-    // inside registerKeys() or init():
-    glfwSetCharCallback(getWindow().getHandle(), (window, codepoint) -> {
-    char ch = (char) codepoint;
-    for (Keybind kb : keybindings) {
-    if (kb.getCharacter() == ch || (kb.getChar2() != null && kb.getChar2() == ch)) {
-    // invoke the action; note: no KeyEvent available, pass null or adapt
-    }
-    }
-    });
-    ```
-    
-    Because `Keybind.handler` is `Consumer<KeyEvent>` and the shift-state-checking handlers (like
-    `'t'`/`'T'` and `'u'`/`'U'`) distinguish via `e.isShiftDown()`, the simplest approach is:
-- For keys without shift variants: pass `null` (handlers must not NPE) or a dummy `KeyEvent`
-- For shift variants (`'T'`, `'U'`, `'J'`, `'<'`, `'>'`): these are separate codepoints in GLFW
-  char callbacks, so they arrive as distinct characters — the existing `char2` / `Keybind.isFired`
-  logic works as-is.
-- Build the keybinding list as a field `List<Keybind> keybindings` in `CthughaWindow` (moved
-  from `JCthugha.main()`).
-  **RenderContext abstract methods** (verify which ones GLWindow leaves abstract):
-- `getTimer()` → `new TimerImpl(() -> (double) System.nanoTime() / 1e9)`
-- `getDesiredUpdatePeriod()` / `setDesiredUpdatePeriod()` → simple `double` field
-  **`main()`:**
-  
-  ```java
-  public static void main(String[] args) throws Exception {
-  new CthughaWindow().displayLoop();
-  }
-  ```
-  
-  ### 4. Update `build.gradle`
-  
-  ```groovy
-  application {
-  mainClass = "io.github.duckasteroid.cthugha.png.display.CthughaWindow"
-  }
-  ```
+| # | Task |
+|---|------|
+| 2.1 | Create `params/UiHint.java` enum: `SLIDER`, `KNOB` |
+| 2.2 | Add `AtomicBoolean controlled` field to `AbstractValue`; add `isControlled()` / `setControlled(boolean)` |
+| 2.3 | Add `UiHint uiHint = UiHint.SLIDER` field to `AbstractValue`; add `getUiHint()` and fluent `withUiHint(UiHint)` |
+| 2.4 | Add a value-change listener hook to `AbstractValue`: `addChangeListener(Runnable)` / `removeChangeListener(Runnable)`, called on every value write in each `AbstractValue` subclass |
+| 2.5 | Wire `AnimatorPool`: call `param.setControlled(true)` on bind, `param.setControlled(false)` on release — also fires the change listener so SSE picks up the state change |
+| 2.6 | Annotate existing `DoubleParameter`, `IntegerParameter`, etc. constructors in each component with appropriate `.withUiHint(UiHint.KNOB)` where dial-like behaviour is intended |
+| 2.7 | Unit tests: verify `controlled` toggling, `uiHint` default + override, listener notification |
 
 ---
 
-## What stays unchanged in Phase 1
+## Phase 3 — Java Remote Server
 
-| Component                                                | Status                             |
-| -------------------------------------------------------- | ---------------------------------- |
-| `JavaFlame` (CPU convolution on `byte[]`)                | Unchanged                          |
-| `Translate.transform()` (CPU array lookup)               | Unchanged                          |
-| `StringRenderer.show()` (AWT Graphics2D → byte[])        | Unchanged — writes palette indices |
-| `SimpleWave`, `RadialWave`, `SpeckleWave`, `SpectraBars` | Unchanged — write palette indices  |
-| `flashImage()` (AWT BufferedImage → byte[])              | Unchanged                          |
-| `NotificationRenderer`                                   | Dropped; restore in Phase 2        |
-| `renderDebugInfo()` / debug overlay                      | Dropped; restore in Phase 2        |
+_The embedded HTTP server, token management, SSE broadcaster, and REST API._
+
+### 3a — Dependencies
+
+| # | Task |
+|---|------|
+| 3a.1 | Add `io.javalin:javalin` to `app/build.gradle` |
+| 3a.2 | Add `com.fasterxml.jackson.core:jackson-databind` (Javalin's default JSON engine) |
+| 3a.3 | Add `io.nayuki:qrcodegen` (or vendor the single Java source file — it has no build system) |
+
+### 3b — Core infrastructure
+
+| # | Task |
+|---|------|
+| 3b.1 | `remote/RemoteConfig.java` — parses `--remote`, `--remote-port=N`, `--remote-qr-timeout=N` from `String[] args`; exposes `boolean enabled`, `int port`, `int qrTimeoutSeconds` |
+| 3b.2 | `remote/TokenStore.java` — holds current token as `String`; `rotate()` generates a new 256-bit `SecureRandom` value encoded as URL-safe Base64 and returns the new URL; `validate(String token)` checks equality |
+| 3b.3 | `remote/RemoteEventBroadcaster.java` — holds `CopyOnWriteArrayList<ClientRecord>` where `ClientRecord` pairs a Javalin `SseClient` with `List<String> prefixes`; `register(SseClient, List<String>)` / `unregister(SseClient)`; `broadcast(String eventName, String jsonPayload)` iterates clients, checks prefix match, sends, removes dead connections lazily; `broadcastAll(String, String)` bypasses prefix check (used for `ping` and `tokenRotated`) |
+
+### 3c — JSON serialisation
+
+| # | Task |
+|---|------|
+| 3c.1 | `remote/ParamSerializer.java` — converts a `Node` to a `Map<String,Object>` (recursively): `name`, `type`, `children` for containers; `name`, `type`, `value`, `min`, `max`, `controlled`, `uiHint` for leaves |
+| 3c.2 | Helper `pathOf(Node)` — walks `getPath()` ancestors to produce a slash-delimited string (needed for SSE payloads and for routing PATCH responses) |
+
+### 3d — REST routes (Javalin)
+
+| # | Task |
+|---|------|
+| 3d.1 | `remote/RemoteServer.java` — creates and configures a `Javalin` instance |
+| 3d.2 | Auth `before` filter: skip `GET /`, `GET /static/*`; otherwise validate `Authorization: Bearer <token>` via `TokenStore`; on first valid request after QR display, signal `QrOverlay` to hide |
+| 3d.3 | `GET /api/v1/info` — returns `{"version":"1.0","appVersion":"..."}` (no auth required) |
+| 3d.4 | `GET /api/v1/params` — serialise root `Node` tree |
+| 3d.5 | `GET /api/v1/params/{path}` — look up node by path segments; 404 if absent |
+| 3d.6 | `PATCH /api/v1/params/{path}` — parse `{"value":...}`; validate leaf + range; set value; return node JSON with optional `"warning":"controlled_by_animator"` |
+| 3d.7 | `POST /api/v1/params/{path}/randomise` — call `node.randomise(rng)` |
+| 3d.8 | `GET /api/v1/events` — open SSE; parse `path` query params; register with `RemoteEventBroadcaster`; on client close unregister |
+| 3d.9 | Static file serving: serve classpath `resources/remote/` at `/`; `index.html` as SPA catch-all |
+
+### 3e — Wiring into CthughaWindow
+
+| # | Task |
+|---|------|
+| 3e.1 | Parse `RemoteConfig` from `main(String[] args)` in `CthughaWindow` |
+| 3e.2 | If `enabled`: instantiate `TokenStore`, `RemoteEventBroadcaster`, `RemoteServer`; start server |
+| 3e.3 | Wire `AbstractValue` change listener → `RemoteEventBroadcaster.broadcast("paramChanged", ...)` for value changes and `"paramControlled"` for controlled-flag changes |
+| 3e.4 | Register `R` key in `registerKeys()` only when `enabled`: calls `TokenStore.rotate()`, passes new URL to `QrOverlay`, starts timeout timer |
+| 3e.5 | On app shutdown: stop Javalin server |
 
 ---
 
-## Files to create / modify
+## Phase 4 — QR Code Overlay
 
-| File                         | Action                                                         |
-| ---------------------------- | -------------------------------------------------------------- |
-| `display/RenderedItem.java`  | Rename to `CthughaRenderItem.java`                             |
-| `JCthugha.java`              | Refactor: remove AWT display, change `init`, rename `doRender` |
-| `display/CthughaWindow.java` | **Create**                                                     |
-| `build.gradle`               | Change `mainClass`                                             |
+_Renders the access URL as an OpenGL texture overlay._
+
+| # | Task |
+|---|------|
+| 4.1 | `remote/QrOverlay.java` — given a URL string, calls `QrCode.encodeText(url, Ecc.MEDIUM)` and extracts the module grid into a `ByteBuffer` (1 byte per module: 0x00 or 0xFF) |
+| 4.2 | Upload to a `GL_R8` texture sized to the QR module count; render as a fullscreen-centred quad with a white border (quiet zone). Scale up with `NEAREST` filtering so modules are crisp pixels |
+| 4.3 | `show(String url)` / `hide()` — toggle a `visible` boolean; `show` also resets the auto-hide countdown |
+| 4.4 | Auto-hide: in the render loop, decrement a countdown each frame (based on elapsed time); call `hide()` when it expires (if `qrTimeoutSeconds > 0`) |
+| 4.5 | Auth-triggered hide: `RemoteServer` auth filter calls `qrOverlay.hide()` on first successful authentication after `show()` |
+| 4.6 | Integrate into `CthughaWindow.render()`: draw `QrOverlay` after the palette renderer, before buffer swap |
 
 ---
 
-## Verification
+## Phase 5 — React SPA (`remote-ui`)
 
-```bash
-./gradlew run # workingDir = src/dist/ per build.gradle
+_The browser UI. Can be developed in parallel with Phase 3 once Phase 1 is done._
+
+### 5a — Project scaffold
+
+| # | Task |
+|---|------|
+| 5a.1 | `npm create vite@latest remote-ui -- --template react-ts` inside `remote-ui/` |
+| 5a.2 | Install Tailwind CSS + shadcn/ui and initialise |
+| 5a.3 | Install `react-knob-headless` |
+| 5a.4 | Implement `remote-ui/build.gradle`: `npmInstall` task (runs `npm ci`, inputs `package-lock.json`, output `node_modules`); `npmBuild` task (runs `npm run build`, output `dist/`) |
+| 5a.5 | Configure Vite `base: '/'` and output to `dist/` |
+
+### 5b — API & token layer
+
+| # | Task |
+|---|------|
+| 5b.1 | `src/token.ts` — module-level `let token: string \| null`; `initToken()` reads `?token=` from URL, stores it, calls `history.replaceState` to strip it |
+| 5b.2 | `src/api.ts` — typed fetch wrapper: attaches `Authorization: Bearer <token>` header; exports `getParams()`, `getParam(path)`, `patchParam(path, value)`, `randomise(path)`, `getInfo()` |
+| 5b.3 | `src/useSSE.ts` — custom hook: opens `EventSource` to `/api/v1/events?path=...`; parses `paramChanged` and `paramControlled` events; exposes a state map of `path → {value, controlled}`; reconnects with new subscription paths when prop changes; closes on unmount |
+
+### 5c — Type definitions
+
+| # | Task |
+|---|------|
+| 5c.1 | `src/types.ts` — TypeScript interfaces mirroring the Java JSON: `ParamNode` (container), `LeafNode` (with `value`, `min`, `max`, `controlled`, `uiHint: 'SLIDER' \| 'KNOB'`), `NodeType` union |
+
+### 5d — UI components
+
+| # | Task |
+|---|------|
+| 5d.1 | `SliderControl` — wraps shadcn `Slider`; debounced `onValueChange` at ~150 ms; numeric readout; disabled when `controlled` |
+| 5d.2 | `KnobControl` — wraps `react-knob-headless`; SVG arc rendering; numeric readout; disabled when `controlled` |
+| 5d.3 | `ToggleControl` — shadcn `Switch` for `BOOLEAN` nodes |
+| 5d.4 | `EnumControl` — shadcn `Select` for `ENUM` nodes |
+| 5d.5 | `ParamLeaf` — dispatches to the correct control based on `type` + `uiHint`; shows lock icon when `controlled` |
+| 5d.6 | `ParamContainer` — collapsible section (shadcn `Collapsible`); renders children recursively |
+| 5d.7 | `ParamTree` — fetches root via `GET /api/v1/params` on mount; opens SSE for all paths; renders `ParamContainer` at the root level |
+
+### 5e — App shell & session handling
+
+| # | Task |
+|---|------|
+| 5e.1 | `App.tsx` — calls `initToken()`; shows "Scan the QR code" screen if no token; otherwise renders main layout |
+| 5e.2 | Bottom tab bar: **Tree** (v1) \| **Quick Controls** (v2 placeholder) |
+| 5e.3 | Disconnect overlay: on `tokenRotated` SSE event or any `401` response, show full-screen "Session ended — scan the QR code to reconnect" overlay and disable all controls |
+| 5e.4 | Dark theme via Tailwind config |
+
+---
+
+## Phase 6 — Integration & Manual Testing
+
+| # | Task |
+|---|------|
+| 6.1 | `./gradlew :app:run --args="--remote"` — verify server starts, port printed to console |
+| 6.2 | Press `R` in-app — verify QR overlay appears on screen |
+| 6.3 | Open URL manually in browser — verify SPA loads, token accepted, QR hides |
+| 6.4 | Adjust a slider/knob — verify parameter changes in the running visualisation |
+| 6.5 | Verify `controlled` params appear greyed out when animator is active |
+| 6.6 | Press `R` again — verify old browser tab shows disconnect overlay; new QR appears |
+| 6.7 | Test on a physical phone: scan QR with camera, verify end-to-end flow |
+| 6.8 | Verify `./gradlew :app:run` (without `--remote`) starts normally with no server and no `R` key binding |
+
+---
+
+## Dependency Map
+
+```
+Phase 1 (restructure)
+    └── Phase 2 (param model)
+            ├── Phase 3 (Java server)  ─┐
+            │       └── Phase 4 (QR)   ├── Phase 6 (integration)
+            └── Phase 5 (React SPA)   ─┘
 ```
 
-Confirm:
-
-- A GLFW window appears (not AWT)
-- Palettized visuals animate (translate + flame + waveforms)
-- Key `t` changes translation, `p` changes palette (palette texture re-uploads)
-- Key `q` shows a text quote, `!` quits
-- No `NullPointerException` on audio init
-- Palette color changes (`p`) are visually reflected immediately
-  If the build environment lacks Java 25, the `java.toolchain` block in `build.gradle` will need
-  a temporary downgrade or `JAVA_HOME` override for the test run.
+Phases 3 and 5 can proceed in parallel. Phase 4 requires Phase 3's `TokenStore` and `RemoteServer` auth hook.
