@@ -119,9 +119,6 @@ public class CthughaWindow extends GLWindow {
     // Quote render mode: true = baked into the indexed buffer (affected by flame/translate);
     //                    false = RGBA overlay on top of the palette output (default)
     private boolean quoteInBuffer = false;
-    private Texture quoteOverlayTex;
-    private FrameBuffer quoteOverlayFBO;
-    private WaveIndexBakeRenderer quoteBaker;
 
     private final TimerImpl timer = new TimerImpl(() -> (double) System.nanoTime() / 1e9);
     private Double desiredUpdatePeriod = null;
@@ -372,19 +369,6 @@ public class CthughaWindow extends GLWindow {
         waveBaker = new WaveIndexBakeRenderer("waveOverlay");
         waveBaker.init(this);
 
-        // Quote in-buffer mode: RGBA offscreen texture baked into pongTex as a palette index
-        quoteOverlayTex = new Texture();
-        quoteOverlayTex.setInternalFormat(GL_RGBA);
-        quoteOverlayTex.setImageFormat(GL_RGBA);
-        quoteOverlayTex.setDataType(GL_UNSIGNED_BYTE);
-        quoteOverlayTex.setFilter(Filter.LINEAR);
-        quoteOverlayTex.generate(w, h, 0L);
-        getResourceManager().putTexture("quoteOverlay", quoteOverlayTex);
-        quoteOverlayFBO = new FrameBuffer(quoteOverlayTex);
-
-        quoteBaker = new WaveIndexBakeRenderer("quoteOverlay");
-        quoteBaker.init(this);
-
         // 1×1 white flash texture: R=0xFF maps to palette index 255, A=0xFF fully opaque
         ByteBuffer whitePx = BufferUtils.createByteBuffer(4);
         whitePx.put((byte) 0xFF).put((byte) 0).put((byte) 0).put((byte) 0xFF).flip();
@@ -438,8 +422,18 @@ public class CthughaWindow extends GLWindow {
 
         java.awt.Rectangle win = getWindow();
 
-        // 4. Wave offscreen: render active waveform(s) into RGBA overlay texture.
-        //    The first renderer clears the FBO; in BOTH mode the second draws on top without clearing.
+        // Sync quote text whenever it changes
+        String quote = cthugha.getCurrentQuote();
+        if (quote != null && !quote.equals(lastQuote)) {
+            quoteRenderer.setText(quote);
+            lastQuote = quote;
+        } else if (quote == null) {
+            lastQuote = null;
+        }
+
+        // 4. Wave offscreen: render waveform(s) and optional in-buffer quote into the shared RGBA
+        //    overlay texture. Wave renderers own the clear; quote is blended on top within the same
+        //    FBO, so a single waveBaker draw covers both in the pongFBO pass.
         glClearColor(0f, 0f, 0f, 0f);
         waveOverlayFBO.bind();
         audioSink.upload();
@@ -453,44 +447,23 @@ public class CthughaWindow extends GLWindow {
             radialWave.setClearBeforeRender(!cleared);
             radialWave.doRender(this);
         }
-        waveOverlayFBO.unbind();
-        glViewport(0, 0, win.width, win.height);
-        glClearColor(0f, 0f, 0f, 1f);
-
-        // Sync quote text whenever it changes
-        String quote = cthugha.getCurrentQuote();
-        if (quote != null && !quote.equals(lastQuote)) {
-            quoteRenderer.setText(quote);
-            lastQuote = quote;
-        } else if (quote == null) {
-            lastQuote = null;
-        }
-
-        // 4b. Quote offscreen (in-buffer mode): render quote text into quoteOverlayFBO so it
-        //     gets baked into the indexed pipeline and is affected by flame and translate.
         if (quoteInBuffer && quote != null) {
-            glClearColor(0f, 0f, 0f, 0f);
-            quoteOverlayFBO.bind();
-            glClear(GL_COLOR_BUFFER_BIT);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             quoteRenderer.doRender(this);
             glDisable(GL_BLEND);
-            quoteOverlayFBO.unbind();
-            glViewport(0, 0, win.width, win.height);
-            glClearColor(0f, 0f, 0f, 1f);
         }
+        waveOverlayFBO.unbind();
+        glViewport(0, 0, win.width, win.height);
+        glClearColor(0f, 0f, 0f, 1f);
 
-        // 5. pongFBO: translate pingTex → pongTex, then bake wave and optional quote/flash.
-        //    waveBaker/quoteBaker read RGBA overlay textures (no feedback loop: pongTex is the FBO).
+        // 5. pongFBO: translate pingTex → pongTex, then bake combined wave+quote overlay and flash.
+        //    waveBaker samples waveOverlay which already contains both waveform and any in-buffer quote.
         pongFBO.bind();
         translateRenderer.doRender(this);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         waveBaker.doRender(this);
-        if (quoteInBuffer && quote != null) {
-            quoteBaker.doRender(this);
-        }
         if (flashPending) {
             textureBaker.doRender(this);
             flashPending = false;
@@ -551,7 +524,6 @@ public class CthughaWindow extends GLWindow {
         if (pingFBO           != null) pingFBO.dispose();
         if (pongFBO           != null) pongFBO.dispose();
         if (waveBaker         != null) waveBaker.dispose();
-        if (quoteBaker        != null) quoteBaker.dispose();
         if (textureBaker      != null) textureBaker.dispose();
         if (flashWhiteTex     != null) flashWhiteTex.dispose();
         if (flashImageTex     != null) flashImageTex.dispose();
@@ -560,7 +532,6 @@ public class CthughaWindow extends GLWindow {
         if (audioWave         != null) audioWave.dispose();
         if (radialWave        != null) radialWave.dispose();
         if (waveOverlayFBO    != null) waveOverlayFBO.dispose();
-        if (quoteOverlayFBO   != null) quoteOverlayFBO.dispose();
         // Textures registered with ResourceManager are disposed by super.dispose()
         if (stdinInjector != null) stdinInjector.close();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
