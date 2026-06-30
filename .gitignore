@@ -1,6 +1,8 @@
 /.gradle/
 /.idea/
-/build/
-/src/dist/
+build/
 /.agents/skills/com-asteroid-duck-opengl-render-core-0-0-1/
-/.claude/worktrees/agent-a6222e9de962378ce/
+/.claude/
+/remote-ui/node_modules/
+/remote-ui/dist/
+/app/src/dist/logs/

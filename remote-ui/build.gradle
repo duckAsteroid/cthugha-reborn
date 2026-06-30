@@ -1,0 +1,24 @@
+plugins {
+    id 'base'
+}
+
+tasks.register('npmInstall', Exec) {
+    description = 'Install npm dependencies'
+    def pkgLock = file('package-lock.json')
+    onlyIf { pkgLock.exists() }
+    inputs.file(pkgLock).optional(true)
+    outputs.dir('node_modules').optional(true)
+    commandLine 'npm', 'ci'
+}
+
+tasks.register('npmBuild', Exec) {
+    description = 'Build React SPA with Vite'
+    dependsOn 'npmInstall'
+    def pkg = file('package.json')
+    onlyIf { pkg.exists() }
+    inputs.dir('src').optional(true)
+    inputs.file(pkg).optional(true)
+    inputs.file('vite.config.ts').optional(true)
+    outputs.dir('dist').optional(true)
+    commandLine 'npm', 'run', 'build'
+}
