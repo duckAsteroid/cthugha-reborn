@@ -55,11 +55,29 @@ export function useSSE(paths: string[]): Map<string, ParamState> {
 
     // 'ping' events are heartbeats — ignore them
 
+    let disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    es.onopen = () => {
+      if (disconnectTimer !== null) {
+        clearTimeout(disconnectTimer);
+        disconnectTimer = null;
+      }
+      window.dispatchEvent(new Event('connection-restored'));
+    };
+
     es.onerror = () => {
-      // EventSource will auto-reconnect; nothing to do here
+      // Wait briefly before declaring connection lost to avoid flashing on transient hiccups
+      if (disconnectTimer === null) {
+        disconnectTimer = setTimeout(() => {
+          window.dispatchEvent(new Event('connection-lost'));
+        }, 3000);
+      }
     };
 
     return () => {
+      if (disconnectTimer !== null) {
+        clearTimeout(disconnectTimer);
+      }
       es.close();
       esRef.current = null;
     };

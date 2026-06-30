@@ -1,12 +1,14 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.params.Node;
+
 import java.util.Random;
 
 
 /**
  * Interface to an object that produces pixel translation tables
  */
-public interface TranslateTableSource {
+public interface TranslateTableSource extends Node {
 
   /**
    * Capture current parameter state, perform any randomised setup, and return a

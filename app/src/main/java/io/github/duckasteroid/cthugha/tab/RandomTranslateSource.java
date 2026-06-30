@@ -1,10 +1,12 @@
 package io.github.duckasteroid.cthugha.tab;
 
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class RandomTranslateSource {
+public class RandomTranslateSource extends AbstractNode {
   private static final List<TranslateTableSource> sources = new ArrayList<>();
 
   private TranslateTableSource selected;
@@ -32,6 +34,11 @@ public class RandomTranslateSource {
     sources.add(new SpiralGalaxyPlughole());
     sources.add(new Twist());
     sources.add(new WaveInterference());
+  }
+
+  public RandomTranslateSource() {
+    super("Translate Source");
+    initChildren(sources);
   }
 
   public PixelMapper generate(int width, int height, boolean newSource, Random rng) {

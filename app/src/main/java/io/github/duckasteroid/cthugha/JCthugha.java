@@ -6,9 +6,9 @@ import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
-import io.github.duckasteroid.cthugha.display.ScreenBuffer;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
+import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import com.asteroid.duck.opengl.util.stats.Stats;
 import com.asteroid.duck.opengl.util.stats.StatsFactory;
@@ -43,8 +43,11 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public SpectrumModel spectrum = new SpectrumModel();
 	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
 	public AnimationSystem animation = new AnimationSystem();
+	public RandomTranslateSource translateSource = new RandomTranslateSource();
 
-	public ScreenBuffer buffer;
+	public PaletteMap paletteMap;
+	public int bufferWidth;
+	public int bufferHeight;
 
 	MapFileReader reader;
 
@@ -52,7 +55,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
 
-	RandomTranslateSource translateSource = new RandomTranslateSource();
+
 
 	private final RandomStringSource stringSource = new RandomStringSource();
 	private volatile String currentQuoteText = null;
@@ -64,14 +67,15 @@ public class JCthugha extends AbstractNode implements Closeable {
 	}
 
 	public void init(Dimension dims, Random rng) throws IOException {
-		buffer = new ScreenBuffer(dims.width, dims.height);
+		bufferWidth = dims.width;
+		bufferHeight = dims.height;
 		translate = new Translate(dims);
 		translate.fill(translateSource.generate(dims.width, dims.height, true, rng), rng);
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
-		buffer.paletteMap = reader.random();
+		paletteMap = reader.random();
 
 		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, 0.05);
 		animation.addBinding("radial rotation", radialWave.transform.rotate, 0.07);
@@ -114,19 +118,19 @@ public class JCthugha extends AbstractNode implements Closeable {
 	}
 
 	public void newTranslation(boolean newMap, Random rng) {
-		translate.fill(translateSource.generate(buffer.width, buffer.height, newMap, rng), rng);
+		translate.fill(translateSource.generate(bufferWidth, bufferHeight, newMap, rng), rng);
 		notify(translateSource.getLastGenerated());
 	}
 
 	public void stepTranslation(int delta, Random rng) {
-		translate.fill(translateSource.step(delta, buffer.width, buffer.height, rng), rng);
+		translate.fill(translateSource.step(delta, bufferWidth, bufferHeight, rng), rng);
 		notify(translateSource.getLastGenerated());
 	}
 
 	public void newPalette() {
 		try {
-			buffer.paletteMap = reader.random();
-			notify(buffer.paletteMap.getName());
+			paletteMap = reader.random();
+			notify(paletteMap.getName());
 		} catch (IOException ioe) {
 			LOG.error("Error loading palette", ioe);
 		}

@@ -27,6 +27,7 @@ import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
@@ -49,7 +50,10 @@ import io.github.duckasteroid.cthugha.remote.RemoteServer;
 import io.github.duckasteroid.cthugha.remote.TokenStore;
 
 import java.awt.Dimension;
+import java.awt.DisplayMode;
 import java.awt.Font;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -63,6 +67,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 
+import com.asteroid.duck.opengl.util.Monitor;
+
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL30.GL_R8;
@@ -72,8 +78,15 @@ import static org.lwjgl.opengl.GL30.GL_RG_INTEGER;
 public class CthughaWindow extends GLWindow {
 
     private static final Logger LOG = LoggerFactory.getLogger(CthughaWindow.class);
+    private static final Config CFG = Config.singleton();
 
     private final JCthugha cthugha;
+
+    // Render buffer dimensions — may differ from the GLFW window size.
+    // Set in init() once getWindow() is available; read from [display] render_width/render_height.
+    private int renderWidth;
+    private int renderHeight;
+    private final boolean startFullscreen;
 
     // Palette LUT (256×1 RGBA)
     private Texture paletteTex;
@@ -153,11 +166,64 @@ public class CthughaWindow extends GLWindow {
     private QrOverlay qrOverlay;
 
     public CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig) {
+        this(stdinEnabled, remoteConfig, resolveDisplaySize());
+    }
+
+    private CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, int[] size) {
         super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
-                "Cthugha Reborn", 1280, 720, null);
+                "Cthugha Reborn",
+                size[0], size[1], null);
         this.cthugha = new JCthugha();
         this.stdinInjector = stdinEnabled ? new StdinKeyInjector(renderActions) : null;
         this.remoteConfig = remoteConfig;
+        this.startFullscreen = CFG.getConfigAs("display", "fullscreen", "false", Boolean::parseBoolean);
+        applyMonitorPosition();
+    }
+
+    /** Parses "1280", "1280px", or "30%" into pixels relative to screenDim. */
+    private static int parseDimension(String value, int screenDim) {
+        String v = value.trim();
+        if (v.endsWith("%")) {
+            double pct = Double.parseDouble(v.substring(0, v.length() - 1));
+            return (int) Math.round(screenDim * pct / 100.0);
+        }
+        if (v.endsWith("px")) {
+            return Integer.parseInt(v.substring(0, v.length() - 2).trim());
+        }
+        return Integer.parseInt(v);
+    }
+
+    /**
+     * Resolves [display] width/height (supporting px/% syntax) against the configured monitor's
+     * dimensions using AWT, so the values are available before GLFW is initialised in super().
+     */
+    private static int[] resolveDisplaySize() {
+        int monIdx = CFG.getConfigAs("display", "monitor", "0", Integer::parseInt);
+        GraphicsDevice[] screens = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+        GraphicsDevice screen = (monIdx >= 0 && monIdx < screens.length) ? screens[monIdx] : screens[0];
+        DisplayMode dm = screen.getDisplayMode();
+        int w = parseDimension(CFG.getConfig("display", "width", "1280"), dm.getWidth());
+        int h = parseDimension(CFG.getConfig("display", "height", "720"), dm.getHeight());
+        return new int[]{w, h};
+    }
+
+    /**
+     * Logs all connected monitors (so the user can pick an index for [display] monitor),
+     * then moves the window to the configured monitor if it is not the primary (index 0).
+     * GLFW is available here because super() has already called glfwInit().
+     */
+    private void applyMonitorPosition() {
+        java.util.List<Monitor> monitors = Monitor.getAll();
+        for (int i = 0; i < monitors.size(); i++) {
+            LOG.info("Monitor {}: {}", i, monitors.get(i));
+        }
+        int monIdx = CFG.getConfigAs("display", "monitor", "0", Integer::parseInt);
+        if (monIdx == 0) return;
+        if (monIdx >= monitors.size()) {
+            LOG.warn("[display] monitor={} not found ({} monitors available)", monIdx, monitors.size());
+            return;
+        }
+        moveToMonitor(monitors.get(monIdx));
     }
 
     @Override
@@ -269,8 +335,11 @@ public class CthughaWindow extends GLWindow {
     @Override
     public void init() throws IOException {
         java.awt.Rectangle win = getWindow();
-        int w = win.width;
-        int h = win.height;
+        // Render buffer defaults to display size; can be set smaller for a retro low-res look.
+        this.renderWidth  = CFG.getConfigAs("display", "render_width",  String.valueOf(win.width),  Integer::parseInt);
+        this.renderHeight = CFG.getConfigAs("display", "render_height", String.valueOf(win.height), Integer::parseInt);
+        int w = renderWidth;
+        int h = renderHeight;
 
         cthugha.init(new Dimension(w, h), getRandom());
         cthugha.animation.init(getClock());
@@ -283,7 +352,7 @@ public class CthughaWindow extends GLWindow {
             wireListeners(cthugha, "", broadcaster, serializer);
             remoteServer.start();
 
-            qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds);
+            qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
             qrOverlay.init(this);
             remoteServer.setOnFirstAuth(() -> qrOverlay.hide());
 
@@ -324,7 +393,7 @@ public class CthughaWindow extends GLWindow {
         paletteTex.setImageFormat(GL_RGBA);
         paletteTex.setDataType(GL_UNSIGNED_BYTE);
         paletteTex.setFilter(Filter.NEAREST);
-        paletteTex.generate(256, 1, fillPaletteBuffer(cthugha.buffer.paletteMap));
+        paletteTex.generate(256, 1, fillPaletteBuffer(cthugha.paletteMap));
         getResourceManager().putTexture("palette", paletteTex);
 
         // FBOs — constructor immediately does GL setup, must be on GL thread
@@ -422,6 +491,10 @@ public class CthughaWindow extends GLWindow {
         radSpecAnalyser.setClearBeforeRender(false);
         audioPipeline.getFreqProc().addSink(radSpecAnalyser);
         radSpecAnalyser.init(this);
+
+        if (startFullscreen) {
+            toggleFullscreen();
+        }
     }
 
     @Override
@@ -437,7 +510,7 @@ public class CthughaWindow extends GLWindow {
             paletteUploadUnit.activate();
             glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE,
-                    fillPaletteBuffer(cthugha.buffer.paletteMap));
+                    fillPaletteBuffer(cthugha.paletteMap));
         }
 
         java.awt.Rectangle win = getWindow();
@@ -455,6 +528,7 @@ public class CthughaWindow extends GLWindow {
         audioPipeline.update();
 
         // 4. Wave offscreen: render enabled waves into shared RGBA overlay texture
+        glViewport(0, 0, renderWidth, renderHeight);
         waveOverlayFBO.bind();
         glClearColor(0f, 0f, 0f, 0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -490,7 +564,6 @@ public class CthughaWindow extends GLWindow {
             glDisable(GL_BLEND);
         }
         waveOverlayFBO.unbind();
-        glViewport(0, 0, win.width, win.height);
         glClearColor(0f, 0f, 0f, 1f);
 
         // 5. pongFBO: translate pingTex → pongTex, bake wave overlay and flash
@@ -505,20 +578,18 @@ public class CthughaWindow extends GLWindow {
         }
         glDisable(GL_BLEND);
         pongFBO.unbind();
-        glViewport(0, 0, win.width, win.height);
 
         // 6. Flame: two-pass Gaussian blur with fade
         flameFBO.bind();
         xBlur.doRender(this);
         flameFBO.unbind();
-        glViewport(0, 0, win.width, win.height);
 
         pingFBO.bind();
         yBlur.doRender(this);
         pingFBO.unbind();
-        glViewport(0, 0, win.width, win.height);
 
-        // 7. Display: pingTex (R8) → RGBA via palette LUT → default FBO
+        // 7. Display: pingTex (R8) → RGBA via palette LUT → default FBO (window viewport)
+        glViewport(0, 0, win.width, win.height);
         paletteRenderer.doRender(this);
 
         // 8. Text overlays — alpha-blend over the palette output (overlay mode only)
@@ -636,8 +707,8 @@ public class CthughaWindow extends GLWindow {
     }
 
     private void rebuildTranslateMap() {
-        int w = cthugha.buffer.width;
-        int h = cthugha.buffer.height;
+        int w = cthugha.bufferWidth;
+        int h = cthugha.bufferHeight;
         ByteBuffer data = cthugha.getTranslateBuffer();
         translateMapUnit.activate();
         translateMapUnit.bind(translateMapTex);

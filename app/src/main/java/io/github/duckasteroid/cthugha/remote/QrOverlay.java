@@ -15,12 +15,18 @@ import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.imageio.ImageIO;
 
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL30.GL_R8;
+import static org.lwjgl.opengl.GL11.GL_RGBA;
 
 /**
  * Renders a QR code as a centered RGBA overlay on the GL output.
@@ -32,6 +38,8 @@ public class QrOverlay implements RenderedItem {
     private static final Logger LOG = LoggerFactory.getLogger(QrOverlay.class);
 
     private final int timeoutSeconds;
+    /** Logo area as a percentage of QR modules (0 = no logo, max 30). */
+    private final int logoPercent;
 
     private final AtomicReference<String> pendingUrl = new AtomicReference<>();
     private volatile boolean visible = false;
@@ -73,13 +81,13 @@ public class QrOverlay implements RenderedItem {
                     discard;
                 }
                 vec2 qrUV = (vTex - lo) / uQrSize;
-                float v = texture(uQr, qrUV).r;
-                fragColor = vec4(vec3(v), 1.0);
+                fragColor = texture(uQr, qrUV);
             }
             """;
 
-    public QrOverlay(int timeoutSeconds) {
+    public QrOverlay(int timeoutSeconds, int logoPercent) {
         this.timeoutSeconds = timeoutSeconds;
+        this.logoPercent = logoPercent;
     }
 
     /** May be called from any thread. Queues URL upload and makes the overlay visible. */
@@ -152,25 +160,67 @@ public class QrOverlay implements RenderedItem {
 
     private void uploadQr(String url) {
         LOG.debug("Generating QR code for: {}", url);
-        QrCode qr = QrCode.encodeText(url, QrCode.Ecc.MEDIUM);
+        // Choose ECC to match logo coverage: HIGH for >25%, QUARTILE for >15%, MEDIUM otherwise
+        QrCode.Ecc ecc = logoPercent > 25 ? QrCode.Ecc.HIGH
+                       : logoPercent > 15 ? QrCode.Ecc.QUARTILE
+                       : QrCode.Ecc.MEDIUM;
+        QrCode qr = QrCode.encodeText(url, ecc);
         int modules = qr.size;
         int quiet = 4;
         int total = modules + 2 * quiet;
 
-        ByteBuffer buf = BufferUtils.createByteBuffer(total * total);
-        for (int i = 0; i < total * total; i++) buf.put((byte) 0xFF);
+        ByteBuffer buf = BufferUtils.createByteBuffer(total * total * 4);
+        for (int i = 0; i < total * total * 4; i++) buf.put((byte) 0xFF);
         buf.rewind();
         for (int y = 0; y < modules; y++) {
             for (int x = 0; x < modules; x++) {
-                buf.put((y + quiet) * total + (x + quiet), qr.getModule(x, y) ? (byte) 0x00 : (byte) 0xFF);
+                byte v = qr.getModule(x, y) ? (byte) 0x00 : (byte) 0xFF;
+                int base = ((y + quiet) * total + (x + quiet)) * 4;
+                buf.put(base,     v);
+                buf.put(base + 1, v);
+                buf.put(base + 2, v);
+                buf.put(base + 3, (byte) 0xFF);
             }
         }
+
+        if (logoPercent <= 0) {
+            buf.rewind();
+        } else {
+        // Blit logo into the centre; size derived from configured area percentage
+        int logoSize = (int) (Math.sqrt(logoPercent / 100.0) * modules);
+        int logoX = quiet + (modules - logoSize) / 2;
+        int logoY = quiet + (modules - logoSize) / 2;
+        try (InputStream is = QrOverlay.class.getResourceAsStream("/logo/cthugha.png")) {
+            if (is != null) {
+                BufferedImage logo = ImageIO.read(is);
+                BufferedImage scaled = new BufferedImage(logoSize, logoSize, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g = scaled.createGraphics();
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g.drawImage(logo, 0, 0, logoSize, logoSize, null);
+                g.dispose();
+                for (int y = 0; y < logoSize; y++) {
+                    for (int x = 0; x < logoSize; x++) {
+                        int argb = scaled.getRGB(x, y);
+                        int base = ((logoY + y) * total + (logoX + x)) * 4;
+                        buf.put(base,     (byte) ((argb >> 16) & 0xFF)); // R
+                        buf.put(base + 1, (byte) ((argb >>  8) & 0xFF)); // G
+                        buf.put(base + 2, (byte) ( argb        & 0xFF)); // B
+                        buf.put(base + 3, (byte) ((argb >> 24) & 0xFF)); // A
+                    }
+                }
+            } else {
+                LOG.warn("QR logo not found at /logo/cthugha.png");
+            }
+        } catch (IOException e) {
+            LOG.warn("Could not load QR logo", e);
+        }
         buf.rewind();
+        } // end showLogo block
 
         if (qrTex != null) qrTex.dispose();
         qrTex = new Texture();
-        qrTex.setInternalFormat(GL_R8);
-        qrTex.setImageFormat(GL_RED);
+        qrTex.setInternalFormat(GL_RGBA);
+        qrTex.setImageFormat(GL_RGBA);
         qrTex.setDataType(GL_UNSIGNED_BYTE);
         qrTex.setFilter(Filter.NEAREST);
         qrTex.generate(total, total, buf);

@@ -58,8 +58,8 @@ public abstract class AbstractNode implements Node {
    *
    * @param children ordered list of child nodes
    */
-  protected void initChildren(List<Node> children) {
-    this.children = children;
+  protected void initChildren(List<? extends Node> children) {
+    this.children = new ArrayList<>(children);
   }
 
   /**
