@@ -3,7 +3,9 @@ package io.github.duckasteroid.cthugha.params;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
@@ -32,6 +34,8 @@ public abstract class AbstractNode implements Node {
   private Optional<Node> parent;
 
   private List<Node> children;
+
+  private final Map<String, String> uiHints = new LinkedHashMap<>();
 
   /**
    * Creates a node whose name is the simple class name and whose children are all
@@ -63,12 +67,12 @@ public abstract class AbstractNode implements Node {
   }
 
   /**
-   * Replaces this node's child list with the given varargs, wrapped in an unmodifiable list.
+   * Replaces this node's child list with the given varargs, wrapped in a modifiable list.
    *
    * @param children child nodes in display order
    */
   protected void initChildren(Node ... children) {
-    this.children = Collections.unmodifiableList(Arrays.asList(children));
+    this.children = new ArrayList<>(Arrays.asList(children));
   }
 
   /**
@@ -98,6 +102,20 @@ public abstract class AbstractNode implements Node {
   @Override
   public NodeType getNodeType() {
     return NodeType.CONTAINER;
+  }
+
+  @Override
+  public Map<String, String> getUiHints() {
+    return Collections.unmodifiableMap(uiHints);
+  }
+
+  /**
+   * Adds a UI hint entry and returns {@code this} for fluent construction.
+   * See {@link UiHint} for standard keys and values.
+   */
+  public AbstractNode withUiHint(String key, String value) {
+    uiHints.put(key, value);
+    return this;
   }
 
   @Override

@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.display.wave;
 
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.TransformParams;
+import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 
@@ -13,5 +14,6 @@ public class RadialSpectrumModel extends AbstractNode {
     public RadialSpectrumModel() {
         super("RadialSpectrum");
         initFields(getClass());
+        withUiHint(UiHint.ICON, "pie-chart");
     }
 }

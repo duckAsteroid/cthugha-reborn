@@ -6,6 +6,7 @@ import { KnobControl } from './controls/KnobControl';
 import { ToggleControl } from './controls/ToggleControl';
 import { EnumControl } from './controls/EnumControl';
 import { CarouselControl } from './controls/CarouselControl';
+import { NodeIcon } from './NodeIcon';
 
 interface ParamLeafProps {
   path: string;
@@ -18,6 +19,7 @@ interface ParamLeafProps {
 export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafProps) {
   const value = liveValue ?? node.value;
   const controlled = liveControlled ?? node.controlled;
+  const iconName = node.uiHints?.['icon'];
 
   const handleChange = async (newValue: number) => {
     try {
@@ -41,7 +43,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
     if (node.type === 'ENUM') {
       const count = Math.max(1, Math.round(node.max) + 1);
       const options = node.options ?? Array.from({ length: count }, (_, i) => ({ label: String(i) }));
-      if (node.uiHint === 'CAROUSEL') {
+      if (node.uiHints?.['control-type'] === 'CAROUSEL') {
         return (
           <CarouselControl
             value={Math.round(value)}
@@ -62,7 +64,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
     }
 
     // DOUBLE, INTEGER, LONG
-    if (node.uiHint === 'KNOB') {
+    if (node.uiHints?.['control-type'] === 'KNOB') {
       return (
         <KnobControl
           value={value}
@@ -88,6 +90,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
   return (
     <div className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-neutral-900/50">
       <div className="flex items-center gap-1.5">
+        {iconName && <NodeIcon name={iconName} className="w-3.5 h-3.5 text-neutral-400 shrink-0" />}
         <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
         {controlled && (
           <Lock className="w-3 h-3 text-neutral-500 shrink-0" aria-label="Controlled by animator" />

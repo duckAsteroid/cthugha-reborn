@@ -49,6 +49,7 @@ public class TransformParams extends AbstractNode {
    */
   public TransformParams(String name) {
     super(name);
+    rotate.withUiHint(UiHint.ICON, "rotate-cw");
     initChildren(perspective, scale, shear, translate, rotate, rotateCenter);
   }
 

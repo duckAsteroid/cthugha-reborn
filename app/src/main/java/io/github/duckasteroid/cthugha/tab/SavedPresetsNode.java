@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.tab;
 
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.UiHint;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class SavedPresetsNode extends AbstractNode {
         super("Presets");
         this.store = store;
         this.generator = generator;
+        withUiHint(UiHint.ICON, "bookmark");
         refresh();
     }
 

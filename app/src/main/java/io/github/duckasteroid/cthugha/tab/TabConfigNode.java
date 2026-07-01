@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.tab;
 
 import io.github.duckasteroid.cthugha.params.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.UiHint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +26,7 @@ public class TabConfigNode extends AbstractNode {
     public TabConfigNode(TabConfig config, TabGenerator generator, SavedPresetsNode presetsNode) {
         super(config.name);
 
-        addChild(new AbstractAction("Load", ctx -> {
+        AbstractAction load = new AbstractAction("Load", ctx -> {
             if (ctx instanceof TabActionContext tctx) {
                 try {
                     TabBuffer buf = tctx.tabStore().load(config, generator, tctx.resolution(), tctx.rng());
@@ -37,9 +38,11 @@ public class TabConfigNode extends AbstractNode {
                     tctx.notify("Load failed: " + config.name);
                 }
             }
-        }));
+        });
+        load.withUiHint(UiHint.ICON, "folder-open");
+        addChild(load);
 
-        addChild(new AbstractAction("Delete", ctx -> {
+        AbstractAction delete = new AbstractAction("Delete", ctx -> {
             if (ctx instanceof TabActionContext tctx) {
                 try {
                     tctx.tabStore().delete(config, generator);
@@ -50,6 +53,8 @@ public class TabConfigNode extends AbstractNode {
                     tctx.notify("Delete failed: " + config.name);
                 }
             }
-        }));
+        });
+        delete.withUiHint(UiHint.ICON, "trash-2");
+        addChild(delete);
     }
 }

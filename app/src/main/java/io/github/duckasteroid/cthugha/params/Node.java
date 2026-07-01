@@ -2,9 +2,11 @@ package io.github.duckasteroid.cthugha.params;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Spliterators;
@@ -46,6 +48,14 @@ public interface Node {
 
   /** Returns the display name of this node. */
   String getName();
+
+  /**
+   * Returns the UI hints map for this node. Keys and well-known values are defined in
+   * {@link UiHint}. The returned map is unmodifiable. Defaults to an empty map.
+   */
+  default Map<String, String> getUiHints() {
+    return Collections.emptyMap();
+  }
 
   /** Returns the parent node, or {@code null} if this is the root. */
   Node getParent();

@@ -3,6 +3,7 @@ package io.github.duckasteroid.cthugha.animation;
 import com.asteroid.duck.opengl.util.timer.Clock;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ public class AnimationSystem extends AbstractNode {
     public AnimationSystem() {
         super("Animation");
         addChild(enabled);
+        withUiHint(UiHint.ICON, "zap");
     }
 
     /**

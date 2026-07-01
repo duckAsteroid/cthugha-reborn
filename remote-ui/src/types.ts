@@ -1,5 +1,4 @@
 export type NodeType = 'CONTAINER' | 'DOUBLE' | 'INTEGER' | 'LONG' | 'BOOLEAN' | 'ENUM' | 'ACTION' | 'STRING';
-export type UiHint = 'SLIDER' | 'KNOB' | 'CAROUSEL';
 
 export interface EnumOption {
   label: string;
@@ -10,6 +9,7 @@ export interface ContainerNode {
   name: string;
   type: 'CONTAINER';
   children: ParamNode[];
+  uiHints?: Record<string, string>;
 }
 
 export interface LeafNode {
@@ -19,19 +19,21 @@ export interface LeafNode {
   min: number;
   max: number;
   controlled: boolean;
-  uiHint: UiHint;
+  uiHints?: Record<string, string>;
   options?: EnumOption[];
 }
 
 export interface ActionNode {
   name: string;
   type: 'ACTION';
+  uiHints?: Record<string, string>;
 }
 
 export interface StringNode {
   name: string;
   type: 'STRING';
   value: string;
+  uiHints?: Record<string, string>;
 }
 
 export type ParamNode = ContainerNode | LeafNode | ActionNode | StringNode;

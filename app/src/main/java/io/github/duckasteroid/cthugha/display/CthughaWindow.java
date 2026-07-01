@@ -44,9 +44,12 @@ import org.slf4j.LoggerFactory;
 import io.github.duckasteroid.cthugha.params.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.Action;
+import io.github.duckasteroid.cthugha.params.ActionContext;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.remote.ParamSerializer;
 import io.github.duckasteroid.cthugha.remote.QrOverlay;
+import io.github.duckasteroid.cthugha.dump.DumpConfig;
 import io.github.duckasteroid.cthugha.remote.RemoteConfig;
 import io.github.duckasteroid.cthugha.remote.RemoteEventBroadcaster;
 import io.github.duckasteroid.cthugha.remote.RemoteServer;
@@ -63,7 +66,9 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
@@ -165,22 +170,24 @@ public class CthughaWindow extends GLWindow {
     private RadialSpectrumAnalyser radSpecAnalyser;
 
     private final RemoteConfig remoteConfig;
+    private final DumpConfig dumpConfig;
     private TokenStore tokenStore;
     private RemoteEventBroadcaster broadcaster;
     private RemoteServer remoteServer;
     private QrOverlay qrOverlay;
 
-    public CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig) {
-        this(stdinEnabled, remoteConfig, resolveDisplaySize());
+    public CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, DumpConfig dumpConfig) {
+        this(stdinEnabled, remoteConfig, dumpConfig, resolveDisplaySize());
     }
 
-    private CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, int[] size) {
+    private CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, DumpConfig dumpConfig, int[] size) {
         super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
                 "Cthugha Reborn",
                 size[0], size[1], null);
         this.cthugha = new JCthugha();
         this.stdinInjector = stdinEnabled ? new StdinKeyInjector(renderActions) : null;
         this.remoteConfig = remoteConfig;
+        this.dumpConfig = dumpConfig;
         this.startFullscreen = CFG.getConfigAs("display", "fullscreen", "false", Boolean::parseBoolean);
         applyMonitorPosition();
     }
@@ -469,6 +476,17 @@ public class CthughaWindow extends GLWindow {
         if (startFullscreen) {
             toggleFullscreen();
         }
+
+        if (dumpConfig.enabled) {
+            System.out.println("Dumping param tree to " + dumpConfig.outputFile.toAbsolutePath() + " in format " + dumpConfig.format);
+            try (Writer out = Files.newBufferedWriter(dumpConfig.outputFile)) {
+                dumpConfig.format.dump(cthugha, getKeyRegistry(), out);
+                LOG.info("Param tree dumped to {}", dumpConfig.outputFile.toAbsolutePath());
+            } catch (IOException e) {
+                LOG.error("Failed to dump param tree", e);
+            }
+            exit();
+        }
     }
 
     @Override
@@ -627,60 +645,73 @@ public class CthughaWindow extends GLWindow {
 
     private void registerDisplayActions() {
         // Display / app actions on the root node
-        cthugha.addChild(new AbstractAction("Screenshot", ctx -> {
-            captureNextFrame();
+        cthugha.addChild(action("Screenshot", "camera", ctx -> {
+            renderActions.enqueue("screenshot", rc -> captureNextFrame());
             cthugha.notify("screenshot saved");
         }));
-        cthugha.addChild(new AbstractAction("Record 5s", ctx -> {
-            startRecording(Duration.ofSeconds(5));
+        cthugha.addChild(action("Record 5s", "video", ctx -> {
+            renderActions.enqueue("startRecording", rc -> startRecording(Duration.ofSeconds(5)));
             cthugha.notify("recording 5s…");
         }));
-        cthugha.addChild(new AbstractAction("Stop Recording", ctx -> {
-            stopRecording();
+        cthugha.addChild(action("Stop Recording", "square", ctx -> {
+            renderActions.enqueue("stopRecording", rc -> stopRecording());
             cthugha.notify("recording stopped");
         }));
-        cthugha.addChild(new AbstractAction("Flash Image", ctx -> flashImage()));
-        cthugha.addChild(new AbstractAction("Flash White", ctx -> {
-            textureBaker.setTexture(flashWhiteTex);
-            flashPending = true;
-        }));
-        cthugha.addChild(new AbstractAction("Show Quote", ctx -> cthugha.showQuote()));
+        cthugha.addChild(action("Flash Image", "image", ctx ->
+            renderActions.enqueue("flashImage", rc -> flashImage())));
+        cthugha.addChild(action("Flash White", "sun", ctx ->
+            renderActions.enqueue("flashWhite", rc -> {
+                textureBaker.setTexture(flashWhiteTex);
+                flashPending = true;
+            })));
+        cthugha.addChild(action("Show Quote", "quote", ctx -> cthugha.showQuote()));
         try {
             cthugha.addChild(new PaletteLibraryNode(cthugha.reader, actionContext, () -> paletteDirty = true));
         } catch (java.io.IOException e) {
             LOG.error("Failed to build palette library node", e);
-            cthugha.addChild(new AbstractAction("New Palette", ctx -> {
+            cthugha.addChild(action("New Palette", "plus-circle", ctx -> {
                 cthugha.newPalette();
                 paletteDirty = true;
             }));
         }
-        cthugha.addChild(new AbstractAction("Toggle Fullscreen", ctx -> toggleFullscreen()));
-        cthugha.addChild(new AbstractAction("Toggle Debug", ctx -> cthugha.toggleDebug()));
-        cthugha.addChild(new AbstractAction("Toggle Notifications", ctx -> cthugha.toggleNotifications()));
-        cthugha.addChild(new AbstractAction("Toggle Quote Mode", ctx -> {
+        cthugha.addChild(action("Toggle Fullscreen", "maximize-2", ctx ->
+            renderActions.enqueue("toggleFullscreen", rc -> toggleFullscreen())));
+        cthugha.addChild(action("Toggle Debug", "bug", ctx -> cthugha.toggleDebug()));
+        cthugha.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
+        cthugha.addChild(action("Toggle Quote Mode", "message-square", ctx -> {
             quoteInBuffer = !quoteInBuffer;
             cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
         }));
-        cthugha.addChild(new AbstractAction("Cycle Audio", ctx ->
+        cthugha.addChild(action("Cycle Audio", "mic", ctx ->
             cthugha.notify("audio: " + audioPipeline.cycleSource().getName())));
 
         // Translation actions on the GeneratorRegistry node
-        cthugha.translateSource.addChild(new AbstractAction("Randomise", ctx -> {
+        cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx -> {
             cthugha.newTranslation(false, ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
         }));
-        cthugha.translateSource.addChild(new AbstractAction("New Source", ctx -> {
+        cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx -> {
             cthugha.newTranslation(true, ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
         }));
-        cthugha.translateSource.addChild(new AbstractAction("Next", ctx -> {
+        cthugha.translateSource.addChild(action("Next", "skip-forward", ctx -> {
             cthugha.stepTranslation(+1, ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
         }));
-        cthugha.translateSource.addChild(new AbstractAction("Previous", ctx -> {
+        cthugha.translateSource.addChild(action("Previous", "skip-back", ctx -> {
             cthugha.stepTranslation(-1, ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
         }));
+    }
+
+    // -------------------------------------------------------------------------
+    // Action factory helper
+    // -------------------------------------------------------------------------
+
+    private static AbstractAction action(String name, String icon, java.util.function.Consumer<ActionContext> body) {
+        AbstractAction a = new AbstractAction(name, body);
+        a.withUiHint(UiHint.ICON, icon);
+        return a;
     }
 
     // -------------------------------------------------------------------------
@@ -772,16 +803,22 @@ public class CthughaWindow extends GLWindow {
     public static void main(String[] args) throws Exception {
         boolean stdinEnabled = Arrays.asList(args).contains("--stdin");
         RemoteConfig remoteConfig = RemoteConfig.parse(args);
-        new CthughaWindow(stdinEnabled, remoteConfig).displayLoop();
+        DumpConfig dumpConfig = DumpConfig.parse(args);
+        new CthughaWindow(stdinEnabled, remoteConfig, dumpConfig).displayLoop();
     }
 
     private String detectBaseUrl() {
         try {
             for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                boolean named = remoteConfig.networkInterface != null
+                        && remoteConfig.networkInterface.equalsIgnoreCase(ni.getName());
+                LOG.debug("Network interface: {} loopback={} up={} virtual={} named={}",
+                        ni.getName(), ni.isLoopback(), ni.isUp(), ni.isVirtual(), named);
+                // When the user names an interface, trust it; otherwise skip loopback/virtual/down.
                 if (ni.isLoopback() || !ni.isUp() || ni.isVirtual()) continue;
-                if (remoteConfig.networkInterface != null
-                        && !remoteConfig.networkInterface.equalsIgnoreCase(ni.getName())) continue;
+                if (remoteConfig.networkInterface != null && !named) continue;
                 for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+                    LOG.debug("  address: {} ({})", addr.getHostAddress(), addr.getClass().getSimpleName());
                     if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
                         return "http://" + addr.getHostAddress() + ":" + remoteConfig.port + "/";
                     }
@@ -790,6 +827,8 @@ public class CthughaWindow extends GLWindow {
         } catch (SocketException e) {
             LOG.warn("Could not detect local IP", e);
         }
+        LOG.warn("No suitable network interface found (configured: {}), falling back to localhost",
+                remoteConfig.networkInterface);
         return "http://localhost:" + remoteConfig.port + "/";
     }
 

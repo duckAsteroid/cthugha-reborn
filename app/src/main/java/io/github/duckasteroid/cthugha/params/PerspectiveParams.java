@@ -23,5 +23,6 @@ public class PerspectiveParams extends AbstractNode {
     public PerspectiveParams() {
         super("Perspective");
         initFields(getClass());
+        withUiHint(UiHint.ICON, "eye");
     }
 }

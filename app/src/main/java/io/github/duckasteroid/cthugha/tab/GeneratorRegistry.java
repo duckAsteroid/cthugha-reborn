@@ -3,6 +3,7 @@ package io.github.duckasteroid.cthugha.tab;
 import io.github.duckasteroid.cthugha.params.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.StringParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ public class GeneratorRegistry extends AbstractNode {
      */
     public GeneratorRegistry(TabStore tabStore) {
         super("Translate Source");
+        withUiHint(UiHint.ICON, "layers");
         generators = StreamSupport
                 .stream(ServiceLoader.load(TabGenerator.class).spliterator(), false)
                 .sorted(Comparator.comparing(g -> g.getClass().getSimpleName()))
@@ -64,7 +66,7 @@ public class GeneratorRegistry extends AbstractNode {
     }
 
     private AbstractAction buildSaveAction(TabStore tabStore) {
-        return new AbstractAction("Save", ctx -> {
+        AbstractAction save = new AbstractAction("Save", ctx -> {
             if (ctx instanceof TabActionContext tctx) {
                 TabGenerator sel = tctx.registry().getSelected();
                 if (sel == null) { tctx.notify("no translation active"); return; }
@@ -87,6 +89,8 @@ public class GeneratorRegistry extends AbstractNode {
                 }
             }
         });
+        save.withUiHint(UiHint.ICON, "save");
+        return save;
     }
 
     public TabMapping generate(int width, int height, boolean newSource, Random rng) {

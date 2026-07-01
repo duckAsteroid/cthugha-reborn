@@ -5,6 +5,7 @@ import type { ActionNode, ContainerNode, LeafNode, StringNode } from '../types';
 import { ParamLeaf } from './ParamLeaf';
 import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
+import { NodeIcon } from './NodeIcon';
 import type { ParamState } from '../useSSE';
 
 interface ParamContainerProps {
@@ -16,6 +17,7 @@ interface ParamContainerProps {
 
 export function ParamContainer({ node, path, sseState, defaultOpen = false }: ParamContainerProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const iconName = node.uiHints?.['icon'];
 
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen}>
@@ -24,6 +26,9 @@ export function ParamContainer({ node, path, sseState, defaultOpen = false }: Pa
           <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
         ) : (
           <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" />
+        )}
+        {iconName && (
+          <NodeIcon name={iconName} className="w-4 h-4 text-neutral-400 shrink-0" />
         )}
         <span className="text-sm font-semibold text-neutral-200 uppercase tracking-wide">
           {node.name}

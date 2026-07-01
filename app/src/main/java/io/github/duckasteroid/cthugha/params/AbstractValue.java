@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AbstractValue extends AbstractNode {
 
   private final AtomicBoolean controlled = new AtomicBoolean(false);
-  private UiHint uiHint = UiHint.SLIDER;
   private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
 
   /**
@@ -39,6 +38,7 @@ public abstract class AbstractValue extends AbstractNode {
    */
   public AbstractValue(String description) {
     super(description);
+    withUiHint(UiHint.CONTROL_TYPE, UiHint.SLIDER);
   }
 
   /**
@@ -79,17 +79,6 @@ public abstract class AbstractValue extends AbstractNode {
   public void setControlled(boolean controlled) {
     this.controlled.set(controlled);
     fireChangeListeners();
-  }
-
-  /** Returns the UI widget hint for the remote-control interface. */
-  public UiHint getUiHint() {
-    return uiHint;
-  }
-
-  /** Sets the UI widget hint. Returns {@code this} for fluent construction. */
-  public AbstractValue withUiHint(UiHint hint) {
-    this.uiHint = hint;
-    return this;
   }
 
   /** Registers a listener to be called whenever this parameter's value or controlled state changes. */

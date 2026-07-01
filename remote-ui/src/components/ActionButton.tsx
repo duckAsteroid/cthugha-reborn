@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Play, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { ActionNode } from '../types';
 import { executeAction } from '../api';
+import { NodeIcon } from './NodeIcon';
 
 interface ActionButtonProps {
   path: string;
@@ -10,6 +11,7 @@ interface ActionButtonProps {
 
 export function ActionButton({ path, node }: ActionButtonProps) {
   const [busy, setBusy] = useState(false);
+  const iconName = node.uiHints?.['icon'];
 
   const handleClick = async () => {
     if (busy) return;
@@ -32,9 +34,9 @@ export function ActionButton({ path, node }: ActionButtonProps) {
       >
         {busy ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <Play className="w-3.5 h-3.5" />
-        )}
+        ) : iconName ? (
+          <NodeIcon name={iconName} className="w-3.5 h-3.5" />
+        ) : null}
         {node.name}
       </button>
     </div>

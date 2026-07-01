@@ -19,13 +19,14 @@ public class PaletteLibraryNode extends AbstractNode {
 
     public PaletteLibraryNode(MapFileReader reader, PaletteActionContext ctx, Runnable afterLoad) throws IOException {
         super("Palette");
+        withUiHint(UiHint.ICON, "palette");
 
         List<Path> files = reader.paletteFiles().stream().sorted().collect(Collectors.toList());
         List<String> names = files.stream().map(PaletteLibraryNode::displayName).collect(Collectors.toList());
         Random rng = new Random();
 
         EnumParameter<String> selector = new EnumParameter<>("Map", names);
-        selector.withUiHint(UiHint.CAROUSEL);
+        selector.withUiHint(UiHint.CONTROL_TYPE, UiHint.CAROUSEL);
         selector.withPreviewUrls(i -> "/api/v1/maps/preview/" + names.get(i));
 
         // Sync the initial selection to whatever palette is already active
@@ -50,10 +51,16 @@ public class PaletteLibraryNode extends AbstractNode {
             }
         });
 
+        AbstractAction random   = new AbstractAction("Random",   c -> selector.setValue(rng.nextInt(files.size())));
+        AbstractAction next     = new AbstractAction("Next",     c -> selector.setValue(Math.floorMod(selector.getValue().intValue() + 1, files.size())));
+        AbstractAction previous = new AbstractAction("Previous", c -> selector.setValue(Math.floorMod(selector.getValue().intValue() - 1, files.size())));
+        random.withUiHint(UiHint.ICON, "shuffle");
+        next.withUiHint(UiHint.ICON, "skip-forward");
+        previous.withUiHint(UiHint.ICON, "skip-back");
         addChild(selector);
-        addChild(new AbstractAction("Random",   c -> selector.setValue(rng.nextInt(files.size()))));
-        addChild(new AbstractAction("Next",     c -> selector.setValue(Math.floorMod(selector.getValue().intValue() + 1, files.size()))));
-        addChild(new AbstractAction("Previous", c -> selector.setValue(Math.floorMod(selector.getValue().intValue() - 1, files.size()))));
+        addChild(random);
+        addChild(next);
+        addChild(previous);
     }
 
     private static String displayName(Path path) {

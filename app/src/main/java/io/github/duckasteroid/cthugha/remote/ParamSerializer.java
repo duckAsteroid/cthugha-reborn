@@ -12,6 +12,7 @@ import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ParamSerializer {
@@ -27,6 +28,13 @@ public class ParamSerializer {
         obj.put("name", node.getName());
         obj.put("type", node.getNodeType().name());
 
+        Map<String, String> hints = node.getUiHints();
+        if (!hints.isEmpty()) {
+            ObjectNode hintsNode = mapper.createObjectNode();
+            hints.forEach(hintsNode::put);
+            obj.set("uiHints", hintsNode);
+        }
+
         if (node instanceof Action) {
             // leaf — no children, no value; type=ACTION is sufficient for the client
         } else if (node instanceof StringValue sv) {
@@ -36,7 +44,6 @@ public class ParamSerializer {
             obj.put("min", value.getMin().doubleValue());
             obj.put("max", value.getMax().doubleValue());
             obj.put("controlled", value.isControlled());
-            obj.put("uiHint", value.getUiHint().name());
             if (value instanceof EnumParameter<?> ep) {
                 ArrayNode options = mapper.createArrayNode();
                 List<String> labels = ep.getOptions();
