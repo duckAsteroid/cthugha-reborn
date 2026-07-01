@@ -92,6 +92,7 @@ public class QrOverlay implements RenderedItem {
 
     /** May be called from any thread. Queues URL upload and makes the overlay visible. */
     public void show(String url) {
+        System.out.println("QR: " + url);
         pendingUrl.set(url);
         showTime = System.currentTimeMillis();
         visible = true;

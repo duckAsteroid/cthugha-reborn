@@ -45,8 +45,12 @@ import io.github.duckasteroid.cthugha.params.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.Action;
 import io.github.duckasteroid.cthugha.params.ActionContext;
+import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.remote.ParamSerializer;
 import io.github.duckasteroid.cthugha.remote.QrOverlay;
 import io.github.duckasteroid.cthugha.dump.DumpConfig;
@@ -119,8 +123,13 @@ public class CthughaWindow extends GLWindow {
     private BlurTextureRenderer yBlur;
     private Texture flameTex;
     private FrameBuffer flameFBO;
-    private volatile float fadeMultiplier = 0.99f;
     private static final int DEFAULT_KERNEL_SIZE = 5;
+
+    // Blur params — exposed in the remote UI; change listeners drive xBlur/yBlur
+    private final BooleanParameter blurEnabled = new BooleanParameter("Enabled", true);
+    private final IntegerParameter blurKernelSize = new IntegerParameter(
+            "Kernel Size", BlurTextureRenderer.MIN_KERNEL_SIZE, BlurTextureRenderer.MAX_KERNEL_SIZE, DEFAULT_KERNEL_SIZE);
+    private final DoubleParameter blurFade = new DoubleParameter("Softening", 0.0, 1.0, 0.99);
 
     // Pass 4 (default FBO): palette-convert pingTex to RGBA for display
     private PaletteRenderer paletteRenderer;
@@ -256,37 +265,32 @@ public class CthughaWindow extends GLWindow {
         // Kept hardcoded: blur/fade tuning, quit, and remote token rotation (not action-node ops).
 
         kr.registerKeyAction(GLFW_KEY_COMMA, GLFW_MOD_SHIFT, () -> {
-            if (xBlur.isBlur() && xBlur.getKernelSize() <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
-                xBlur.setBlur(false);
-                yBlur.setBlur(false);
+            if (blurEnabled.value && blurKernelSize.value <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
+                blurEnabled.setValue(0);
                 cthugha.notify("blur: OFF");
-            } else if (xBlur.isBlur()) {
-                xBlur.decreaseKernelSize();
-                yBlur.setKernelSize(xBlur.getKernelSize());
-                cthugha.notify("blur kernel: " + xBlur.getKernelSize());
+            } else if (blurEnabled.value) {
+                blurKernelSize.setValue(blurKernelSize.value - 2);
+                cthugha.notify("blur kernel: " + blurKernelSize.value);
             }
         }, "Decrease blur kernel size (OFF at minimum)");
         kr.registerKeyAction(GLFW_KEY_PERIOD, GLFW_MOD_SHIFT, () -> {
-            if (!xBlur.isBlur()) {
-                xBlur.setBlur(true);
-                yBlur.setBlur(true);
-                xBlur.setKernelSize(BlurTextureRenderer.MIN_KERNEL_SIZE);
-                yBlur.setKernelSize(BlurTextureRenderer.MIN_KERNEL_SIZE);
-                cthugha.notify("blur kernel: " + xBlur.getKernelSize());
+            if (!blurEnabled.value) {
+                blurEnabled.setValue(1);
+                blurKernelSize.setValue(BlurTextureRenderer.MIN_KERNEL_SIZE);
+                cthugha.notify("blur kernel: " + blurKernelSize.value);
             } else {
-                xBlur.increaseKernelSize();
-                yBlur.setKernelSize(xBlur.getKernelSize());
-                cthugha.notify("blur kernel: " + xBlur.getKernelSize());
+                blurKernelSize.setValue(blurKernelSize.value + 2);
+                cthugha.notify("blur kernel: " + blurKernelSize.value);
             }
         }, "Increase blur kernel size (ON from OFF)");
 
         kr.registerKeyAction(GLFW_KEY_COMMA, 0, () -> {
-            fadeMultiplier = Math.max(0.0f, fadeMultiplier - 0.005f);
-            cthugha.notify(String.format("fade: %.3f", fadeMultiplier));
+            blurFade.setValue(Math.max(0.0, blurFade.value - 0.005));
+            cthugha.notify(String.format("fade: %.3f", blurFade.value));
         }, "Decrease fade (faster decay)");
         kr.registerKeyAction(GLFW_KEY_PERIOD, 0, () -> {
-            fadeMultiplier = Math.min(1.0f, fadeMultiplier + 0.005f);
-            cthugha.notify(String.format("fade: %.3f", fadeMultiplier));
+            blurFade.setValue(Math.min(1.0, blurFade.value + 0.005));
+            cthugha.notify(String.format("fade: %.3f", blurFade.value));
         }, "Increase fade (slower decay)");
 
         kr.registerKeyAction(GLFW_KEY_ESCAPE, () -> {
@@ -400,8 +404,17 @@ public class CthughaWindow extends GLWindow {
         yBlur = new BlurTextureRenderer("flameTex");
         yBlur.setXAxis(false);
         yBlur.setKernelSize(DEFAULT_KERNEL_SIZE);
-        yBlur.addVariable(ShaderVariable.floatVariable("multiplier", () -> fadeMultiplier));
+        yBlur.addVariable(ShaderVariable.floatVariable("multiplier", () -> (float) blurFade.value));
         yBlur.init(this);
+
+        blurEnabled.addChangeListener(() -> {
+            xBlur.setBlur(blurEnabled.value);
+            yBlur.setBlur(blurEnabled.value);
+        });
+        blurKernelSize.addChangeListener(() -> {
+            xBlur.setKernelSize(blurKernelSize.value);
+            yBlur.setKernelSize(blurKernelSize.value);
+        });
 
         // Pass 4: palette-convert pingTex → RGBA for display (default FBO)
         paletteRenderer = new PaletteRenderer("pingTex");
@@ -684,6 +697,13 @@ public class CthughaWindow extends GLWindow {
         }));
         cthugha.addChild(action("Cycle Audio", "mic", ctx ->
             cthugha.notify("audio: " + audioPipeline.cycleSource().getName())));
+
+        ContainerNode blurNode = new ContainerNode("Blur");
+        blurNode.withUiHint(UiHint.ICON, "wind");
+        blurNode.addChild(blurEnabled);
+        blurNode.addChild(blurKernelSize);
+        blurNode.addChild(blurFade);
+        cthugha.addChild(blurNode);
 
         // Translation actions on the GeneratorRegistry node
         cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx -> {

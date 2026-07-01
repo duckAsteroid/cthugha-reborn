@@ -16,6 +16,8 @@ import io.github.duckasteroid.cthugha.params.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -216,7 +218,7 @@ public class RemoteServer {
     }
 
     private String extractNodePath(Context ctx) {
-        String path = ctx.path();
+        String path = URLDecoder.decode(ctx.path(), StandardCharsets.UTF_8);
         if (path.startsWith(API_PARAMS_PREFIX)) {
             return path.substring(API_PARAMS_PREFIX.length());
         }
