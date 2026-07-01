@@ -33,6 +33,6 @@ public class SavedPresetsNode extends AbstractNode {
         List<Node> current = getChildren().collect(Collectors.toList());
         current.forEach(this::removeChild);
         store.listFor(generator)
-             .forEach(config -> addChild(new TabConfigNode(config, generator, this)));
+             .forEach(config -> addChild(new TabConfigNode(config, generator, this::refresh)));
     }
 }

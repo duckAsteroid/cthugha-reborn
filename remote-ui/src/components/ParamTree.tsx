@@ -13,27 +13,29 @@ export function ParamTree() {
   // Subscribe to all params (empty path = root subscription)
   const sseState = useSSE(['']);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchParams = () => {
     setLoading(true);
     setError(null);
     getParams()
       .then((data) => {
-        if (!cancelled) {
-          setRoot(data);
-          setLoading(false);
-        }
+        setRoot(data);
+        setLoading(false);
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load parameters');
-          setLoading(false);
-        }
+        setError(err instanceof Error ? err.message : 'Failed to load parameters');
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  };
+
+  useEffect(() => {
+    fetchParams();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = () => fetchParams();
+    window.addEventListener('tree-changed', handler);
+    return () => window.removeEventListener('tree-changed', handler);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

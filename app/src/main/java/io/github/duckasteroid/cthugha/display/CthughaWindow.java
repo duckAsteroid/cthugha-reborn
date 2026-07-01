@@ -329,6 +329,16 @@ public class CthughaWindow extends GLWindow {
         registerDisplayActions();
         cthugha.animation.init(getClock());
 
+        // Wire translation-layer callbacks before starting the remote server so SSE events work.
+        cthugha.translateSource.setOnRegenerateNeeded(() -> {
+            cthugha.regenerateTranslation();
+            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+        });
+        cthugha.translateSource.setOnNewGeneratorSelected(() -> {
+            cthugha.newTranslation(cthugha.rng);
+            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+        });
+
         if (remoteConfig != null && remoteConfig.enabled) {
             tokenStore = new TokenStore();
             broadcaster = new RemoteEventBroadcaster();
@@ -336,6 +346,9 @@ public class CthughaWindow extends GLWindow {
             remoteServer = new RemoteServer(cthugha, tokenStore, broadcaster, remoteConfig, actionContext);
             wireListeners(cthugha, "", broadcaster, serializer);
             remoteServer.start();
+
+            cthugha.translateSource.setOnTreeChanged(
+                    () -> broadcaster.broadcastAll("treeChanged", "{}"));
 
             qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
             qrOverlay.init(this);
@@ -707,21 +720,15 @@ public class CthughaWindow extends GLWindow {
 
         // Translation actions on the GeneratorRegistry node
         cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx -> {
-            cthugha.newTranslation(false, ctx.rng());
+            cthugha.newTranslation(ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
         }));
-        cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx -> {
-            cthugha.newTranslation(true, ctx.rng());
-            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
-        }));
-        cthugha.translateSource.addChild(action("Next", "skip-forward", ctx -> {
-            cthugha.stepTranslation(+1, ctx.rng());
-            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
-        }));
-        cthugha.translateSource.addChild(action("Previous", "skip-back", ctx -> {
-            cthugha.stepTranslation(-1, ctx.rng());
-            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
-        }));
+        cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx ->
+            cthugha.translateSource.selectRandom(ctx.rng())));
+        cthugha.translateSource.addChild(action("Next", "skip-forward", ctx ->
+            cthugha.translateSource.stepSelection(+1)));
+        cthugha.translateSource.addChild(action("Previous", "skip-back", ctx ->
+            cthugha.translateSource.stepSelection(-1)));
     }
 
     // -------------------------------------------------------------------------

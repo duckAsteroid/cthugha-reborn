@@ -23,17 +23,20 @@ public class TabConfigNode extends AbstractNode {
 
     private static final Logger LOG = LoggerFactory.getLogger(TabConfigNode.class);
 
-    public TabConfigNode(TabConfig config, TabGenerator generator, SavedPresetsNode presetsNode) {
+    public TabConfigNode(TabConfig config, TabGenerator generator, Runnable onDeleted) {
         super(config.name);
 
         AbstractAction load = new AbstractAction("Load", ctx -> {
             if (ctx instanceof TabActionContext tctx) {
                 try {
+                    tctx.registry().beginBatch();
                     TabBuffer buf = tctx.tabStore().load(config, generator, tctx.resolution(), tctx.rng());
-                    tctx.loadTabBuffer(buf);
+                    tctx.registry().endBatch();
                     tctx.registry().selectBySimpleName(generator.getClass().getSimpleName());
+                    tctx.loadTabBuffer(buf);
                     tctx.notify("Loaded: " + config.name);
                 } catch (IOException e) {
+                    tctx.registry().endBatch();
                     LOG.error("Failed to load preset '{}'", config.name, e);
                     tctx.notify("Load failed: " + config.name);
                 }
@@ -46,7 +49,7 @@ public class TabConfigNode extends AbstractNode {
             if (ctx instanceof TabActionContext tctx) {
                 try {
                     tctx.tabStore().delete(config, generator);
-                    presetsNode.refresh();
+                    onDeleted.run();
                     tctx.notify("Deleted: " + config.name);
                 } catch (IOException e) {
                     LOG.error("Failed to delete preset '{}'", config.name, e);

@@ -53,6 +53,10 @@ export function useSSE(paths: string[]): Map<string, ParamState> {
       window.dispatchEvent(new Event('session-expired'));
     });
 
+    es.addEventListener('treeChanged', () => {
+      window.dispatchEvent(new Event('tree-changed'));
+    });
+
     // 'ping' events are heartbeats — ignore them
 
     let disconnectTimer: ReturnType<typeof setTimeout> | null = null;

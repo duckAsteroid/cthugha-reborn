@@ -54,6 +54,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public MapFileReader reader;
 
 	TabBuffer translate;
+	public Random rng;
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
 
@@ -69,10 +70,11 @@ public class JCthugha extends AbstractNode implements Closeable {
 	}
 
 	public void init(Dimension dims, Random rng) throws IOException {
+		this.rng = rng;
 		bufferWidth = dims.width;
 		bufferHeight = dims.height;
 		translate = new TabBuffer(dims);
-		translate.fill(translateSource.generate(dims.width, dims.height, true, rng), rng);
+		translate.fill(translateSource.generate(dims.width, dims.height, rng), rng);
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
@@ -128,13 +130,15 @@ public class JCthugha extends AbstractNode implements Closeable {
 		this.translate = t;
 	}
 
-	public void newTranslation(boolean newMap, Random rng) {
-		translate.fill(translateSource.generate(bufferWidth, bufferHeight, newMap, rng), rng);
+	/** Randomises the current generator's params and regenerates the translation map. */
+	public void newTranslation(Random rng) {
+		translate.fill(translateSource.generate(bufferWidth, bufferHeight, rng), rng);
 		notify(translateSource.getLastGenerated());
 	}
 
-	public void stepTranslation(int delta, Random rng) {
-		translate.fill(translateSource.step(delta, bufferWidth, bufferHeight, rng), rng);
+	/** Regenerates the translation map using the current generator's current param values. */
+	public void regenerateTranslation() {
+		translate.fill(translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
 		notify(translateSource.getLastGenerated());
 	}
 
