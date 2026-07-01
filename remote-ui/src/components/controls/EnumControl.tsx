@@ -1,9 +1,10 @@
 import * as Select from '@radix-ui/react-select';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import type { EnumOption } from '../../types';
 
 interface EnumControlProps {
   value: number;
-  options: string[];
+  options: EnumOption[];
   disabled: boolean;
   onChange: (v: number) => void;
 }
@@ -35,13 +36,13 @@ export function EnumControl({ value, options, disabled, onChange }: EnumControlP
               <ChevronUp className="w-4 h-4" />
             </Select.ScrollUpButton>
             <Select.Viewport className="p-1">
-              {options.map((label, idx) => (
+              {options.map((opt, idx) => (
                 <Select.Item
                   key={idx}
                   value={String(idx)}
                   className="flex items-center px-3 py-1.5 text-sm text-neutral-200 rounded cursor-pointer hover:bg-indigo-600 focus:bg-indigo-600 focus:outline-none data-[state=checked]:text-indigo-300"
                 >
-                  <Select.ItemText>{label}</Select.ItemText>
+                  <Select.ItemText>{opt.label}</Select.ItemText>
                 </Select.Item>
               ))}
             </Select.Viewport>

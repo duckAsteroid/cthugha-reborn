@@ -15,8 +15,9 @@ import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.Constants;
 import io.github.duckasteroid.cthugha.strings.Quote;
 import io.github.duckasteroid.cthugha.strings.RandomStringSource;
-import io.github.duckasteroid.cthugha.tab.RandomTranslateSource;
-import io.github.duckasteroid.cthugha.tab.Translate;
+import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
+import io.github.duckasteroid.cthugha.tab.TabBuffer;
+import io.github.duckasteroid.cthugha.tab.TabStore;
 import java.awt.Dimension;
 import java.io.Closeable;
 import java.io.IOException;
@@ -43,15 +44,16 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public SpectrumModel spectrum = new SpectrumModel();
 	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
 	public AnimationSystem animation = new AnimationSystem();
-	public RandomTranslateSource translateSource = new RandomTranslateSource();
+	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
+	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
 
 	public PaletteMap paletteMap;
 	public int bufferWidth;
 	public int bufferHeight;
 
-	MapFileReader reader;
+	public MapFileReader reader;
 
-	Translate translate;
+	TabBuffer translate;
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
 
@@ -69,7 +71,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 	public void init(Dimension dims, Random rng) throws IOException {
 		bufferWidth = dims.width;
 		bufferHeight = dims.height;
-		translate = new Translate(dims);
+		translate = new TabBuffer(dims);
 		translate.fill(translateSource.generate(dims.width, dims.height, true, rng), rng);
 		Path currentWorkingDir = Paths.get("").toAbsolutePath();
 		System.out.println(currentWorkingDir.normalize().toString());
@@ -117,6 +119,15 @@ public class JCthugha extends AbstractNode implements Closeable {
 		return translate.getBuffer();
 	}
 
+	public TabBuffer getTabBuffer() {
+		return translate;
+	}
+
+	/** Replaces the active translation buffer (e.g. when loading a saved preset). */
+	public void loadTabBuffer(TabBuffer t) {
+		this.translate = t;
+	}
+
 	public void newTranslation(boolean newMap, Random rng) {
 		translate.fill(translateSource.generate(bufferWidth, bufferHeight, newMap, rng), rng);
 		notify(translateSource.getLastGenerated());
@@ -127,10 +138,14 @@ public class JCthugha extends AbstractNode implements Closeable {
 		notify(translateSource.getLastGenerated());
 	}
 
+	public void loadPalette(PaletteMap map) {
+		paletteMap = map;
+		notify(map.getName());
+	}
+
 	public void newPalette() {
 		try {
-			paletteMap = reader.random();
-			notify(paletteMap.getName());
+			loadPalette(reader.random());
 		} catch (IOException ioe) {
 			LOG.error("Error loading palette", ioe);
 		}

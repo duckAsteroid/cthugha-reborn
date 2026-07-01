@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { ContainerNode, LeafNode } from '../types';
+import type { ActionNode, ContainerNode, LeafNode, StringNode } from '../types';
 import { ParamLeaf } from './ParamLeaf';
+import { ActionButton } from './ActionButton';
+import { StringLeaf } from './StringLeaf';
 import type { ParamState } from '../useSSE';
 
 interface ParamContainerProps {
@@ -39,6 +41,26 @@ export function ParamContainer({ node, path, sseState, defaultOpen = false }: Pa
                 node={child}
                 path={childPath}
                 sseState={sseState}
+              />
+            );
+          }
+
+          if (child.type === 'ACTION') {
+            return (
+              <ActionButton
+                key={child.name}
+                path={childPath}
+                node={child as ActionNode}
+              />
+            );
+          }
+
+          if (child.type === 'STRING') {
+            return (
+              <StringLeaf
+                key={child.name}
+                path={childPath}
+                node={child as StringNode}
               />
             );
           }

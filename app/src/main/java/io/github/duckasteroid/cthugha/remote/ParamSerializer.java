@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.Action;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.StringValue;
+import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,12 +27,28 @@ public class ParamSerializer {
         obj.put("name", node.getName());
         obj.put("type", node.getNodeType().name());
 
-        if (node instanceof AbstractValue value) {
+        if (node instanceof Action) {
+            // leaf — no children, no value; type=ACTION is sufficient for the client
+        } else if (node instanceof StringValue sv) {
+            obj.put("value", sv.getValue());
+        } else if (node instanceof AbstractValue value) {
             obj.put("value", value.getValue().doubleValue());
             obj.put("min", value.getMin().doubleValue());
             obj.put("max", value.getMax().doubleValue());
             obj.put("controlled", value.isControlled());
             obj.put("uiHint", value.getUiHint().name());
+            if (value instanceof EnumParameter<?> ep) {
+                ArrayNode options = mapper.createArrayNode();
+                List<String> labels = ep.getOptions();
+                for (int i = 0; i < labels.size(); i++) {
+                    ObjectNode opt = mapper.createObjectNode();
+                    opt.put("label", labels.get(i));
+                    String preview = ep.getPreviewUrl(i);
+                    if (preview != null) opt.put("preview", preview);
+                    options.add(opt);
+                }
+                obj.set("options", options);
+            }
         } else {
             ArrayNode children = mapper.createArrayNode();
             node.getChildren().forEach(child -> children.add(serialize(child)));

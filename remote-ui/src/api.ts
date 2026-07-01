@@ -55,6 +55,19 @@ export async function randomise(path: string): Promise<ParamNode> {
   });
 }
 
+export async function patchStringParam(path: string, value: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/params/${path}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export async function executeAction(path: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/params/${path}/execute`, {
+    method: 'POST',
+  });
+}
+
 export async function getInfo(): Promise<ServerInfo> {
   // /api/v1/info does not require auth
   const response = await fetch(`${BASE_URL}/api/v1/info`);

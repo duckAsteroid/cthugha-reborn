@@ -5,5 +5,7 @@ public enum UiHint {
     /** Horizontal slider with numeric readout. Default for most numeric params. */
     SLIDER,
     /** Rotary knob with numeric readout. Suitable for amplitude, frequency, pan, etc. */
-    KNOB
+    KNOB,
+    /** Carousel strip with prev/next arrows and optional image preview per option. */
+    CAROUSEL
 }

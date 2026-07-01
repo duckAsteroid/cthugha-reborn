@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class EnumParameter<T> extends ObjectParameter<T> {
 
   private final List<T> values;
+  private Function<Integer, String> previewUrlProvider = null;
 
   /**
    * @param description display name
@@ -52,6 +54,21 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   @Override
   public NodeType getNodeType() {
     return NodeType.ENUM;
+  }
+
+  public EnumParameter<T> withPreviewUrls(Function<Integer, String> provider) {
+    this.previewUrlProvider = provider;
+    return this;
+  }
+
+  /** Returns the preview URL for option {@code index}, or {@code null} if none was set. */
+  public String getPreviewUrl(int index) {
+    return previewUrlProvider != null ? previewUrlProvider.apply(index) : null;
+  }
+
+  /** Returns the string labels for all options, in order. */
+  public List<String> getOptions() {
+    return values.stream().map(Object::toString).collect(Collectors.toList());
   }
 
   /** Returns the currently selected element. */

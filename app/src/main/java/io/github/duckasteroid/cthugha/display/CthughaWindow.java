@@ -33,6 +33,7 @@ import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
+import io.github.duckasteroid.cthugha.map.PaletteLibraryNode;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -40,7 +41,9 @@ import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.github.duckasteroid.cthugha.params.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.Action;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.remote.ParamSerializer;
 import io.github.duckasteroid.cthugha.remote.QrOverlay;
@@ -143,6 +146,8 @@ public class CthughaWindow extends GLWindow {
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final StdinKeyInjector stdinInjector;
 
+    private CthughaActionContext actionContext;
+
     // RGBA offscreen texture: all wave renderers draw here
     private Texture waveOverlayTex;
     private FrameBuffer waveOverlayFBO;
@@ -240,41 +245,8 @@ public class CthughaWindow extends GLWindow {
     public void registerKeys() {
         var kr = getKeyRegistry();
 
-        kr.registerKeyAction(KeyCombination.simple('D'), cthugha::toggleDebug, "Toggle debug");
-        kr.registerKeyAction(KeyCombination.simple('F'), this::toggleFullscreen, "Toggle fullscreen");
-        kr.registerKeyAction(KeyCombination.simple('I'), this::flashImage, "Flash a random image");
-        kr.registerKeyAction(KeyCombination.simple('N'), cthugha::toggleNotifications, "Toggle notifications");
-        kr.registerKeyAction(KeyCombination.simple('P'), () -> { cthugha.newPalette(); paletteDirty = true; }, "Change palette");
-        kr.registerKeyAction(KeyCombination.simple('Q'), cthugha::showQuote, "Show a quote on screen");
-        kr.registerKeyAction(KeyCombination.simple('B'), () -> {
-            quoteInBuffer = !quoteInBuffer;
-            cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
-        }, "Toggle quote render mode (overlay vs. in-buffer)");
-        kr.registerKeyAction(KeyCombination.simple('T'), () -> {
-            cthugha.newTranslation(false, getRandom());
-            rebuildTranslateMap();
-        }, "Randomise translation");
-        kr.registerKeyAction(KeyCombination.simpleWithMods('T', "SHIFT"), () -> {
-            cthugha.newTranslation(true, getRandom());
-            rebuildTranslateMap();
-        }, "Fully randomise translation");
-        kr.registerKeyAction(GLFW_KEY_RIGHT_BRACKET, 0, () -> {
-            cthugha.stepTranslation(+1, getRandom());
-            rebuildTranslateMap();
-        }, "Next translation type");
-        kr.registerKeyAction(GLFW_KEY_LEFT_BRACKET, 0, () -> {
-            cthugha.stepTranslation(-1, getRandom());
-            rebuildTranslateMap();
-        }, "Previous translation type");
-
-        kr.registerKeyAction(KeyCombination.simple('A'), () ->
-            cthugha.notify("audio: " + audioPipeline.cycleSource().getName()),
-            "Cycle audio input");
-
-        kr.registerKeyAction(KeyCombination.simple('X'), () -> {
-            textureBaker.setTexture(flashWhiteTex);
-            flashPending = true;
-        }, "Flash fill screen white");
+        // Simple action bindings are loaded from [keys] in cthugha.ini (see KeyBindingConfig).
+        // Kept hardcoded: blur/fade tuning, quit, and remote token rotation (not action-node ops).
 
         kr.registerKeyAction(GLFW_KEY_COMMA, GLFW_MOD_SHIFT, () -> {
             if (xBlur.isBlur() && xBlur.getKernelSize() <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
@@ -314,8 +286,8 @@ public class CthughaWindow extends GLWindow {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
         }, "Quit");
-        kr.registerKeyAction(KeyCombination.named("PRINT_SCREEN"), this::captureNextFrame, "Capture screenshot");
-        kr.registerKeyAction(KeyCombination.namedWithMods("PRINT_SCREEN", "SHIFT"), () -> startRecording(Duration.ofSeconds(5)), "Record 5s video");
+        // Load INI key bindings — must come after registerDisplayActions() has populated the tree
+        new KeyBindingConfig(cthugha, actionContext).register(kr);
 
         if (remoteConfig != null && remoteConfig.enabled) {
             kr.registerKeyAction(KeyCombination.simple('R'), () -> {
@@ -342,13 +314,15 @@ public class CthughaWindow extends GLWindow {
         int h = renderHeight;
 
         cthugha.init(new Dimension(w, h), getRandom());
+        actionContext = new CthughaActionContext(cthugha, getRandom());
+        registerDisplayActions();
         cthugha.animation.init(getClock());
 
         if (remoteConfig != null && remoteConfig.enabled) {
             tokenStore = new TokenStore();
             broadcaster = new RemoteEventBroadcaster();
             ParamSerializer serializer = new ParamSerializer();
-            remoteServer = new RemoteServer(cthugha, tokenStore, broadcaster, remoteConfig);
+            remoteServer = new RemoteServer(cthugha, tokenStore, broadcaster, remoteConfig, actionContext);
             wireListeners(cthugha, "", broadcaster, serializer);
             remoteServer.start();
 
@@ -645,6 +619,68 @@ public class CthughaWindow extends GLWindow {
         if (remoteServer      != null) remoteServer.stop();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
+    }
+
+    // -------------------------------------------------------------------------
+    // Display action nodes — mounted on cthugha root during init()
+    // -------------------------------------------------------------------------
+
+    private void registerDisplayActions() {
+        // Display / app actions on the root node
+        cthugha.addChild(new AbstractAction("Screenshot", ctx -> {
+            captureNextFrame();
+            cthugha.notify("screenshot saved");
+        }));
+        cthugha.addChild(new AbstractAction("Record 5s", ctx -> {
+            startRecording(Duration.ofSeconds(5));
+            cthugha.notify("recording 5s…");
+        }));
+        cthugha.addChild(new AbstractAction("Stop Recording", ctx -> {
+            stopRecording();
+            cthugha.notify("recording stopped");
+        }));
+        cthugha.addChild(new AbstractAction("Flash Image", ctx -> flashImage()));
+        cthugha.addChild(new AbstractAction("Flash White", ctx -> {
+            textureBaker.setTexture(flashWhiteTex);
+            flashPending = true;
+        }));
+        cthugha.addChild(new AbstractAction("Show Quote", ctx -> cthugha.showQuote()));
+        try {
+            cthugha.addChild(new PaletteLibraryNode(cthugha.reader, actionContext, () -> paletteDirty = true));
+        } catch (java.io.IOException e) {
+            LOG.error("Failed to build palette library node", e);
+            cthugha.addChild(new AbstractAction("New Palette", ctx -> {
+                cthugha.newPalette();
+                paletteDirty = true;
+            }));
+        }
+        cthugha.addChild(new AbstractAction("Toggle Fullscreen", ctx -> toggleFullscreen()));
+        cthugha.addChild(new AbstractAction("Toggle Debug", ctx -> cthugha.toggleDebug()));
+        cthugha.addChild(new AbstractAction("Toggle Notifications", ctx -> cthugha.toggleNotifications()));
+        cthugha.addChild(new AbstractAction("Toggle Quote Mode", ctx -> {
+            quoteInBuffer = !quoteInBuffer;
+            cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
+        }));
+        cthugha.addChild(new AbstractAction("Cycle Audio", ctx ->
+            cthugha.notify("audio: " + audioPipeline.cycleSource().getName())));
+
+        // Translation actions on the GeneratorRegistry node
+        cthugha.translateSource.addChild(new AbstractAction("Randomise", ctx -> {
+            cthugha.newTranslation(false, ctx.rng());
+            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+        }));
+        cthugha.translateSource.addChild(new AbstractAction("New Source", ctx -> {
+            cthugha.newTranslation(true, ctx.rng());
+            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+        }));
+        cthugha.translateSource.addChild(new AbstractAction("Next", ctx -> {
+            cthugha.stepTranslation(+1, ctx.rng());
+            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+        }));
+        cthugha.translateSource.addChild(new AbstractAction("Previous", ctx -> {
+            cthugha.stepTranslation(-1, ctx.rng());
+            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+        }));
     }
 
     // -------------------------------------------------------------------------

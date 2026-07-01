@@ -5,6 +5,7 @@ import { SliderControl } from './controls/SliderControl';
 import { KnobControl } from './controls/KnobControl';
 import { ToggleControl } from './controls/ToggleControl';
 import { EnumControl } from './controls/EnumControl';
+import { CarouselControl } from './controls/CarouselControl';
 
 interface ParamLeafProps {
   path: string;
@@ -38,9 +39,18 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
     }
 
     if (node.type === 'ENUM') {
-      // Number of options derived from max+1; labels are just indices for now
       const count = Math.max(1, Math.round(node.max) + 1);
-      const options = Array.from({ length: count }, (_, i) => String(i));
+      const options = node.options ?? Array.from({ length: count }, (_, i) => ({ label: String(i) }));
+      if (node.uiHint === 'CAROUSEL') {
+        return (
+          <CarouselControl
+            value={Math.round(value)}
+            options={options}
+            disabled={controlled}
+            onChange={handleChange}
+          />
+        );
+      }
       return (
         <EnumControl
           value={Math.round(value)}

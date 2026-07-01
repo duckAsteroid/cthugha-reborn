@@ -9,10 +9,16 @@ import io.javalin.http.HttpResponseException;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.http.sse.SseClient;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.Action;
+import io.github.duckasteroid.cthugha.params.ActionContext;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +35,7 @@ public class RemoteServer {
     private final TokenStore tokenStore;
     private final RemoteEventBroadcaster broadcaster;
     private final RemoteConfig config;
+    private final ActionContext actionContext;
     private final ParamSerializer serializer;
     private final ObjectMapper mapper;
 
@@ -37,11 +44,13 @@ public class RemoteServer {
     private final AtomicBoolean firstAuthFired = new AtomicBoolean(false);
 
     public RemoteServer(Node paramRoot, TokenStore tokenStore,
-                        RemoteEventBroadcaster broadcaster, RemoteConfig config) {
+                        RemoteEventBroadcaster broadcaster, RemoteConfig config,
+                        ActionContext actionContext) {
         this.paramRoot = paramRoot;
         this.tokenStore = tokenStore;
         this.broadcaster = broadcaster;
         this.config = config;
+        this.actionContext = actionContext;
         this.serializer = new ParamSerializer();
         this.mapper = serializer.getMapper();
     }
@@ -61,6 +70,17 @@ public class RemoteServer {
 
         app.get("/api/v1/info", ctx ->
                 ctx.json(Map.of("version", "1.0")));
+
+        app.get("/api/v1/maps/preview/*", ctx -> {
+            String name = ctx.path().substring("/api/v1/maps/preview/".length());
+            Path file = Paths.get("maps", name + ".MAP.png");
+            if (!Files.exists(file)) {
+                ctx.status(404);
+                return;
+            }
+            ctx.contentType("image/png");
+            ctx.result(Files.newInputStream(file));
+        });
 
         app.get("/api/v1/params", ctx ->
                 ctx.json(serializer.serialize(paramRoot).toString()));
@@ -83,13 +103,18 @@ public class RemoteServer {
                 return;
             }
             Node node = nodeOpt.get();
-            if (!(node instanceof AbstractValue param)) {
-                ctx.status(400).json(Map.of("error", "not_a_leaf"));
-                return;
-            }
             JsonNode body = mapper.readTree(ctx.body());
             if (!body.has("value")) {
                 ctx.status(400).json(Map.of("error", "missing_value"));
+                return;
+            }
+            if (node instanceof StringValue sv) {
+                sv.setValue(body.get("value").asText());
+                ctx.json(serializer.serialize(node).toString());
+                return;
+            }
+            if (!(node instanceof AbstractValue param)) {
+                ctx.status(400).json(Map.of("error", "not_a_leaf"));
                 return;
             }
             double value = body.get("value").asDouble();
@@ -109,6 +134,24 @@ public class RemoteServer {
 
         app.post("/api/v1/params/*", ctx -> {
             String fullPath = extractNodePath(ctx);
+
+            if (fullPath.endsWith("/execute")) {
+                String nodePath = fullPath.substring(0, fullPath.length() - "/execute".length());
+                Optional<Node> nodeOpt = nodePath.isEmpty() ? Optional.of(paramRoot) : findNode(nodePath);
+                if (nodeOpt.isEmpty()) {
+                    ctx.status(404).json(Map.of("error", "not_found"));
+                    return;
+                }
+                Node node = nodeOpt.get();
+                if (!(node instanceof Action action)) {
+                    ctx.status(400).json(Map.of("error", "not_an_action"));
+                    return;
+                }
+                action.execute(actionContext);
+                ctx.json("{}");
+                return;
+            }
+
             if (!fullPath.endsWith("/randomise")) {
                 ctx.status(400).json(Map.of("error", "unknown_action"));
                 return;
@@ -153,7 +196,7 @@ public class RemoteServer {
     private void authFilter(Context ctx) {
         String path = ctx.path();
         // Only API paths require auth; static files and SPA root are public.
-        if (!path.startsWith("/api/") || path.equals("/api/v1/info")) {
+        if (!path.startsWith("/api/") || path.equals("/api/v1/info") || path.startsWith("/api/v1/maps/preview/")) {
             return;
         }
         String auth = ctx.header("Authorization");

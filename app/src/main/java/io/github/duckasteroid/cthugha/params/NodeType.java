@@ -18,5 +18,9 @@ public enum NodeType {
   /** Node holds an enumerated object value – see {@link io.github.duckasteroid.cthugha.params.values.EnumParameter}. */
   ENUM,
   /** Node is an interior grouping node with no value of its own. */
-  CONTAINER
+  CONTAINER,
+  /** Node is an invocable action — see {@link Action}. */
+  ACTION,
+  /** Node holds a mutable {@link String} value — see {@link io.github.duckasteroid.cthugha.params.values.StringParameter}. */
+  STRING
 }
