@@ -310,7 +310,7 @@ public class CthughaWindow extends GLWindow {
                 if (qrOverlay != null) qrOverlay.show(url);
                 broadcaster.broadcastAll("tokenRotated", "{}");
                 remoteServer.resetFirstAuth();
-            }));
+            }).withNoRemote());
             cthugha.addChild(remoteNode);
 
             qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
