@@ -297,6 +297,12 @@ public class CthughaWindow extends GLWindow {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
         }, "Quit");
+        // Generator step — ] next, [ previous (carousel arrows on remote duplicate these)
+        kr.registerKeyAction(GLFW_KEY_RIGHT_BRACKET, 0,
+                () -> cthugha.translateSource.stepSelection(+1), "Next generator");
+        kr.registerKeyAction(GLFW_KEY_LEFT_BRACKET, 0,
+                () -> cthugha.translateSource.stepSelection(-1), "Previous generator");
+
         // Load INI key bindings — must come after registerDisplayActions() has populated the tree
         new KeyBindingConfig(cthugha, actionContext).register(kr);
 
@@ -725,10 +731,6 @@ public class CthughaWindow extends GLWindow {
         }));
         cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx ->
             cthugha.translateSource.selectRandom(ctx.rng())));
-        cthugha.translateSource.addChild(action("Next", "skip-forward", ctx ->
-            cthugha.translateSource.stepSelection(+1)));
-        cthugha.translateSource.addChild(action("Previous", "skip-back", ctx ->
-            cthugha.translateSource.stepSelection(-1)));
     }
 
     // -------------------------------------------------------------------------
