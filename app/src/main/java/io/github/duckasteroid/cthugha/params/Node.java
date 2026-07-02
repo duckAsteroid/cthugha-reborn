@@ -140,6 +140,16 @@ public interface Node {
   boolean isLeaf();
 
   /**
+   * Returns {@code true} if this node may be read or mutated via the remote HTTP API.
+   * Defaults to {@code true}; set to {@code false} on nodes whose execution from a remote
+   * client would be unsafe (e.g. Quit).  The remote server rejects requests targeting
+   * non-allowed nodes with 403, and the serializer omits them from the param tree payload.
+   */
+  default boolean isRemoteAllowed() {
+    return true;
+  }
+
+  /**
    * Adds {@code child} as a direct child of this node and sets this node as its parent.
    *
    * @param child the node to attach

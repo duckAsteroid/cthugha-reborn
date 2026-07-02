@@ -105,6 +105,10 @@ public class RemoteServer {
                 return;
             }
             Node node = nodeOpt.get();
+            if (!node.isRemoteAllowed()) {
+                ctx.status(403).json(Map.of("error", "not_allowed"));
+                return;
+            }
             JsonNode body = mapper.readTree(ctx.body());
             if (!body.has("value")) {
                 ctx.status(400).json(Map.of("error", "missing_value"));
@@ -145,6 +149,10 @@ public class RemoteServer {
                     return;
                 }
                 Node node = nodeOpt.get();
+                if (!node.isRemoteAllowed()) {
+                    ctx.status(403).json(Map.of("error", "not_allowed"));
+                    return;
+                }
                 if (!(node instanceof Action action)) {
                     ctx.status(400).json(Map.of("error", "not_an_action"));
                     return;
@@ -165,6 +173,10 @@ public class RemoteServer {
                 return;
             }
             Node node = nodeOpt.get();
+            if (!node.isRemoteAllowed()) {
+                ctx.status(403).json(Map.of("error", "not_allowed"));
+                return;
+            }
             node.randomise(new Random());
             if (node instanceof AbstractValue) {
                 ctx.json(serializer.serialize(node).toString());

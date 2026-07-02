@@ -37,6 +37,8 @@ public abstract class AbstractNode implements Node {
 
   private final Map<String, String> uiHints = new LinkedHashMap<>();
 
+  private boolean remoteAllowed = true;
+
   /**
    * Creates a node whose name is the simple class name and whose children are all
    * {@code public} {@link Node}-typed fields discovered via {@link #initFields(Class)}.
@@ -116,6 +118,21 @@ public abstract class AbstractNode implements Node {
   public AbstractNode withUiHint(String key, String value) {
     uiHints.put(key, value);
     return this;
+  }
+
+  /**
+   * Marks this node as not accessible via the remote HTTP API and returns {@code this}
+   * for fluent construction.  The remote server will return 403 for any request targeting
+   * this node, and the serializer will omit it from the param tree entirely.
+   */
+  public AbstractNode withNoRemote() {
+    this.remoteAllowed = false;
+    return this;
+  }
+
+  @Override
+  public boolean isRemoteAllowed() {
+    return remoteAllowed;
   }
 
   @Override

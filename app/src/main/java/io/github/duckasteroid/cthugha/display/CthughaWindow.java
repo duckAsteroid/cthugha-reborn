@@ -636,7 +636,7 @@ public class CthughaWindow extends GLWindow {
         cthugha.addChild(action("Quit", "x-circle", ctx -> {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
             exit();
-        }));
+        }).withNoRemote());
         cthugha.addChild(action("Screenshot", "camera", ctx -> {
             renderActions.enqueue("screenshot", rc -> captureNextFrame());
             cthugha.notify("screenshot saved");

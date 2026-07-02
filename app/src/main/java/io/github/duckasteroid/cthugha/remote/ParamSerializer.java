@@ -58,7 +58,9 @@ public class ParamSerializer {
             }
         } else {
             ArrayNode children = mapper.createArrayNode();
-            node.getChildren().forEach(child -> children.add(serialize(child)));
+            node.getChildren()
+                .filter(Node::isRemoteAllowed)
+                .forEach(child -> children.add(serialize(child)));
             obj.set("children", children);
         }
 
