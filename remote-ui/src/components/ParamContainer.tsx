@@ -36,7 +36,7 @@ export function ParamContainer({ node, path, sseState, defaultOpen = false }: Pa
       </Collapsible.Trigger>
 
       <Collapsible.Content className="pl-4 pr-1 mt-1 space-y-1">
-        {node.children.map((child) => {
+        {node.children.filter(child => child.uiHints?.['hidden'] !== 'true').map((child) => {
           const childPath = path ? `${path}/${child.name}` : child.name;
 
           if (child.type === 'CONTAINER') {

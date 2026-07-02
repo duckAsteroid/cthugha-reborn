@@ -12,6 +12,12 @@ public final class UiHint {
     public static final String SKIP_CHILDREN = "skip-children";
 
     /**
+     * Key: when {@code "true"}, the remote UI omits this node entirely.
+     * Useful for actions that exist only for keyboard-binding lookups.
+     */
+    public static final String HIDDEN = "hidden";
+
+    /**
      * Key: a Lucide icon name (kebab-case, e.g. {@code "music"}, {@code "volume-2"}, {@code "palette"})
      * that the remote UI will render alongside the control label.
      */

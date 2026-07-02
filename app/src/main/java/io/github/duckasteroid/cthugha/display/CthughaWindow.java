@@ -13,7 +13,7 @@ import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
 import com.asteroid.duck.opengl.util.color.StandardColors;
-import com.asteroid.duck.opengl.util.keys.KeyCombination;
+
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
@@ -81,7 +81,6 @@ import java.util.Collections;
 
 import com.asteroid.duck.opengl.util.Monitor;
 
-import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL30.GL_R8;
 import static org.lwjgl.opengl.GL30.GL_RG16UI;
@@ -260,62 +259,9 @@ public class CthughaWindow extends GLWindow {
     @Override
     public void registerKeys() {
         var kr = getKeyRegistry();
-
-        // Simple action bindings are loaded from [keys] in cthugha.ini (see KeyBindingConfig).
-        // Kept hardcoded: blur/fade tuning, quit, and remote token rotation (not action-node ops).
-
-        kr.registerKeyAction(GLFW_KEY_COMMA, GLFW_MOD_SHIFT, () -> {
-            if (blurEnabled.value && blurKernelSize.value <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
-                blurEnabled.setValue(0);
-                cthugha.notify("blur: OFF");
-            } else if (blurEnabled.value) {
-                blurKernelSize.setValue(blurKernelSize.value - 2);
-                cthugha.notify("blur kernel: " + blurKernelSize.value);
-            }
-        }, "Decrease blur kernel size (OFF at minimum)");
-        kr.registerKeyAction(GLFW_KEY_PERIOD, GLFW_MOD_SHIFT, () -> {
-            if (!blurEnabled.value) {
-                blurEnabled.setValue(1);
-                blurKernelSize.setValue(BlurTextureRenderer.MIN_KERNEL_SIZE);
-                cthugha.notify("blur kernel: " + blurKernelSize.value);
-            } else {
-                blurKernelSize.setValue(blurKernelSize.value + 2);
-                cthugha.notify("blur kernel: " + blurKernelSize.value);
-            }
-        }, "Increase blur kernel size (ON from OFF)");
-
-        kr.registerKeyAction(GLFW_KEY_COMMA, 0, () -> {
-            blurFade.setValue(Math.max(0.0, blurFade.value - 0.005));
-            cthugha.notify(String.format("fade: %.3f", blurFade.value));
-        }, "Decrease fade (faster decay)");
-        kr.registerKeyAction(GLFW_KEY_PERIOD, 0, () -> {
-            blurFade.setValue(Math.min(1.0, blurFade.value + 0.005));
-            cthugha.notify(String.format("fade: %.3f", blurFade.value));
-        }, "Increase fade (slower decay)");
-
-        kr.registerKeyAction(GLFW_KEY_ESCAPE, () -> {
-            try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
-            exit();
-        }, "Quit");
-        // Generator step — ] next, [ previous (carousel arrows on remote duplicate these)
-        kr.registerKeyAction(GLFW_KEY_RIGHT_BRACKET, 0,
-                () -> cthugha.translateSource.stepSelection(+1), "Next generator");
-        kr.registerKeyAction(GLFW_KEY_LEFT_BRACKET, 0,
-                () -> cthugha.translateSource.stepSelection(-1), "Previous generator");
-
-        // Load INI key bindings — must come after registerDisplayActions() has populated the tree
+        // All key bindings are driven from [keys] in cthugha.ini (see KeyBindingConfig).
+        // Must run after init() → registerDisplayActions() has populated the param tree.
         new KeyBindingConfig(cthugha, actionContext).register(kr);
-
-        if (remoteConfig != null && remoteConfig.enabled) {
-            kr.registerKeyAction(KeyCombination.simple('R'), () -> {
-                String url = tokenStore.rotate(detectBaseUrl());
-                LOG.info("Remote URL: {}", url);
-                if (qrOverlay != null) qrOverlay.show(url);
-                broadcaster.broadcastAll("tokenRotated", "{}");
-                remoteServer.resetFirstAuth();
-            }, "Rotate remote access token");
-        }
-
         if (stdinInjector != null) {
             stdinInjector.start(kr);
         }
@@ -355,6 +301,17 @@ public class CthughaWindow extends GLWindow {
 
             cthugha.translateSource.setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
+
+            ContainerNode remoteNode = new ContainerNode("Remote");
+            remoteNode.withUiHint(UiHint.ICON, "wifi");
+            remoteNode.addChild(action("Rotate Token", "refresh-cw", ctx -> {
+                String url = tokenStore.rotate(detectBaseUrl());
+                LOG.info("Remote URL: {}", url);
+                if (qrOverlay != null) qrOverlay.show(url);
+                broadcaster.broadcastAll("tokenRotated", "{}");
+                remoteServer.resetFirstAuth();
+            }));
+            cthugha.addChild(remoteNode);
 
             qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
             qrOverlay.init(this);
@@ -676,7 +633,10 @@ public class CthughaWindow extends GLWindow {
     // -------------------------------------------------------------------------
 
     private void registerDisplayActions() {
-        // Display / app actions on the root node
+        cthugha.addChild(action("Quit", "x-circle", ctx -> {
+            try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
+            exit();
+        }));
         cthugha.addChild(action("Screenshot", "camera", ctx -> {
             renderActions.enqueue("screenshot", rc -> captureNextFrame());
             cthugha.notify("screenshot saved");
@@ -722,6 +682,33 @@ public class CthughaWindow extends GLWindow {
         blurNode.addChild(blurEnabled);
         blurNode.addChild(blurKernelSize);
         blurNode.addChild(blurFade);
+        blurNode.addChild(action("Kernel -", "minus", ctx -> {
+            if (blurEnabled.value && blurKernelSize.value <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
+                blurEnabled.setValue(0);
+                cthugha.notify("blur: OFF");
+            } else if (blurEnabled.value) {
+                blurKernelSize.setValue(blurKernelSize.value - 2);
+                cthugha.notify("blur kernel: " + blurKernelSize.value);
+            }
+        }));
+        blurNode.addChild(action("Kernel +", "plus", ctx -> {
+            if (!blurEnabled.value) {
+                blurEnabled.setValue(1);
+                blurKernelSize.setValue(BlurTextureRenderer.MIN_KERNEL_SIZE);
+                cthugha.notify("blur kernel: " + blurKernelSize.value);
+            } else {
+                blurKernelSize.setValue(blurKernelSize.value + 2);
+                cthugha.notify("blur kernel: " + blurKernelSize.value);
+            }
+        }));
+        blurNode.addChild(action("Fade -", "minus-circle", ctx -> {
+            blurFade.setValue(Math.max(0.0, blurFade.value - 0.005));
+            cthugha.notify(String.format("fade: %.3f", blurFade.value));
+        }));
+        blurNode.addChild(action("Fade +", "plus-circle", ctx -> {
+            blurFade.setValue(Math.min(1.0, blurFade.value + 0.005));
+            cthugha.notify(String.format("fade: %.3f", blurFade.value));
+        }));
         cthugha.addChild(blurNode);
 
         // Translation actions on the GeneratorRegistry node
@@ -731,6 +718,16 @@ public class CthughaWindow extends GLWindow {
         }));
         cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx ->
             cthugha.translateSource.selectRandom(ctx.rng())));
+        // Next/Previous are hidden from the remote UI (the Generator carousel duplicates them)
+        // but remain in the param tree so the INI key bindings can find them.
+        AbstractAction nextGen = action("Next", "skip-forward", ctx ->
+            cthugha.translateSource.stepSelection(+1));
+        nextGen.withUiHint(UiHint.HIDDEN, "true");
+        cthugha.translateSource.addChild(nextGen);
+        AbstractAction prevGen = action("Previous", "skip-back", ctx ->
+            cthugha.translateSource.stepSelection(-1));
+        prevGen.withUiHint(UiHint.HIDDEN, "true");
+        cthugha.translateSource.addChild(prevGen);
     }
 
     // -------------------------------------------------------------------------
