@@ -29,7 +29,7 @@ import java.util.stream.Stream;
  * <p>The node's {@link #getName()} defaults to the simple class name when the no-arg
  * constructor is used, or to the {@code name} passed to the string constructor.</p>
  */
-public abstract class AbstractNode implements Node {
+public abstract class ParamNode implements Node {
 
   private final String name;
 
@@ -50,7 +50,7 @@ public abstract class AbstractNode implements Node {
    * Creates a node whose name is the simple class name and whose children are all
    * {@code public} {@link Node}-typed fields discovered via {@link #initFields(Class)}.
    */
-  public AbstractNode() {
+  public ParamNode() {
     this.name = getClass().getSimpleName();
     this.parent = Optional.empty();
     initFields(getClass());
@@ -62,7 +62,7 @@ public abstract class AbstractNode implements Node {
    *
    * @param name display name for this node
    */
-  public AbstractNode(String name) {
+  public ParamNode(String name) {
     this.name = name;
     this.parent = Optional.empty();
     this.children = new ArrayList<>();
@@ -76,7 +76,7 @@ public abstract class AbstractNode implements Node {
   protected void initChildren(List<? extends Node> children) {
     this.children = new ArrayList<>(children);
     for (Node child : this.children) {
-      if (child instanceof AbstractNode an) an.setParent(this);
+      if (child instanceof ParamNode an) an.setParent(this);
     }
   }
 
@@ -88,7 +88,7 @@ public abstract class AbstractNode implements Node {
   protected void initChildren(Node ... children) {
     this.children = new ArrayList<>(Arrays.asList(children));
     for (Node child : this.children) {
-      if (child instanceof AbstractNode an) an.setParent(this);
+      if (child instanceof ParamNode an) an.setParent(this);
     }
   }
 
@@ -104,7 +104,7 @@ public abstract class AbstractNode implements Node {
       .filter(field -> Node.class.isAssignableFrom(field.getType()))
       .map(field -> {
         try {
-          return Optional.ofNullable((Node) field.get(AbstractNode.this));
+          return Optional.ofNullable((Node) field.get(ParamNode.this));
         } catch (IllegalAccessException ignored) {
         }
         return Optional.ofNullable((Node)null);
@@ -130,7 +130,7 @@ public abstract class AbstractNode implements Node {
    * Adds a UI hint entry and returns {@code this} for fluent construction.
    * See {@link UiHint} for standard keys and values.
    */
-  public AbstractNode withUiHint(String key, String value) {
+  public ParamNode withUiHint(String key, String value) {
     uiHints.put(key, value);
     return this;
   }
@@ -140,7 +140,7 @@ public abstract class AbstractNode implements Node {
    * for fluent construction.  The remote server will return 403 for any request targeting
    * this node, and the serializer will omit it from the param tree entirely.
    */
-  public AbstractNode withNoRemote() {
+  public ParamNode withNoRemote() {
     this.remoteAllowed = false;
     return this;
   }
@@ -180,7 +180,7 @@ public abstract class AbstractNode implements Node {
       if (!hasParent() || getParent() == null) {
         cachedFullPath = "";
       } else {
-        String parentPath = ((AbstractNode) getParent()).getFullPath();
+        String parentPath = ((ParamNode) getParent()).getFullPath();
         cachedFullPath = parentPath.isEmpty() ? getName() : parentPath + "/" + getName();
       }
     }
@@ -202,13 +202,13 @@ public abstract class AbstractNode implements Node {
    * node and every ancestor, passing the full path of the changed node.
    */
   final void fireSubtreeListeners(String fullPath) {
-    AbstractNode current = this;
+    ParamNode current = this;
     while (current != null) {
       for (SubtreeChangeListener l : current.subtreeListeners) {
         l.changed(fullPath, this);
       }
       Node p = current.getParent();
-      current = (p instanceof AbstractNode an) ? an : null;
+      current = (p instanceof ParamNode an) ? an : null;
     }
   }
 
@@ -236,13 +236,13 @@ public abstract class AbstractNode implements Node {
   @Override
   public void addChild(Node child) {
     children.add(child);
-    if (child instanceof AbstractNode someChild) someChild.setParent(this);
+    if (child instanceof ParamNode someChild) someChild.setParent(this);
   }
 
   @Override
   public void removeChild(Node child) {
     children.remove(child);
-    if (child instanceof AbstractNode someChild) someChild.setParent(null);
+    if (child instanceof ParamNode someChild) someChild.setParent(null);
   }
 
   @Override
@@ -259,7 +259,7 @@ public abstract class AbstractNode implements Node {
    * Adds a "Reset" action child that calls {@link #resetToDefaults()} on this node.
    * Returns {@code this} for fluent construction.
    */
-  public AbstractNode withResetAction() {
+  public ParamNode withResetAction() {
     addChild(new AbstractAction("Reset", ctx -> this.resetToDefaults()));
     return this;
   }

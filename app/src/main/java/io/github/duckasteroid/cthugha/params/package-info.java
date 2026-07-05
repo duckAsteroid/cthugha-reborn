@@ -3,7 +3,7 @@
  *
  * <h2>Overview</h2>
  * <p>Parameters are organised as a composite tree of {@link io.github.duckasteroid.cthugha.params.Node}s.
- * Interior nodes – implemented by {@link io.github.duckasteroid.cthugha.params.AbstractNode} –
+ * Interior nodes – implemented by {@link io.github.duckasteroid.cthugha.params.ParamNode} –
  * group related parameters.  Leaf nodes are either
  * {@link io.github.duckasteroid.cthugha.params.AbstractValue} subclasses (readable/writable values)
  * or {@link io.github.duckasteroid.cthugha.params.action.Action} instances (invokable operations).</p>
@@ -11,7 +11,7 @@
  * <h2>Node type hierarchy</h2>
  * <pre>
  * Node (interface)
- * ├─ AbstractNode               – composite grouping node  {@link io.github.duckasteroid.cthugha.params.NodeType#CONTAINER}
+ * ├─ ParamNode               – composite grouping node  {@link io.github.duckasteroid.cthugha.params.NodeType#CONTAINER}
  * │  ├─ AbstractValue           – leaf: bounded numeric value
  * │  │  └─ (see params.values)
  * │  ├─ StringValue             – leaf: mutable String value
@@ -34,10 +34,10 @@
  *
  * <h2>Defining parameters</h2>
  * <p>Declare child parameters as {@code public} fields; the no-arg constructor discovers them
- * via reflection.  Alternatively call {@link io.github.duckasteroid.cthugha.params.AbstractNode#initChildren}
+ * via reflection.  Alternatively call {@link io.github.duckasteroid.cthugha.params.ParamNode#initChildren}
  * explicitly from a named constructor:</p>
  * <pre>{@code
- * public class MyRenderer extends AbstractNode {
+ * public class MyRenderer extends ParamNode {
  *     public final DoubleParameter speed = new DoubleParameter("Speed", 0.0, 10.0, 1.0);
  *     public final BooleanParameter enabled = new BooleanParameter("Enabled", true);
  *
@@ -54,7 +54,7 @@
  *   <li><b>Leaf listeners</b> – {@link io.github.duckasteroid.cthugha.params.AbstractValue#addChangeListener}
  *       fires whenever a single parameter's value or controlled state changes.  Used internally
  *       by the remote SSE broadcaster.</li>
- *   <li><b>Subtree listeners</b> – {@link io.github.duckasteroid.cthugha.params.AbstractNode#addSubtreeListener}
+ *   <li><b>Subtree listeners</b> – {@link io.github.duckasteroid.cthugha.params.ParamNode#addSubtreeListener}
  *       fires on any ancestor when any descendant value changes, providing the changed node's
  *       full slash-delimited path.  The {@code RemoteEventBroadcaster} attaches subtree listeners
  *       to stream SSE events to connected browser clients.</li>
@@ -68,7 +68,7 @@
  *
  * <h2>Remote visibility</h2>
  * <p>{@link io.github.duckasteroid.cthugha.params.Node#isRemoteAllowed()} controls whether a node
- * appears in the remote API.  Call {@link io.github.duckasteroid.cthugha.params.AbstractNode#withNoRemote()}
+ * appears in the remote API.  Call {@link io.github.duckasteroid.cthugha.params.ParamNode#withNoRemote()}
  * on any node that must not be accessible from a remote browser client (e.g. Quit).
  * The {@code ParamSerializer} omits such nodes from the JSON payload; the {@code RemoteServer}
  * returns 403 for any direct request targeting them.</p>
@@ -77,6 +77,6 @@
  * <p>{@link io.github.duckasteroid.cthugha.params.UiHint} defines the hint keys ({@code control-type},
  * {@code icon}, {@code hidden}, …) that guide how the remote React UI renders each node.
  * Apply hints fluently via
- * {@link io.github.duckasteroid.cthugha.params.AbstractNode#withUiHint(String, String)}.</p>
+ * {@link io.github.duckasteroid.cthugha.params.ParamNode#withUiHint(String, String)}.</p>
  */
 package io.github.duckasteroid.cthugha.params;

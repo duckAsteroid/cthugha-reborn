@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.params.transform;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import org.joml.Vector2f;
@@ -17,7 +17,7 @@ import java.util.stream.Stream;
  * <p>Values are stored normalised in {@code [0, 1]} by convention; callers multiply against
  * screen dimensions to obtain pixel coordinates.</p>
  */
-public class XYParam extends AbstractNode {
+public class XYParam extends ParamNode {
 
   /** Horizontal component. */
   public final DoubleParameter x;

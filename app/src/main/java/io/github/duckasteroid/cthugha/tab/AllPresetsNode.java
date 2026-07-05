@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  *
  * <p>Call {@link #refresh()} after any save or delete.</p>
  */
-public class AllPresetsNode extends AbstractNode {
+public class AllPresetsNode extends ParamNode {
 
     private final TabStore store;
     private final List<TabGenerator> generators;

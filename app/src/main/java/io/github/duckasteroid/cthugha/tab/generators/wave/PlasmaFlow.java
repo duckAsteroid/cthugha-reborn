@@ -5,7 +5,7 @@ import com.google.auto.service.AutoService;
 
 import static java.lang.Math.sin;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -19,7 +19,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * that a single-frequency field would show.
  */
 @AutoService(TabGenerator.class)
-public class PlasmaFlow extends AbstractNode implements TabGenerator {
+public class PlasmaFlow extends ParamNode implements TabGenerator {
 
   /** Primary spatial frequency — controls coarseness of the flow pattern. */
   public DoubleParameter freqA = new DoubleParameter("Freq A", 0.001, 0.08, 0.015);

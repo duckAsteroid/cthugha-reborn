@@ -10,7 +10,7 @@ import static java.lang.Math.exp;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -23,7 +23,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * the hard vortex of SpiralGalaxyPlughole.
  */
 @AutoService(TabGenerator.class)
-public class Twist extends AbstractNode implements TabGenerator {
+public class Twist extends ParamNode implements TabGenerator {
 
   public XYParam center = new XYParam("Center", 0, 1, 0.5);
   /** Peak rotation at r=0, in radians. Positive = counter-clockwise. */

@@ -9,7 +9,7 @@ import io.javalin.http.HttpResponseException;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.http.sse.SseClient;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
@@ -195,17 +195,17 @@ public class RemoteServer {
 
         app.sse("/api/v1/events", client -> {
             List<String> pathParams = client.ctx().queryParams("path");
-            List<AbstractNode> nodes;
+            List<ParamNode> nodes;
             if (pathParams.isEmpty()) {
                 // No filter: subscribe to the entire tree
-                nodes = paramRoot instanceof AbstractNode an ? List.of(an) : List.of();
+                nodes = paramRoot instanceof ParamNode an ? List.of(an) : List.of();
             } else {
                 nodes = pathParams.stream()
                         .map(this::findNode)
                         .filter(Optional::isPresent)
                         .map(Optional::get)
-                        .filter(n -> n instanceof AbstractNode)
-                        .map(n -> (AbstractNode) n)
+                        .filter(n -> n instanceof ParamNode)
+                        .map(n -> (ParamNode) n)
                         .collect(Collectors.toList());
             }
             broadcaster.register(client, nodes);

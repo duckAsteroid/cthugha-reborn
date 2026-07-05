@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.remote;
 
 import io.javalin.http.sse.SseClient;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.SubtreeChangeListener;
 
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * Manages SSE client registrations and dispatches parameter-change events.
  *
  * <p>Each connected client subscribes to one or more subtrees of the parameter tree via
- * {@link AbstractNode#addSubtreeListener}.  When a descendant value changes, the subtree
+ * {@link ParamNode#addSubtreeListener}.  When a descendant value changes, the subtree
  * listener runs on the render thread and enqueues a serialised JSON payload into a per-client
  * {@link ConcurrentHashMap} (last-write-wins deduplication — rapid changes to the same param
  * collapse to a single send per flush window).  A dedicated platform daemon thread flushes
@@ -36,10 +36,10 @@ public class RemoteEventBroadcaster {
     static final class ClientRecord {
         final SseClient client;
         final List<SubtreeChangeListener> listeners;
-        final List<AbstractNode> subscribedNodes;
+        final List<ParamNode> subscribedNodes;
         volatile ConcurrentHashMap<String, PendingEvent> pending = new ConcurrentHashMap<>();
 
-        ClientRecord(SseClient client, List<SubtreeChangeListener> listeners, List<AbstractNode> subscribedNodes) {
+        ClientRecord(SseClient client, List<SubtreeChangeListener> listeners, List<ParamNode> subscribedNodes) {
             this.client = client;
             this.listeners = listeners;
             this.subscribedNodes = subscribedNodes;
@@ -55,11 +55,11 @@ public class RemoteEventBroadcaster {
      * given nodes.  When any descendant value changes the listener enqueues the serialised event
      * into this client's pending map — no I/O on the render thread.
      */
-    public void register(SseClient client, List<AbstractNode> nodes) {
+    public void register(SseClient client, List<ParamNode> nodes) {
         List<SubtreeChangeListener> listeners = new ArrayList<>(nodes.size());
         ClientRecord record = new ClientRecord(client, listeners, new ArrayList<>(nodes));
 
-        for (AbstractNode node : nodes) {
+        for (ParamNode node : nodes) {
             SubtreeChangeListener listener = (path, changedNode) -> {
                 if (!(changedNode instanceof AbstractValue value)) return;
                 try {

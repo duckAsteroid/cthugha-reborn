@@ -56,7 +56,7 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`
 
 ### Parameter System
 
-`AbstractNode` / `Node` (`params/`) provide a tree-structured parameter hierarchy. Every major component extends `AbstractNode`, exposing typed parameters via `params/values/` (`BooleanParameter`, `DoubleParameter`, `EnumParameter`, `IntegerParameter`, `StringParameter`, etc.) that can be introspected, animated, and serialized. The parameter tree is exposed over the remote HTTP API.
+`ParamNode` / `Node` (`params/`) provide a tree-structured parameter hierarchy. Every major component extends `ParamNode`, exposing typed parameters via `params/values/` (`BooleanParameter`, `DoubleParameter`, `EnumParameter`, `IntegerParameter`, `StringParameter`, etc.) that can be introspected, animated, and serialized. The parameter tree is exposed over the remote HTTP API.
 
 `Action` / `AbstractAction` (`params/`) extend the tree with invokable operations. Actions receive a typed `ActionContext` (sub-interfaces like `TabActionContext`, `PaletteActionContext`, `CthughaActionContext`) that provides access to runtime state without coupling actions to the window.
 
@@ -64,7 +64,7 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`
 
 ### Animation System
 
-`AnimationSystem` (`animation/`) extends `AbstractNode` and manages `AnimationBinding` entries that map animated curves to `DoubleParameter` values in the tree. Animations advance each CPU tick via `animation.tick()`.
+`AnimationSystem` (`animation/`) extends `ParamNode` and manages `AnimationBinding` entries that map animated curves to `DoubleParameter` values in the tree. Animations advance each CPU tick via `animation.tick()`.
 
 ### Audio System
 
@@ -89,7 +89,7 @@ Wave renderers live in `display/wave/` and implement the render-core wave interf
 
 ### Palette Library
 
-`PaletteLibraryNode` (`map/`) extends `AbstractNode` and exposes the available `.MAP` palette files as a browseable parameter node, allowing the remote UI to list and switch palettes.
+`PaletteLibraryNode` (`map/`) extends `ParamNode` and exposes the available `.MAP` palette files as a browseable parameter node, allowing the remote UI to list and switch palettes.
 
 ## Key Dependencies
 

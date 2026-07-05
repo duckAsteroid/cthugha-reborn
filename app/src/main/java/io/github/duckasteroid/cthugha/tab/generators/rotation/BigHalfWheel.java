@@ -5,14 +5,14 @@ import com.google.auto.service.AutoService;
 
 import static java.lang.Math.PI;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 @AutoService(TabGenerator.class)
-public class BigHalfWheel extends AbstractNode implements TabGenerator {
+public class BigHalfWheel extends ParamNode implements TabGenerator {
   public XYParam center = new XYParam("Wheel centre location", 0, 1, 0.4, 0.0);
 
   public BigHalfWheel() {

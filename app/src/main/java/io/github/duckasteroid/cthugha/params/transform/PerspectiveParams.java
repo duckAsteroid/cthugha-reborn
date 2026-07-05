@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.params.transform;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
@@ -13,7 +13,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * perspective frustum followed by a view-distance translation before the affine components.
  * This maps flat 2-D NDC geometry into a 3-D perspective view.</p>
  */
-public class PerspectiveParams extends AbstractNode {
+public class PerspectiveParams extends ParamNode {
 
     public BooleanParameter enabled = new BooleanParameter("enabled", false);
 

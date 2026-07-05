@@ -6,7 +6,7 @@ import com.google.auto.service.AutoService;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -20,7 +20,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
  * but intricate; slight frequency differences produce slowly-evolving moiré beating.
  */
 @AutoService(TabGenerator.class)
-public class WaveInterference extends AbstractNode implements TabGenerator {
+public class WaveInterference extends ParamNode implements TabGenerator {
 
   public IntegerParameter numSources = new IntegerParameter("Sources", 2, 3, 2);
   public XYParam source1 = new XYParam("Source 1", 0, 1, 0.25);

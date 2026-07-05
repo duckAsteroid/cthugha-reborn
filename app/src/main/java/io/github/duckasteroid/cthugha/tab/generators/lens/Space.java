@@ -5,7 +5,7 @@ import com.google.auto.service.AutoService;
 
 import static java.lang.Math.abs;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
@@ -13,7 +13,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;
 
 @AutoService(TabGenerator.class)
-public class Space extends AbstractNode implements TabGenerator {
+public class Space extends ParamNode implements TabGenerator {
 
   public BooleanParameter reverse = new BooleanParameter("Reverse", true);
   public IntegerParameter randomness = new IntegerParameter("Randomness", 0, 250);

@@ -10,7 +10,7 @@ import static java.lang.Math.log;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -28,7 +28,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * rotation shifts which angular sector is sampled, adding a spin to the zoom.
  */
 @AutoService(TabGenerator.class)
-public class LogPolarZoom extends AbstractNode implements TabGenerator {
+public class LogPolarZoom extends ParamNode implements TabGenerator {
 
   public XYParam center = new XYParam("Center", 0, 1, 0.5);
   /** Translation in log(r) space. Small values (0.05–0.3) give a gentle zoom. */

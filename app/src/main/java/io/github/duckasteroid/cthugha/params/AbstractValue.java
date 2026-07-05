@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * are notified whenever the value or {@code controlled} state changes — used by the remote
  * HTTP server to push SSE events.</p>
  */
-public abstract class AbstractValue extends AbstractNode {
+public abstract class AbstractValue extends ParamNode {
 
   private final AtomicBoolean controlled = new AtomicBoolean(false);
   private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();

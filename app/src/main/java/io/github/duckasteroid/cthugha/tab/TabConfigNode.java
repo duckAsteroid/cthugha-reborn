@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.tab;
 
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ import java.io.IOException;
  *       {@link SavedPresetsNode}.</li>
  * </ul>
  */
-public class TabConfigNode extends AbstractNode {
+public class TabConfigNode extends ParamNode {
 
     private static final Logger LOG = LoggerFactory.getLogger(TabConfigNode.class);
 

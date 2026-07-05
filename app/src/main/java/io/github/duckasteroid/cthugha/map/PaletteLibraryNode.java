@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.map;
 
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-public class PaletteLibraryNode extends AbstractNode {
+public class PaletteLibraryNode extends ParamNode {
 
     public PaletteLibraryNode(MapFileReader reader, PaletteActionContext ctx) throws IOException {
         this(reader, ctx, () -> {});

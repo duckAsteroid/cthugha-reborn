@@ -2,7 +2,7 @@ package io.github.duckasteroid.cthugha.animation;
 
 import com.asteroid.duck.opengl.util.timer.Clock;
 import com.asteroid.duck.opengl.util.timer.function.WaveFunction;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -14,7 +14,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * evaluates the sine wave, normalises its [-1, 1] output to [0, 1], and pushes the result into
  * the target parameter via {@link AbstractValue#setNormalisedValue(double)}.</p>
  */
-public class AnimationBinding extends AbstractNode {
+public class AnimationBinding extends ParamNode {
 
     public final BooleanParameter enabled = new BooleanParameter("enabled", true);
     public final DoubleParameter frequency = new DoubleParameter("frequency", 0.01, 10.0, 0.2);

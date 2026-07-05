@@ -3,7 +3,7 @@ package io.github.duckasteroid.cthugha.tab.generators.rotation;
 import io.github.duckasteroid.cthugha.tab.*;
 import com.google.auto.service.AutoService;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -12,7 +12,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;
 
 @AutoService(TabGenerator.class)
-public class Hurricane extends AbstractNode implements TabGenerator {
+public class Hurricane extends ParamNode implements TabGenerator {
 
   public IntegerParameter Randomness = new IntegerParameter("Randomness", 0, 150, 80);
   private LongParameter speed = new LongParameter("Speed", 0, 100, 30);

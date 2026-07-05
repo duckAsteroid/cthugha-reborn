@@ -5,7 +5,7 @@ import com.google.auto.service.AutoService;
 
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -24,7 +24,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * regardless of aspect ratio.
  */
 @AutoService(TabGenerator.class)
-public class FisheyeLens extends AbstractNode implements TabGenerator {
+public class FisheyeLens extends ParamNode implements TabGenerator {
 
   public XYParam center = new XYParam("Center", 0, 1, 0.5);
   /** Distortion strength. Positive = barrel (fisheye). Negative = pincushion. */

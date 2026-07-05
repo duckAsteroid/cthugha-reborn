@@ -11,7 +11,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
@@ -19,7 +19,7 @@ import java.nio.ShortBuffer;
 import java.util.Random;
 
 @AutoService(TabGenerator.class)
-public class Spiral extends AbstractNode implements TabGenerator{
+public class Spiral extends ParamNode implements TabGenerator{
 
   /** number of spirals (0 for one centered spiral) */
   public IntegerParameter nr_spirals = new IntegerParameter("Number of spirals", 0, MAX_NR_SPIRALS, 1);

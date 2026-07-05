@@ -3,7 +3,7 @@ package io.github.duckasteroid.cthugha.tab.generators.lens;
 import io.github.duckasteroid.cthugha.tab.*;
 import com.google.auto.service.AutoService;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -19,7 +19,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
  * Positive strength pulls content toward the wells; negative pushes it away.
  */
 @AutoService(TabGenerator.class)
-public class GravityWells extends AbstractNode implements TabGenerator {
+public class GravityWells extends ParamNode implements TabGenerator {
 
   public IntegerParameter numWells = new IntegerParameter("Wells", 1, 3, 2);
   public XYParam well1 = new XYParam("Well 1", 0, 1, 0.3);

@@ -3,13 +3,13 @@ package io.github.duckasteroid.cthugha.tab.generators.wave;
 import io.github.duckasteroid.cthugha.tab.*;
 import com.google.auto.service.AutoService;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 
 @AutoService(TabGenerator.class)
-public class Smoke extends AbstractNode implements TabGenerator {
+public class Smoke extends ParamNode implements TabGenerator {
 
   public IntegerParameter speed = new IntegerParameter("Speed", 1, 300, 100);
   public IntegerParameter randomness = new IntegerParameter("Randomness", 1, 100, 70);

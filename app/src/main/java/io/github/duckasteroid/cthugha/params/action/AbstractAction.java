@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.params.action;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.NodeType;
 
 import java.util.Random;
@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  * });
  * }</pre>
  */
-public class AbstractAction extends AbstractNode implements Action {
+public class AbstractAction extends ParamNode implements Action {
 
     private final Consumer<ActionContext> body;
 

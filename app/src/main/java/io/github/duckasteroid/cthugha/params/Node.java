@@ -22,7 +22,7 @@ import java.util.stream.StreamSupport;
  *
  * <p>The primary implementations are:</p>
  * <ul>
- *   <li>{@link AbstractNode} – base class for interior nodes (type = {@link NodeType#CONTAINER}).</li>
+ *   <li>{@link ParamNode} – base class for interior nodes (type = {@link NodeType#CONTAINER}).</li>
  *   <li>{@link AbstractValue} – base class for leaf value nodes.</li>
  * </ul>
  */

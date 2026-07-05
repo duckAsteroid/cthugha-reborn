@@ -3,14 +3,14 @@ package io.github.duckasteroid.cthugha.tab.generators.wave;
 import io.github.duckasteroid.cthugha.tab.*;
 import com.google.auto.service.AutoService;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 @AutoService(TabGenerator.class)
-public class LinearSlider extends AbstractNode implements TabGenerator {
+public class LinearSlider extends ParamNode implements TabGenerator {
   public DoubleParameter focalPoint = new DoubleParameter("Relative focus", 0, 1, 0.3);
   public DoubleParameter speed = new DoubleParameter("Speed", -100, 100, 10);
   // true = focal axis is horizontal (a row); pixels slide left/right.

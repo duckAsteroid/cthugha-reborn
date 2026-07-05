@@ -9,7 +9,7 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -22,7 +22,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
  * the colour bands smear symmetrically across sector boundaries.
  */
 @AutoService(TabGenerator.class)
-public class Kaleidoscope extends AbstractNode implements TabGenerator {
+public class Kaleidoscope extends ParamNode implements TabGenerator {
 
   public XYParam center = new XYParam("Center", 0, 1, 0.5);
   public IntegerParameter arms = new IntegerParameter("Arms", 2, 16, 6);

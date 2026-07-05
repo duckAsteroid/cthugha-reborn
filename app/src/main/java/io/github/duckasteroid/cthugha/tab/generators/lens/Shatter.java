@@ -3,7 +3,7 @@ package io.github.duckasteroid.cthugha.tab.generators.lens;
 import io.github.duckasteroid.cthugha.tab.*;
 import com.google.auto.service.AutoService;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -20,7 +20,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
  * Negative zoomStrength = content expands away from seed (explosion).
  */
 @AutoService(TabGenerator.class)
-public class Shatter extends AbstractNode implements TabGenerator {
+public class Shatter extends ParamNode implements TabGenerator {
 
   public IntegerParameter cells = new IntegerParameter("Cells", 2, 64, 20);
   public DoubleParameter zoomStrength = new DoubleParameter("Zoom strength", -1.0, 1.0, 0.12);

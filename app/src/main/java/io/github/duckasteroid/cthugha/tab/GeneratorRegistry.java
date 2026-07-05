@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.tab;
 
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;
@@ -45,7 +45,7 @@ import java.util.stream.StreamSupport;
  * <p>{@link #setOnTreeChanged} is called whenever the active generator changes, so the caller
  * can broadcast a {@code treeChanged} SSE event and let remote clients re-fetch the param tree.</p>
  */
-public class GeneratorRegistry extends AbstractNode {
+public class GeneratorRegistry extends ParamNode {
 
     private static final Logger LOG = LoggerFactory.getLogger(GeneratorRegistry.class);
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");

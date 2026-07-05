@@ -6,7 +6,7 @@ package io.github.duckasteroid.cthugha.params;
  * <p>Use this when you need to wrap a set of child nodes under a label without
  * creating a dedicated class.  Children are added via {@link #addChild(Node)}.</p>
  */
-public final class ContainerNode extends AbstractNode {
+public final class ContainerNode extends ParamNode {
 
     public ContainerNode(String name) {
         super(name);

@@ -43,7 +43,7 @@
  * <h2>Remote access</h2>
  * <p>Actions are serialised into the remote param-tree JSON as nodes of type {@code ACTION}.
  * The remote UI renders them as buttons.  Sensitive actions (e.g. Quit) should be marked
- * {@link io.github.duckasteroid.cthugha.params.AbstractNode#withNoRemote()} so they are omitted
+ * {@link io.github.duckasteroid.cthugha.params.ParamNode#withNoRemote()} so they are omitted
  * from the JSON payload and rejected with 403 by the server.</p>
  */
 package io.github.duckasteroid.cthugha.params.action;

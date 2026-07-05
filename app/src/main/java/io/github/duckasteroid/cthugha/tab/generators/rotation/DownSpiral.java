@@ -11,13 +11,13 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 @AutoService(TabGenerator.class)
-public class DownSpiral extends AbstractNode implements TabGenerator {
+public class DownSpiral extends ParamNode implements TabGenerator {
   public DoubleParameter a = new DoubleParameter("A", 0, Float.MAX_VALUE, 0.75);
   public DoubleParameter b = new DoubleParameter("B", 1, Float.MAX_VALUE, 1500);
 

@@ -10,7 +10,7 @@ Nodes follow the **Composite** pattern. Interior nodes group child nodes; leaf n
 
 ```
 Node (interface)
-├─ AbstractNode               — composite grouping node (NodeType.CONTAINER)
+├─ ParamNode               — composite grouping node (NodeType.CONTAINER)
 │  ├─ AbstractValue           — leaf: bounded numeric value
 │  │  ├─ BooleanParameter     — on/off flag (0 or 1 numerically)
 │  │  ├─ DoubleParameter      — bounded double; supports range remapping
@@ -40,7 +40,7 @@ Sub-packages:
 Declare child parameters as `public` fields. The no-arg constructor discovers them automatically via reflection:
 
 ```java
-public class MyRenderer extends AbstractNode {
+public class MyRenderer extends ParamNode {
     public final DoubleParameter speed = new DoubleParameter("Speed", 0.0, 10.0, 1.0);
     public final BooleanParameter enabled = new BooleanParameter("Enabled", true);
 
@@ -95,14 +95,14 @@ AbstractValue.setValue(...)
   ├─ fires AbstractValue.changeListeners   (leaf-level, Runnable)
   │    └─ used by RemoteEventBroadcaster to enqueue per-client SSE events
   │
-  └─ fires AbstractNode.fireSubtreeListeners(path)
+  └─ fires ParamNode.fireSubtreeListeners(path)
        └─ bubbles up through every ancestor in the tree
             └─ used by RemoteEventBroadcaster to subscribe to subtrees
 ```
 
 **Leaf listeners** (`AbstractValue.addChangeListener`) notify when a single parameter changes.
 
-**Subtree listeners** (`AbstractNode.addSubtreeListener`) notify any ancestor when any descendant changes, receiving the full slash-delimited path of the changed node. The remote SSE broadcaster attaches one subtree listener per connected browser client.
+**Subtree listeners** (`ParamNode.addSubtreeListener`) notify any ancestor when any descendant changes, receiving the full slash-delimited path of the changed node. The remote SSE broadcaster attaches one subtree listener per connected browser client.
 
 ---
 
@@ -154,7 +154,7 @@ AnimationSystem.tick()  (once per render frame)
        └─ AbstractValue.setNormalisedValue(...)
             └─ setValue(...)
                  ├─ AbstractValue.changeListeners  → RemoteEventBroadcaster (enqueue SSE)
-                 └─ AbstractNode.subtreeListeners  → RemoteEventBroadcaster (per subtree SSE)
+                 └─ ParamNode.subtreeListeners  → RemoteEventBroadcaster (per subtree SSE)
 
 RemoteServer  (Javalin HTTP)
   ├─ GET  /params          → ParamSerializer serialises full tree to JSON

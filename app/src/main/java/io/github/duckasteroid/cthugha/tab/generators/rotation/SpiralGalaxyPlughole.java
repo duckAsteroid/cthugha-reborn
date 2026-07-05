@@ -10,7 +10,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -19,7 +19,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 
 @AutoService(TabGenerator.class)
-public class SpiralGalaxyPlughole extends AbstractNode implements TabGenerator {
+public class SpiralGalaxyPlughole extends ParamNode implements TabGenerator {
 
   /**
    * Angular rotation per frame. Positive = counter-clockwise.

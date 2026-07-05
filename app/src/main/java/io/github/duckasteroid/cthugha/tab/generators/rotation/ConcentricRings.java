@@ -8,7 +8,7 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -22,7 +22,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * The flame blur smears colour along ring boundaries into glowing halos.
  */
 @AutoService(TabGenerator.class)
-public class ConcentricRings extends AbstractNode implements TabGenerator {
+public class ConcentricRings extends ParamNode implements TabGenerator {
 
   public XYParam center = new XYParam("Center", 0, 1, 0.5);
   /** Thickness of each ring in pixels. */

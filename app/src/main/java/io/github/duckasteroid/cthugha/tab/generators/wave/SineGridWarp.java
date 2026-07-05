@@ -5,7 +5,7 @@ import com.google.auto.service.AutoService;
 
 import static java.lang.Math.sin;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -17,7 +17,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * flame blur because the wave nodes create stable "pooling" points where colour accumulates.
  */
 @AutoService(TabGenerator.class)
-public class SineGridWarp extends AbstractNode implements TabGenerator {
+public class SineGridWarp extends ParamNode implements TabGenerator {
 
   /** Controls how many wave cycles span the screen height (affects X displacement). */
   public DoubleParameter freqX = new DoubleParameter("Freq X", 0.001, 0.1, 0.02);

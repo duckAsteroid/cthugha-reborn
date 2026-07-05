@@ -12,7 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * <p>The concrete implementation is {@link io.github.duckasteroid.cthugha.params.values.StringParameter}.</p>
  */
-public abstract class StringValue extends AbstractNode {
+public abstract class StringValue extends ParamNode {
 
     private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
 

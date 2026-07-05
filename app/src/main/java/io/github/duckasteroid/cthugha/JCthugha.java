@@ -9,7 +9,7 @@ import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import com.asteroid.duck.opengl.util.stats.Stats;
 import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.strings.Constants;
@@ -30,7 +30,7 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JCthugha extends AbstractNode implements Closeable {
+public class JCthugha extends ParamNode implements Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
 

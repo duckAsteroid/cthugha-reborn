@@ -4,7 +4,7 @@
  * <h2>Overview</h2>
  * <p>These classes are building blocks for effects that need tunable geometric parameters.
  * They are built on top of the core param framework
- * ({@link io.github.duckasteroid.cthugha.params.AbstractNode},
+ * ({@link io.github.duckasteroid.cthugha.params.ParamNode},
  * {@link io.github.duckasteroid.cthugha.params.values.DoubleParameter}) and are used by both
  * wave models ({@code display.wave}) and tab generators ({@code tab.generators}).</p>
  *
@@ -30,7 +30,7 @@
  *
  * <h2>Typical usage</h2>
  * <pre>{@code
- * public class MyWaveModel extends AbstractNode {
+ * public class MyWaveModel extends ParamNode {
  *     public final TransformParams transform = new TransformParams("transform");
  *
  *     public MyWaveModel() { super("MyWaveModel"); initFields(getClass()); }

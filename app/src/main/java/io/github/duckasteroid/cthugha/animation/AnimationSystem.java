@@ -1,7 +1,7 @@
 package io.github.duckasteroid.cthugha.animation;
 
 import com.asteroid.duck.opengl.util.timer.Clock;
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
@@ -16,7 +16,7 @@ import java.util.List;
  * <p>Wire bindings with {@link #addBinding} before calling {@link #init(Clock)}, then call
  * {@link #tick()} once per frame to push updated values into all active targets.</p>
  */
-public class AnimationSystem extends AbstractNode {
+public class AnimationSystem extends ParamNode {
 
     public final BooleanParameter enabled = new BooleanParameter("enabled", true);
 

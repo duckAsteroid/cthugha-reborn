@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.params.transform;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -25,7 +25,7 @@ import java.util.function.DoublePredicate;
  * <p>Each affine component is skipped when it equals its identity value (checked to 10 decimal
  * places), avoiding unnecessary matrix multiplications.</p>
  */
-public class TransformParams extends AbstractNode {
+public class TransformParams extends ParamNode {
 
   /** Optional perspective projection applied before the affine components. */
   public final PerspectiveParams perspective = new PerspectiveParams();

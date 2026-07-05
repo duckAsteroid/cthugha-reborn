@@ -8,7 +8,7 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
 import io.github.duckasteroid.cthugha.params.transform.XYParam;
@@ -20,7 +20,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
  * concentric ring distortion like a stone dropped in water.
  */
 @AutoService(TabGenerator.class)
-public class Ripple extends AbstractNode implements TabGenerator {
+public class Ripple extends ParamNode implements TabGenerator {
 
   public XYParam source = new XYParam("Source", 0, 1, 0.5);
   public DoubleParameter frequency = new DoubleParameter("Frequency", 0.01, 0.5, 0.1);

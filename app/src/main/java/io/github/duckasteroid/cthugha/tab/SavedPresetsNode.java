@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;
 
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * {@link TabStore} is provided.  Call {@link #refresh()} after any save or delete to
  * re-scan disk and rebuild the child list.</p>
  */
-public class SavedPresetsNode extends AbstractNode {
+public class SavedPresetsNode extends ParamNode {
 
     private final TabStore store;
     private final TabGenerator generator;
