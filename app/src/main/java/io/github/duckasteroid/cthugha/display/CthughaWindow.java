@@ -26,6 +26,7 @@ import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
+import io.github.duckasteroid.cthugha.ActionTreeBuilder;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
@@ -33,7 +34,6 @@ import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
-import io.github.duckasteroid.cthugha.map.PaletteLibraryNode;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -42,15 +42,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
-import io.github.duckasteroid.cthugha.params.action.Action;
-import io.github.duckasteroid.cthugha.params.action.ActionContext;
-import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
+import io.github.duckasteroid.cthugha.remote.NetworkUtils;
 import io.github.duckasteroid.cthugha.remote.QrOverlay;
 import io.github.duckasteroid.cthugha.dump.DumpConfig;
 import io.github.duckasteroid.cthugha.remote.RemoteConfig;
@@ -65,10 +63,6 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -76,7 +70,6 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Collections;
 
 import com.asteroid.duck.opengl.util.Monitor;
 
@@ -161,8 +154,7 @@ public class CthughaWindow extends GLWindow {
 
     private CthughaActionContext actionContext;
 
-    // Top-level tab groups — populated by registerDisplayActions(), referenced when
-    // the remote node is added later so it lands in the right group.
+    // Populated by ActionTreeBuilder.build(); used to add the Remote node afterwards.
     private ContainerNode generalGroup;
 
     // RGBA offscreen texture: all wave renderers draw here
@@ -287,7 +279,27 @@ public class CthughaWindow extends GLWindow {
 
         cthugha.init(new Dimension(w, h), getRandom());
         actionContext = new CthughaActionContext(cthugha, getRandom());
-        registerDisplayActions();
+        ActionTreeBuilder treeBuilder = new ActionTreeBuilder(
+                cthugha, actionContext, renderActions,
+                blurEnabled, blurKernelSize, blurFade,
+                new ActionTreeBuilder.Callbacks() {
+                    @Override public void rebuildTranslateMap() { CthughaWindow.this.rebuildTranslateMap(); }
+                    @Override public void markPaletteDirty() { paletteDirty = true; }
+                    @Override public void screenshot() { captureNextFrame(); }
+                    @Override public void startRecording() { CthughaWindow.this.startRecording(Duration.ofSeconds(5)); }
+                    @Override public void stopRecording() { CthughaWindow.this.stopRecording(); }
+                    @Override public void flashImage() { CthughaWindow.this.flashImage(); }
+                    @Override public void flashWhite() { textureBaker.setTexture(flashWhiteTex); flashPending = true; }
+                    @Override public void toggleFullscreen() { CthughaWindow.this.toggleFullscreen(); }
+                    @Override public void toggleQuoteMode() {
+                        quoteInBuffer = !quoteInBuffer;
+                        cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
+                    }
+                    @Override public String cycleAudio() { return audioPipeline.cycleSource().getName(); }
+                    @Override public void exitApplication() { exit(); }
+                });
+        treeBuilder.build();
+        generalGroup = treeBuilder.getGeneralGroup();
         cthugha.animation.init(getClock());
 
         // Wire translation-layer callbacks before starting the remote server so SSE events work.
@@ -311,20 +323,23 @@ public class CthughaWindow extends GLWindow {
 
             ContainerNode remoteNode = new ContainerNode("Remote");
             remoteNode.withUiHint(UiHint.ICON, "wifi");
-            remoteNode.addChild(action("Rotate Token", "refresh-cw", ctx -> {
-                String url = tokenStore.rotate(detectBaseUrl());
+            AbstractAction rotateToken = new AbstractAction("Rotate Token", ctx -> {
+                String url = tokenStore.rotate(NetworkUtils.detectBaseUrl(remoteConfig));
                 LOG.info("Remote URL: {}", url);
                 if (qrOverlay != null) qrOverlay.show(url);
                 broadcaster.broadcastAll("tokenRotated", "{}");
                 remoteServer.resetFirstAuth();
-            }).withNoRemote());
+            });
+            rotateToken.withUiHint(UiHint.ICON, "refresh-cw");
+            rotateToken.withNoRemote();
+            remoteNode.addChild(rotateToken);
             generalGroup.addChild(remoteNode);
 
             qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
             qrOverlay.init(this);
             remoteServer.setOnFirstAuth(() -> qrOverlay.hide());
 
-            String initialUrl = tokenStore.rotate(detectBaseUrl());
+            String initialUrl = tokenStore.rotate(NetworkUtils.detectBaseUrl(remoteConfig));
             LOG.info("Remote URL: {}", initialUrl);
             qrOverlay.show(initialUrl);
         }
@@ -636,147 +651,6 @@ public class CthughaWindow extends GLWindow {
     }
 
     // -------------------------------------------------------------------------
-    // Display action nodes — mounted on cthugha root during init()
-    // -------------------------------------------------------------------------
-
-    private void registerDisplayActions() {
-        // ---- Wave tab: all audio-reactive renderers and animation ----
-        ContainerNode waveGroup = new ContainerNode("Wave");
-        waveGroup.withUiHint(UiHint.ICON, "music");
-        waveGroup.addChild(cthugha.oscilloscope);
-        waveGroup.addChild(cthugha.radialWave);
-        waveGroup.addChild(cthugha.spectrum);
-        waveGroup.addChild(cthugha.radialSpectrum);
-        waveGroup.addChild(cthugha.animation);
-
-        // ---- Tab tab: translation-table generator ----
-        ContainerNode tabGroup = new ContainerNode("Tab");
-        tabGroup.withUiHint(UiHint.ICON, "layers");
-        tabGroup.addChild(cthugha.translateSource);
-
-        // Translation actions on the GeneratorRegistry node
-        cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx -> {
-            cthugha.newTranslation(ctx.rng());
-            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
-        }));
-        cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx ->
-            cthugha.translateSource.selectRandom(ctx.rng())));
-        // Next/Previous are hidden from the remote UI (the Generator carousel duplicates them)
-        // but remain in the param tree so the INI key bindings can find them.
-        AbstractAction nextGen = action("Next", "skip-forward", ctx ->
-            cthugha.translateSource.stepSelection(+1));
-        nextGen.withUiHint(UiHint.HIDDEN, "true");
-        cthugha.translateSource.addChild(nextGen);
-        AbstractAction prevGen = action("Previous", "skip-back", ctx ->
-            cthugha.translateSource.stepSelection(-1));
-        prevGen.withUiHint(UiHint.HIDDEN, "true");
-        cthugha.translateSource.addChild(prevGen);
-
-        // ---- Render tab: palette and blur ----
-        ContainerNode renderGroup = new ContainerNode("Render");
-        renderGroup.withUiHint(UiHint.ICON, "monitor");
-        try {
-            renderGroup.addChild(new PaletteLibraryNode(cthugha.reader, actionContext, () -> paletteDirty = true));
-        } catch (java.io.IOException e) {
-            LOG.error("Failed to build palette library node", e);
-            renderGroup.addChild(action("New Palette", "plus-circle", ctx -> {
-                cthugha.newPalette();
-                paletteDirty = true;
-            }));
-        }
-
-        ContainerNode blurNode = new ContainerNode("Blur");
-        blurNode.withUiHint(UiHint.ICON, "wind");
-        blurNode.addChild(blurEnabled);
-        blurNode.addChild(blurKernelSize);
-        blurNode.addChild(blurFade);
-        blurNode.addChild(action("Kernel -", "minus", ctx -> {
-            if (blurEnabled.value && blurKernelSize.value <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
-                blurEnabled.setValue(0);
-                cthugha.notify("blur: OFF");
-            } else if (blurEnabled.value) {
-                blurKernelSize.setValue(blurKernelSize.value - 2);
-                cthugha.notify("blur kernel: " + blurKernelSize.value);
-            }
-        }));
-        blurNode.addChild(action("Kernel +", "plus", ctx -> {
-            if (!blurEnabled.value) {
-                blurEnabled.setValue(1);
-                blurKernelSize.setValue(BlurTextureRenderer.MIN_KERNEL_SIZE);
-                cthugha.notify("blur kernel: " + blurKernelSize.value);
-            } else {
-                blurKernelSize.setValue(blurKernelSize.value + 2);
-                cthugha.notify("blur kernel: " + blurKernelSize.value);
-            }
-        }));
-        blurNode.addChild(action("Fade -", "minus-circle", ctx -> {
-            blurFade.setValue(Math.max(0.0, blurFade.value - 0.005));
-            cthugha.notify(String.format("fade: %.3f", blurFade.value));
-        }));
-        blurNode.addChild(action("Fade +", "plus-circle", ctx -> {
-            blurFade.setValue(Math.min(1.0, blurFade.value + 0.005));
-            cthugha.notify(String.format("fade: %.3f", blurFade.value));
-        }));
-        renderGroup.addChild(blurNode);
-
-        // ---- General group: actions, rendered as a persistent expander below the tabs ----
-        generalGroup = new ContainerNode("General");
-        generalGroup.withUiHint(UiHint.ICON, "settings");
-        generalGroup.withUiHint(UiHint.CONTROL_TYPE, UiHint.EXPANDER);
-        generalGroup.addChild(action("Quit", "x-circle", ctx -> {
-            try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
-            exit();
-        }).withNoRemote());
-        generalGroup.addChild(action("Screenshot", "camera", ctx -> {
-            renderActions.enqueue("screenshot", rc -> captureNextFrame());
-            cthugha.notify("screenshot saved");
-        }));
-        generalGroup.addChild(action("Record 5s", "video", ctx -> {
-            renderActions.enqueue("startRecording", rc -> startRecording(Duration.ofSeconds(5)));
-            cthugha.notify("recording 5s…");
-        }));
-        generalGroup.addChild(action("Stop Recording", "square", ctx -> {
-            renderActions.enqueue("stopRecording", rc -> stopRecording());
-            cthugha.notify("recording stopped");
-        }));
-        generalGroup.addChild(action("Flash Image", "image", ctx ->
-            renderActions.enqueue("flashImage", rc -> flashImage())));
-        generalGroup.addChild(action("Flash White", "sun", ctx ->
-            renderActions.enqueue("flashWhite", rc -> {
-                textureBaker.setTexture(flashWhiteTex);
-                flashPending = true;
-            })));
-        generalGroup.addChild(action("Show Quote", "quote", ctx -> cthugha.showQuote()));
-        generalGroup.addChild(action("Toggle Fullscreen", "maximize-2", ctx ->
-            renderActions.enqueue("toggleFullscreen", rc -> toggleFullscreen())));
-        generalGroup.addChild(action("Toggle Debug", "bug", ctx -> cthugha.toggleDebug()));
-        generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
-        generalGroup.addChild(action("Toggle Quote Mode", "message-square", ctx -> {
-            quoteInBuffer = !quoteInBuffer;
-            cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
-        }));
-        generalGroup.addChild(action("Cycle Audio", "mic", ctx ->
-            cthugha.notify("audio: " + audioPipeline.cycleSource().getName())));
-
-        // ---- Wire up the root as a tabbed layout ----
-        cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);
-        cthugha.addChild(waveGroup);
-        cthugha.addChild(tabGroup);
-        cthugha.addChild(renderGroup);
-        cthugha.addChild(generalGroup);
-    }
-
-    // -------------------------------------------------------------------------
-    // Action factory helper
-    // -------------------------------------------------------------------------
-
-    private static AbstractAction action(String name, String icon, java.util.function.Consumer<ActionContext> body) {
-        AbstractAction a = new AbstractAction(name, body);
-        a.withUiHint(UiHint.ICON, icon);
-        return a;
-    }
-
-    // -------------------------------------------------------------------------
     // Flash image helper
     // -------------------------------------------------------------------------
 
@@ -860,38 +734,6 @@ public class CthughaWindow extends GLWindow {
         }
         palBuf.flip();
         return palBuf;
-    }
-
-    public static void main(String[] args) throws Exception {
-        boolean stdinEnabled = Arrays.asList(args).contains("--stdin");
-        RemoteConfig remoteConfig = RemoteConfig.parse(args);
-        DumpConfig dumpConfig = DumpConfig.parse(args);
-        new CthughaWindow(stdinEnabled, remoteConfig, dumpConfig).displayLoop();
-    }
-
-    private String detectBaseUrl() {
-        try {
-            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                boolean named = remoteConfig.networkInterface != null
-                        && remoteConfig.networkInterface.equalsIgnoreCase(ni.getName());
-                LOG.debug("Network interface: {} loopback={} up={} virtual={} named={}",
-                        ni.getName(), ni.isLoopback(), ni.isUp(), ni.isVirtual(), named);
-                // When the user names an interface, trust it; otherwise skip loopback/virtual/down.
-                if (ni.isLoopback() || !ni.isUp() || ni.isVirtual()) continue;
-                if (remoteConfig.networkInterface != null && !named) continue;
-                for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
-                    LOG.debug("  address: {} ({})", addr.getHostAddress(), addr.getClass().getSimpleName());
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                        return "http://" + addr.getHostAddress() + ":" + remoteConfig.port + "/";
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            LOG.warn("Could not detect local IP", e);
-        }
-        LOG.warn("No suitable network interface found (configured: {}), falling back to localhost",
-                remoteConfig.networkInterface);
-        return "http://localhost:" + remoteConfig.port + "/";
     }
 
 }

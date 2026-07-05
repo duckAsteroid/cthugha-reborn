@@ -78,7 +78,7 @@ test {
 }
 
 application {
-	mainClass = "io.github.duckasteroid.cthugha.display.CthughaWindow"
+	mainClass = "io.github.duckasteroid.cthugha.Main"
 	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
 }
 
