@@ -1,5 +1,6 @@
 package io.github.duckasteroid.cthugha.params;
 
+import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;

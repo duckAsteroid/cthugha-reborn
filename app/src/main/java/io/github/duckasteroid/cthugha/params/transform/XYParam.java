@@ -1,4 +1,6 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.transform;
+
+import io.github.duckasteroid.cthugha.params.AbstractNode;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import org.joml.Vector2f;

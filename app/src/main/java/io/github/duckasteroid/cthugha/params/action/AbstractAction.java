@@ -1,4 +1,7 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.action;
+
+import io.github.duckasteroid.cthugha.params.AbstractNode;
+import io.github.duckasteroid.cthugha.params.NodeType;
 
 import java.util.Random;
 import java.util.function.Consumer;

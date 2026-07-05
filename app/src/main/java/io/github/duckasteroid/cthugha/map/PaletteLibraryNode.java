@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.map;
 
-import io.github.duckasteroid.cthugha.params.AbstractAction;
+import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;

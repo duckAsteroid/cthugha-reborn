@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.params.AbstractAction;
+import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.Node;

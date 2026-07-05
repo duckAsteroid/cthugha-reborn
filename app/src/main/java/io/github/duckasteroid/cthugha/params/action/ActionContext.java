@@ -1,4 +1,4 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.action;
 
 import java.util.Random;
 

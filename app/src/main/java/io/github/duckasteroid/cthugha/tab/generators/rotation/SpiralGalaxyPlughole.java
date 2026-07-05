@@ -13,7 +13,7 @@ import static java.lang.Math.sqrt;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
-import io.github.duckasteroid.cthugha.params.XYParam;
+import io.github.duckasteroid.cthugha.params.transform.XYParam;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;

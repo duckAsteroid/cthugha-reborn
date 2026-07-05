@@ -3,7 +3,7 @@ package io.github.duckasteroid.cthugha.dump;
 import com.asteroid.duck.opengl.util.keys.KeyAction;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
-import io.github.duckasteroid.cthugha.params.Action;
+import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.StringValue;
 

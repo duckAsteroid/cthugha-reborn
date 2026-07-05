@@ -6,7 +6,7 @@ import com.google.auto.service.AutoService;
 import io.github.duckasteroid.cthugha.params.AbstractNode;
 import java.nio.ShortBuffer;
 import java.util.Random;
-import io.github.duckasteroid.cthugha.params.XYParam;
+import io.github.duckasteroid.cthugha.params.transform.XYParam;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.params.values.LongParameter;

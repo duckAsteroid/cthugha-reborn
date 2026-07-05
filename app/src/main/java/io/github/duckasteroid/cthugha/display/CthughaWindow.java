@@ -41,10 +41,10 @@ import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.duckasteroid.cthugha.params.AbstractAction;
+import io.github.duckasteroid.cthugha.params.action.AbstractAction;
+import io.github.duckasteroid.cthugha.params.action.Action;
+import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
-import io.github.duckasteroid.cthugha.params.Action;
-import io.github.duckasteroid.cthugha.params.ActionContext;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;

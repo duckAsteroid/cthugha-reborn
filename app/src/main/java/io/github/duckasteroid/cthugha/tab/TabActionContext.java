@@ -1,6 +1,6 @@
 package io.github.duckasteroid.cthugha.tab;
 
-import io.github.duckasteroid.cthugha.params.ActionContext;
+import io.github.duckasteroid.cthugha.params.action.ActionContext;
 
 import java.awt.Dimension;
 

@@ -1,4 +1,6 @@
-package io.github.duckasteroid.cthugha.params;
+package io.github.duckasteroid.cthugha.params.action;
+
+import io.github.duckasteroid.cthugha.params.Node;
 
 /**
  * A leaf node in the parameter tree that represents an invocable operation.

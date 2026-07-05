@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
-import io.github.duckasteroid.cthugha.params.Action;
+import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.StringValue;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
