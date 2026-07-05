@@ -3,6 +3,11 @@ package io.github.duckasteroid.cthugha;
 
 import io.github.duckasteroid.cthugha.animation.AnimationSystem;
 import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
+import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
+import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
+import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
+import io.github.duckasteroid.cthugha.display.phase.WavePhase;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
@@ -26,6 +31,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,6 +164,15 @@ public class JCthugha extends ParamNode implements Closeable {
 
 	public void toggleDebug() {
 		notify("debug toggled (no-op in OpenGL mode)");
+	}
+
+	public List<RenderPhase> createPhases() {
+		List<RenderPhase> list = new ArrayList<>();
+		list.add(new WavePhase(this));
+		list.add(new FlashPhase());
+		list.add(new QuotePhase(this));
+		list.add(new NotifPhase(this));
+		return list;
 	}
 
 	@Override

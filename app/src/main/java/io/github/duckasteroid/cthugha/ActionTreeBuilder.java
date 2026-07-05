@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha;
 
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
+import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.map.PaletteActionContext;
 import io.github.duckasteroid.cthugha.map.PaletteLibraryNode;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
@@ -15,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -39,11 +41,7 @@ public class ActionTreeBuilder {
         void screenshot();           // GL thread
         void startRecording();       // GL thread
         void stopRecording();        // GL thread
-        void flashImage();           // GL thread
-        void flashWhite();           // GL thread
         void toggleFullscreen();     // GL thread
-        void toggleQuoteMode();
-        String cycleAudio();
         void exitApplication();
     }
 
@@ -77,8 +75,10 @@ public class ActionTreeBuilder {
      * Builds the Wave / Tab / Render / General tab groups and mounts them on the
      * {@link JCthugha} root node.  Must be called exactly once after
      * {@link JCthugha#init} and before the render loop starts.
+     *
+     * @param phases the ordered list of render phases; each phase registers its own actions
      */
-    public void build() {
+    public void build(List<RenderPhase> phases) {
         // ---- Wave tab: audio-reactive renderers and animation ----
         ContainerNode waveGroup = new ContainerNode("Wave");
         waveGroup.withUiHint(UiHint.ICON, "music");
@@ -177,19 +177,16 @@ public class ActionTreeBuilder {
             renderActions.enqueue("stopRecording", rc -> callbacks.stopRecording());
             cthugha.notify("recording stopped");
         }));
-        generalGroup.addChild(action("Flash Image", "image", ctx ->
-                renderActions.enqueue("flashImage", rc -> callbacks.flashImage())));
-        generalGroup.addChild(action("Flash White", "sun", ctx ->
-                renderActions.enqueue("flashWhite", rc -> callbacks.flashWhite())));
-        generalGroup.addChild(action("Show Quote", "quote", ctx -> cthugha.showQuote()));
         generalGroup.addChild(action("Toggle Fullscreen", "maximize-2", ctx ->
                 renderActions.enqueue("toggleFullscreen", rc -> callbacks.toggleFullscreen())));
         generalGroup.addChild(action("Toggle Debug", "bug", ctx -> cthugha.toggleDebug()));
         generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
-        generalGroup.addChild(action("Toggle Quote Mode", "message-square", ctx ->
-                callbacks.toggleQuoteMode()));
-        generalGroup.addChild(action("Cycle Audio", "mic", ctx ->
-                cthugha.notify("audio: " + callbacks.cycleAudio())));
+
+        // Each phase registers its own actions (Flash Image, Flash White, Show Quote,
+        // Toggle Quote Mode, Cycle Audio, etc.)
+        for (RenderPhase phase : phases) {
+            phase.registerActions(generalGroup, renderActions);
+        }
 
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);

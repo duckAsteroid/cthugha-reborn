@@ -2,6 +2,11 @@ package io.github.duckasteroid.cthugha;
 
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
+import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
+import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
+import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
+import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
+import io.github.duckasteroid.cthugha.display.phase.WavePhase;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.map.PaletteActionContext;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
@@ -60,16 +65,20 @@ class ActionTreePathTest {
             @Override public void screenshot() {}
             @Override public void startRecording() {}
             @Override public void stopRecording() {}
-            @Override public void flashImage() {}
-            @Override public void flashWhite() {}
             @Override public void toggleFullscreen() {}
-            @Override public void toggleQuoteMode() {}
-            @Override public String cycleAudio() { return "test"; }
             @Override public void exitApplication() {}
         };
 
+        // Phase objects register their own actions (Flash Image, Flash White, etc.)
+        // No GL init() needed — registerActions() is pure param-tree wiring.
+        List<RenderPhase> phases = List.of(
+                new WavePhase(app),
+                new FlashPhase(),
+                new QuotePhase(app),
+                new NotifPhase(app));
+
         new ActionTreeBuilder(app, ctx, new RenderActionQueue(), blurEnabled, blurKernelSize, blurFade, noOp)
-                .build();
+                .build(phases);
     }
 
     /** Every path referenced in cthugha.ini [keys] must exist in the built tree. */

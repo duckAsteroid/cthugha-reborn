@@ -1,49 +1,34 @@
 package io.github.duckasteroid.cthugha.display;
 
 import com.asteroid.duck.opengl.util.GLWindow;
-import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
-import com.asteroid.duck.opengl.util.wave.AudioWave;
-import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
-import com.asteroid.duck.opengl.util.wave.RadialWave;
-import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
-import com.asteroid.duck.opengl.util.color.StandardColors;
 
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
-import com.asteroid.duck.opengl.util.resources.font.FontTexture;
-import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.resources.io.PathBasedLoader;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManagerImpl;
 import com.asteroid.duck.opengl.util.resources.texture.Filter;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
-import com.asteroid.duck.opengl.util.text.StringRenderer;
 import io.github.duckasteroid.cthugha.ActionTreeBuilder;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.config.Config;
-import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
-import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
-import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
-import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
-import io.github.duckasteroid.cthugha.img.RandomImageSource;
+import io.github.duckasteroid.cthugha.display.phase.QrPhase;
+import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
-import org.joml.Matrix4f;
-import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
-import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -55,23 +40,19 @@ import io.github.duckasteroid.cthugha.remote.RemoteConfig;
 import io.github.duckasteroid.cthugha.remote.RemoteEventBroadcaster;
 import io.github.duckasteroid.cthugha.remote.RemoteServer;
 import io.github.duckasteroid.cthugha.remote.TokenStore;
-import io.github.duckasteroid.cthugha.strings.Constants;
-import io.github.duckasteroid.cthugha.strings.Quote;
 
 import java.awt.Dimension;
 import java.awt.DisplayMode;
-import java.awt.Font;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.asteroid.duck.opengl.util.Monitor;
 
@@ -88,7 +69,6 @@ public class CthughaWindow extends GLWindow {
     private final JCthugha cthugha;
 
     // Render buffer dimensions — may differ from the GLFW window size.
-    // Set in init() once getWindow() is available; read from [display] render_width/render_height.
     private int renderWidth;
     private int renderHeight;
     private final boolean startFullscreen;
@@ -133,25 +113,6 @@ public class CthughaWindow extends GLWindow {
     private final ByteBuffer palBuf = BufferUtils.createByteBuffer(256 * 4);
     private boolean paletteDirty = false;
 
-    private StringRenderer quoteRenderer;
-    private StringRenderer attrRenderer;
-    private StringRenderer notifRenderer;
-    private Quote lastQuote = null;
-    private String attrPosition;
-    private String attrAlign;
-    private Instant notifExpiry = null;
-    private static final Duration NOTIF_DURATION = Duration.ofSeconds(3);
-
-    // Texture flash: one-shot bake of an RGBA texture into pongTex as palette indices
-    private final RandomImageSource imageSource = new RandomImageSource(Paths.get("pcx"));
-    private TextureBakeRenderer textureBaker;
-    private Texture flashWhiteTex;
-    private Texture flashImageTex;
-    private boolean flashPending = false;
-
-    // Quote render mode: true = baked into the indexed buffer; false = RGBA overlay (default)
-    private boolean quoteInBuffer = false;
-
     private Double desiredUpdatePeriod = null;
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
@@ -162,28 +123,15 @@ public class CthughaWindow extends GLWindow {
     // Populated by ActionTreeBuilder.build(); used to add the Remote node afterwards.
     private ContainerNode generalGroup;
 
-    // RGBA offscreen texture: all wave renderers draw here
-    private Texture waveOverlayTex;
-    private FrameBuffer waveOverlayFBO;
-    // Converts RGBA wave overlay → R8 palette indices baked into pongTex
-    private WaveIndexBakeRenderer waveBaker;
-
-    // Audio pipeline — owns LineAcquirer, AudioReader, PboAudioSink, FrequencyProcessor
-    private AudioPipeline audioPipeline;
-
-    // Fixed wave/spectrum GL renderers — always initialized, rendered only when model.enabled
-    private static final Vector4f WAVE_COLOUR = new Vector4f(1f, 1f, 1f, 0.85f);
-    private AudioWave oscWave;
-    private RadialWave radWave;
-    private SpectrumAnalyser specAnalyser;
-    private RadialSpectrumAnalyser radSpecAnalyser;
+    // Ordered render phase list (Wave, Flash, Quote, Notif, and optionally QrPhase)
+    private List<RenderPhase> phases;
+    private QrPhase qrPhase;  // non-null only when remote is enabled
 
     private final RemoteConfig remoteConfig;
     private final DumpConfig dumpConfig;
     private TokenStore tokenStore;
     private RemoteEventBroadcaster broadcaster;
     private RemoteServer remoteServer;
-    private QrOverlay qrOverlay;
 
     public CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, DumpConfig dumpConfig) {
         this(stdinEnabled, remoteConfig, dumpConfig, resolveDisplaySize());
@@ -284,28 +232,9 @@ public class CthughaWindow extends GLWindow {
 
         cthugha.init(new Dimension(w, h), getRandom());
         actionContext = new CthughaActionContext(cthugha, getRandom());
-        ActionTreeBuilder treeBuilder = new ActionTreeBuilder(
-                cthugha, actionContext, renderActions,
-                blurEnabled, blurKernelSize, blurFade,
-                new ActionTreeBuilder.Callbacks() {
-                    @Override public void rebuildTranslateMap() { CthughaWindow.this.rebuildTranslateMap(); }
-                    @Override public void markPaletteDirty() { paletteDirty = true; }
-                    @Override public void screenshot() { captureNextFrame(); }
-                    @Override public void startRecording() { CthughaWindow.this.startRecording(Duration.ofSeconds(5)); }
-                    @Override public void stopRecording() { CthughaWindow.this.stopRecording(); }
-                    @Override public void flashImage() { CthughaWindow.this.flashImage(); }
-                    @Override public void flashWhite() { textureBaker.setTexture(flashWhiteTex); flashPending = true; }
-                    @Override public void toggleFullscreen() { CthughaWindow.this.toggleFullscreen(); }
-                    @Override public void toggleQuoteMode() {
-                        quoteInBuffer = !quoteInBuffer;
-                        cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
-                    }
-                    @Override public String cycleAudio() { return audioPipeline.cycleSource().getName(); }
-                    @Override public void exitApplication() { exit(); }
-                });
-        treeBuilder.build();
-        generalGroup = treeBuilder.getGeneralGroup();
-        cthugha.animation.init(getClock());
+
+        // Create phase list from JCthugha factory
+        phases = new ArrayList<>(cthugha.createPhases());
 
         // Wire translation-layer callbacks before starting the remote server so SSE events work.
         cthugha.translateSource.setOnRegenerateNeeded(() -> {
@@ -317,6 +246,30 @@ public class CthughaWindow extends GLWindow {
             renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
         });
 
+        // Remote setup: create QrPhase and add to phase list before tree build
+        if (remoteConfig != null && remoteConfig.enabled) {
+            QrOverlay qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
+            qrPhase = new QrPhase(qrOverlay);
+            phases.add(qrPhase);
+        }
+
+        // Build action tree (phases register their own actions)
+        ActionTreeBuilder treeBuilder = new ActionTreeBuilder(
+                cthugha, actionContext, renderActions,
+                blurEnabled, blurKernelSize, blurFade,
+                new ActionTreeBuilder.Callbacks() {
+                    @Override public void rebuildTranslateMap() { CthughaWindow.this.rebuildTranslateMap(); }
+                    @Override public void markPaletteDirty() { paletteDirty = true; }
+                    @Override public void screenshot() { captureNextFrame(); }
+                    @Override public void startRecording() { CthughaWindow.this.startRecording(Duration.ofSeconds(5)); }
+                    @Override public void stopRecording() { CthughaWindow.this.stopRecording(); }
+                    @Override public void toggleFullscreen() { CthughaWindow.this.toggleFullscreen(); }
+                    @Override public void exitApplication() { exit(); }
+                });
+        treeBuilder.build(phases);
+        generalGroup = treeBuilder.getGeneralGroup();
+
+        // Start remote server and add remote node to the param tree
         if (remoteConfig != null && remoteConfig.enabled) {
             tokenStore = new TokenStore();
             broadcaster = new RemoteEventBroadcaster();
@@ -331,7 +284,7 @@ public class CthughaWindow extends GLWindow {
             AbstractAction rotateToken = new AbstractAction("Rotate Token", ctx -> {
                 String url = tokenStore.rotate(NetworkUtils.detectBaseUrl(remoteConfig));
                 LOG.info("Remote URL: {}", url);
-                if (qrOverlay != null) qrOverlay.show(url);
+                if (qrPhase != null) qrPhase.show(url);
                 broadcaster.broadcastAll("tokenRotated", "{}");
                 remoteServer.resetFirstAuth();
             });
@@ -340,23 +293,14 @@ public class CthughaWindow extends GLWindow {
             remoteNode.addChild(rotateToken);
             generalGroup.addChild(remoteNode);
 
-            qrOverlay = new QrOverlay(remoteConfig.qrTimeoutSeconds, remoteConfig.qrLogoPercent);
-            qrOverlay.init(this);
-            remoteServer.setOnFirstAuth(() -> qrOverlay.hide());
+            remoteServer.setOnFirstAuth(() -> qrPhase.hide());
 
             String initialUrl = tokenStore.rotate(NetworkUtils.detectBaseUrl(remoteConfig));
             LOG.info("Remote URL: {}", initialUrl);
-            qrOverlay.show(initialUrl);
+            qrPhase.show(initialUrl);  // safe to call before init()
         }
 
-        // Font textures first to avoid disturbing the active texture unit
-        FontTexture quoteFont = makeFontTexture("quote", "Serif", Font.ITALIC, 36);
-        FontTexture attrFont  = makeFontTexture("attr",  "Serif", Font.PLAIN,  22);
-        FontTexture notifFont = new FontTextureFactory(new Font("Monospaced", Font.BOLD, 18), true).createFontTexture();
-        attrPosition = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_POSITION, "below");
-        attrAlign    = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_ALIGN,    "center");
-
-        // Ping-pong R8 textures
+        // GL backbone: ping-pong R8 textures
         pingTex = new Texture();
         pingTex.setInternalFormat(GL_R8);
         pingTex.setImageFormat(GL_RED);
@@ -428,72 +372,12 @@ public class CthughaWindow extends GLWindow {
         paletteUploadUnit = getResourceManager().nextTextureUnit();
         paletteUploadUnit.bind(paletteTex);
 
-        quoteRenderer = new StringRenderer(quoteFont);
-        quoteRenderer.init(this);
-        quoteRenderer.setTextColor(StandardColors.WHITE.color);
+        // Initialise all phases (GL context is now fully set up)
+        for (RenderPhase p : phases) {
+            p.init(this);
+        }
 
-        attrRenderer = new StringRenderer(attrFont);
-        attrRenderer.init(this);
-        attrRenderer.setTextColor(new Vector4f(0.85f, 0.85f, 0.85f, 1.0f));
-
-        notifRenderer = new StringRenderer(notifFont);
-        notifRenderer.init(this);
-        notifRenderer.setTransform(new Matrix4f().translate(20.0f, 30.0f, 0.0f));
-        notifRenderer.setTextColor(StandardColors.YELLOW.color);
-
-        // Wave overlay — RGBA offscreen FBO shared by all wave/spectrum renderers
-        waveOverlayTex = new Texture();
-        waveOverlayTex.setInternalFormat(GL_RGBA);
-        waveOverlayTex.setImageFormat(GL_RGBA);
-        waveOverlayTex.setDataType(GL_UNSIGNED_BYTE);
-        waveOverlayTex.setFilter(Filter.LINEAR);
-        waveOverlayTex.generate(w, h, 0L);
-        getResourceManager().putTexture("waveOverlay", waveOverlayTex);
-        waveOverlayFBO = new FrameBuffer(waveOverlayTex);
-
-        waveBaker = new WaveIndexBakeRenderer("waveOverlay");
-        waveBaker.init(this);
-
-        // 1×1 white flash texture
-        ByteBuffer whitePx = BufferUtils.createByteBuffer(4);
-        whitePx.put((byte) 0xFF).put((byte) 0).put((byte) 0).put((byte) 0xFF).flip();
-        flashWhiteTex = new Texture();
-        flashWhiteTex.setInternalFormat(GL_RGBA);
-        flashWhiteTex.setImageFormat(GL_RGBA);
-        flashWhiteTex.setDataType(GL_UNSIGNED_BYTE);
-        flashWhiteTex.setFilter(Filter.NEAREST);
-        flashWhiteTex.generate(1, 1, whitePx);
-
-        textureBaker = new TextureBakeRenderer();
-        textureBaker.init(this);
-        textureBaker.setTexture(flashWhiteTex);
-
-        // Audio pipeline
-        audioPipeline = new AudioPipeline();
-        audioPipeline.init(this);
-
-        // GL wave renderers — all 4 fixed slots always initialized
-        oscWave = new AudioWave(audioPipeline.getPboSink());
-        oscWave.setLineColour(WAVE_COLOUR);
-        oscWave.setLineWidth(2.0f);
-        oscWave.setClearBeforeRender(false);
-        oscWave.init(this);
-
-        radWave = new RadialWave(audioPipeline.getPboSink());
-        radWave.setLineColour(WAVE_COLOUR);
-        radWave.setLineWidth(2.0f);
-        radWave.setClearBeforeRender(false);
-        radWave.init(this);
-
-        specAnalyser = new SpectrumAnalyser(audioPipeline.getFreqProc());
-        specAnalyser.setClearBeforeRender(false);
-        audioPipeline.getFreqProc().addSink(specAnalyser);
-        specAnalyser.init(this);
-
-        radSpecAnalyser = new RadialSpectrumAnalyser(audioPipeline.getFreqProc());
-        radSpecAnalyser.setClearBeforeRender(false);
-        audioPipeline.getFreqProc().addSink(radSpecAnalyser);
-        radSpecAnalyser.init(this);
+        cthugha.animation.init(getClock());
 
         if (startFullscreen) {
             toggleFullscreen();
@@ -515,10 +399,10 @@ public class CthughaWindow extends GLWindow {
     public void render() throws IOException {
         renderActions.processAll(this);
 
-        // 1. CPU pipeline: advance parameter animators
+        // CPU pipeline: advance parameter animators
         cthugha.doRenderCPU();
 
-        // 2. Upload palette LUT only when changed
+        // Upload palette LUT only when changed
         if (paletteDirty) {
             paletteDirty = false;
             paletteUploadUnit.activate();
@@ -528,73 +412,15 @@ public class CthughaWindow extends GLWindow {
         }
 
         java.awt.Rectangle win = getWindow();
-
-        // Sync quote text whenever it changes
-        Quote quote = cthugha.getCurrentQuote();
-        if (quote != lastQuote) {
-            if (quote != null) {
-                updateQuoteLayout(quote, renderWidth, renderHeight);
-            }
-            lastQuote = quote;
-        }
-
-        // 3. Upload audio data once for all renderers this frame
-        audioPipeline.update();
-
-        // 4. Wave offscreen: render enabled waves into shared RGBA overlay texture
         glViewport(0, 0, renderWidth, renderHeight);
-        waveOverlayFBO.bind();
-        glClearColor(0f, 0f, 0f, 0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        OscilloscopeModel om = cthugha.oscilloscope;
-        if (om.enabled.value) {
-            float amp = (float) om.amplitude.value;
-            oscWave.setAmplitudeFunction(om.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            oscWave.setTransform(om.transform.applyTo(new Matrix4f()));
-            oscWave.doRender(this);
-        }
-        RadialWaveModel rm = cthugha.radialWave;
-        if (rm.enabled.value) {
-            float amp = (float) rm.amplitude.value;
-            radWave.setAmplitudeFunction(rm.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            radWave.setTransform(rm.transform.applyTo(new Matrix4f()));
-            radWave.doRender(this);
-        }
-        SpectrumModel sm = cthugha.spectrum;
-        if (sm.enabled.value) {
-            specAnalyser.setTransform(sm.transform.applyTo(new Matrix4f()));
-            specAnalyser.doRender(this);
-        }
-        RadialSpectrumModel rsm = cthugha.radialSpectrum;
-        if (rsm.enabled.value) {
-            radSpecAnalyser.withRepeats(rsm.repeats.value);
-            radSpecAnalyser.setTransform(rsm.transform.applyTo(new Matrix4f()));
-            radSpecAnalyser.doRender(this);
-        }
-        if (quoteInBuffer && quote != null) {
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            quoteRenderer.doRender(this);
-            attrRenderer.doRender(this);
-            glDisable(GL_BLEND);
-        }
-        waveOverlayFBO.unbind();
-        glClearColor(0f, 0f, 0f, 1f);
 
-        // 5. pongFBO: translate pingTex → pongTex, bake wave overlay and flash
+        // Indexed pass: translate pingTex → pongTex, then phases write directly into pongTex
         pongFBO.bind();
         translateRenderer.doRender(this);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        waveBaker.doRender(this);
-        if (flashPending) {
-            textureBaker.doRender(this);
-            flashPending = false;
-        }
-        glDisable(GL_BLEND);
+        for (RenderPhase p : phases) p.indexedRender(this);
         pongFBO.unbind();
 
-        // 6. Flame: two-pass Gaussian blur with fade
+        // Flame: two-pass Gaussian blur with fade
         flameFBO.bind();
         xBlur.doRender(this);
         flameFBO.unbind();
@@ -603,47 +429,19 @@ public class CthughaWindow extends GLWindow {
         yBlur.doRender(this);
         pingFBO.unbind();
 
-        // 7. Display: pingTex (R8) → RGBA via palette LUT → default FBO (window viewport)
+        // Display: pingTex (R8) → RGBA via palette LUT → default FBO (window viewport)
         glViewport(0, 0, win.width, win.height);
         paletteRenderer.doRender(this);
 
-        // 8. Text overlays — alpha-blend over the palette output (overlay mode only)
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        if (!quoteInBuffer && quote != null) {
-            quoteRenderer.doRender(this);
-            attrRenderer.doRender(this);
-        }
-
-        String notif = cthugha.pollNotification();
-        if (notif != null) {
-            notifRenderer.setText(notif);
-            notifExpiry = Instant.now().plus(NOTIF_DURATION);
-        }
-        if (notifExpiry != null && Instant.now().isBefore(notifExpiry)) {
-            notifRenderer.doRender(this);
-        } else {
-            notifExpiry = null;
-        }
-
-        if (qrOverlay != null) {
-            qrOverlay.doRender(this);
-        }
-
-        glDisable(GL_BLEND);
+        // Screen overlays: each phase manages its own blend state
+        for (RenderPhase p : phases) p.screenRender(this);
     }
 
     @Override
     public void dispose() {
-        if (oscWave           != null) oscWave.dispose();
-        if (radWave           != null) radWave.dispose();
-        if (specAnalyser      != null) specAnalyser.dispose();
-        if (radSpecAnalyser   != null) radSpecAnalyser.dispose();
-        if (audioPipeline     != null) audioPipeline.dispose();
-        if (quoteRenderer     != null) quoteRenderer.dispose();
-        if (attrRenderer      != null) attrRenderer.dispose();
-        if (notifRenderer     != null) notifRenderer.dispose();
+        if (phases != null) {
+            for (RenderPhase p : phases) p.dispose();
+        }
         if (xBlur             != null) xBlur.dispose();
         if (yBlur             != null) yBlur.dispose();
         if (flameFBO          != null) flameFBO.dispose();
@@ -652,119 +450,10 @@ public class CthughaWindow extends GLWindow {
         if (translateRenderer != null) translateRenderer.dispose();
         if (pingFBO           != null) pingFBO.dispose();
         if (pongFBO           != null) pongFBO.dispose();
-        if (waveBaker         != null) waveBaker.dispose();
-        if (textureBaker      != null) textureBaker.dispose();
-        if (flashWhiteTex     != null) flashWhiteTex.dispose();
-        if (flashImageTex     != null) flashImageTex.dispose();
-        if (waveOverlayFBO    != null) waveOverlayFBO.dispose();
-        if (qrOverlay         != null) qrOverlay.dispose();
         if (stdinInjector     != null) stdinInjector.close();
         if (remoteServer      != null) remoteServer.stop();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }
         super.dispose();
-    }
-
-    // -------------------------------------------------------------------------
-    // Flash image helper
-    // -------------------------------------------------------------------------
-
-    private void flashImage() {
-        try {
-            BufferedImage img = imageSource.nextImage();
-            if (flashImageTex != null) {
-                flashImageTex.dispose();
-            }
-            flashImageTex = new Texture();
-            flashImageTex.setInternalFormat(GL_RGBA);
-            flashImageTex.setImageFormat(GL_RGBA);
-            flashImageTex.setDataType(GL_UNSIGNED_BYTE);
-            flashImageTex.setFilter(Filter.LINEAR);
-            flashImageTex.generate(img.getWidth(), img.getHeight(), imageToRGBA(img));
-            textureBaker.setTexture(flashImageTex);
-            flashPending = true;
-        } catch (IOException e) {
-            LOG.error("Error loading flash image", e);
-        }
-    }
-
-    private ByteBuffer imageToRGBA(BufferedImage img) {
-        int w = img.getWidth();
-        int h = img.getHeight();
-        ByteBuffer buf = BufferUtils.createByteBuffer(w * h * 4);
-        for (int y = h - 1; y >= 0; y--) {
-            for (int x = 0; x < w; x++) {
-                int rgb = img.getRGB(x, y);
-                int r = (rgb >> 16) & 0xFF;
-                int g = (rgb >> 8) & 0xFF;
-                int b = rgb & 0xFF;
-                int luma = (r * 299 + g * 587 + b * 114) / 1000;
-                buf.put((byte) luma);
-                buf.put((byte) 0);
-                buf.put((byte) 0);
-                buf.put((byte) 0xFF);
-            }
-        }
-        buf.flip();
-        return buf;
-    }
-
-    // -------------------------------------------------------------------------
-    // Quote layout helpers
-    // -------------------------------------------------------------------------
-
-    private void updateQuoteLayout(Quote quote, int w, int h) {
-        String quoteText = quote.quote();
-        String attrText  = "— " + quote.author();
-
-        quoteRenderer.setText(quoteText);
-        attrRenderer.setText(attrText);
-
-        float quoteY = h / 2.0f;
-        quoteRenderer.setTransform(new Matrix4f().translate(40.0f, quoteY, 0.0f));
-
-        FontTexture attrFont  = attrRenderer.getFontTexture();
-        FontTexture quoteFont = quoteRenderer.getFontTexture();
-        int gap = 8;
-
-        float attrY;
-        if ("above".equalsIgnoreCase(attrPosition)) {
-            attrY = quoteY - attrFont.getFontHeight() - gap;
-        } else {
-            attrY = quoteY + quoteFont.getHeight(quoteText) + gap;
-        }
-
-        float attrX = switch (attrAlign.toLowerCase()) {
-            case "center" -> (w - attrFont.getWidth(attrText)) / 2.0f;
-            case "right"  -> w - attrFont.getWidth(attrText) - 40.0f;
-            default       -> 40.0f;
-        };
-
-        attrRenderer.setTransform(new Matrix4f().translate(attrX, attrY, 0.0f));
-    }
-
-    private static FontTexture makeFontTexture(String prefix, String defaultName, int defaultStyle, int defaultSize) {
-        String name  = CFG.getConfig(Constants.SECTION, prefix + "_font",  defaultName);
-        int    size  = CFG.getConfigAs(Constants.SECTION, prefix + "_size",  String.valueOf(defaultSize), Integer::parseInt);
-        int    style = parseFontStyle(CFG.getConfig(Constants.SECTION, prefix + "_style", fontStyleName(defaultStyle)));
-        return new FontTextureFactory(new Font(name, style, size), true).createFontTexture();
-    }
-
-    private static int parseFontStyle(String s) {
-        return switch (s.toUpperCase()) {
-            case "BOLD"        -> Font.BOLD;
-            case "ITALIC"      -> Font.ITALIC;
-            case "BOLD_ITALIC" -> Font.BOLD | Font.ITALIC;
-            default            -> Font.PLAIN;
-        };
-    }
-
-    private static String fontStyleName(int style) {
-        return switch (style) {
-            case Font.BOLD              -> "BOLD";
-            case Font.ITALIC            -> "ITALIC";
-            case Font.BOLD | Font.ITALIC -> "BOLD_ITALIC";
-            default                     -> "PLAIN";
-        };
     }
 
     // -------------------------------------------------------------------------

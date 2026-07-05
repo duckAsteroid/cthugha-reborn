@@ -16,7 +16,7 @@ import java.io.IOException;
  * underlying content; A=1 overwrites with the palette index.
  * Used for one-shot effects (white flash, PCX image flash) baked into pongFBO.
  */
-class TextureBakeRenderer implements RenderedItem {
+public class TextureBakeRenderer implements RenderedItem {
 
     private static final String VERT = """
             #version 330 core

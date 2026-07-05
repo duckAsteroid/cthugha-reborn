@@ -35,17 +35,33 @@ The `app/src/dist/` directory is the runtime working directory and contains:
 
 ### Rendering Pipeline
 
-The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`'s `GLWindow`). Each frame executes as a sequence of GPU passes:
+The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`'s `GLWindow`). Each frame executes as two passes driven by an ordered list of `RenderPhase` implementations:
 
-1. **CPU tick** (`JCthugha.doRenderCPU()`) — advances animations and frame rate stats
-2. **Translate pass** (`TranslateTextureRenderer`) — GPU shader reads the RG16UI translation map texture and shifts every pixel in `pingTex` into `pongTex`
-3. **Blur/flame pass** (`BlurTextureRenderer`) — two-pass separable Gaussian blur with a fade multiplier applied to `pongTex` back into `pingTex`, creating the flame spread effect
-4. **Wave bake** (`WaveIndexBakeRenderer`) — audio waveform models write palette indices into the indexed buffer, baked into `pingTex`
-5. **Texture flash** (`TextureBakeRenderer`) — optionally bakes a PCX image or white flash into the indexed buffer
-6. **Display pass** (`PaletteRenderer`) — palette-converts `pingTex` (R8 palette indices) to RGBA for display using a 256-entry LUT texture
-7. **Overlay** — quote text and notifications rendered by `StringRenderer` (render-core); QR code overlay via `QrOverlay`
+**Indexed pass** (while `pongFBO` is bound — writes directly to the R8 `pongTex`):
+1. **CPU tick** (`JCthugha.doRenderCPU()`) — advances animations and frame rate stats; uploads palette LUT when dirty
+2. **Translate** (`TranslateTextureRenderer`) — GPU shader reads the RG16UI translation map and shifts every pixel of `pingTex` into `pongTex`
+3. **`phase.indexedRender()`** for each phase in order — waves, flash effects, and (optionally) baked quote text write palette indices directly into `pongTex`
 
-**Ping-pong textures**: `pingTex` is always the display/translate source; `pongTex` is the translate output/flame source. Both are R8 format (single-byte palette index per pixel).
+**Blur** (between passes):
+4. **Two-pass Gaussian blur** (`BlurTextureRenderer` xBlur + yBlur) with fade multiplier — `pongTex` → `flameTex` → `pingTex`, creating the flame spread effect
+
+**Screen pass** (after palette display, renders RGBA overlays):
+5. **Display** (`PaletteRenderer`) — palette-converts `pingTex` (R8 indices) to RGBA for the window using a 256-entry LUT texture
+6. **`phase.screenRender()`** for each phase in order — quote text overlay, notifications, QR code (each phase manages its own blend state)
+
+**Ping-pong textures**: `pingTex` is always the display/translate source; `pongTex` is the translate output/indexed-render target. Both are R8 format (single-byte palette index per pixel).
+
+### Render Phase Components
+
+`RenderPhase` (`display/phase/RenderPhase.java`) is a simple interface with default no-op methods: `init`, `indexedRender`, `screenRender`, `dispose`, and `registerActions`. `CthughaWindow` drives an ordered list of phases; `JCthugha.createPhases()` defines the default order.
+
+Five implementations live in `display/phase/`:
+
+- **`WavePhase`** — owns `AudioPipeline` and all four wave/spectrum GL renderers. Renders directly into the R8 pong texture using palette-index–compatible colours (red channel = index/255, so index 200 ≈ 0.784). Registers the "Cycle Audio" action.
+- **`FlashPhase`** — one-shot texture flash effects (PCX image or white) baked into `pongTex` via `TextureBakeRenderer`. Registers "Flash Image" and "Flash White" actions.
+- **`QuotePhase`** — renders the current quote as a screen overlay (default) or baked into the indexed buffer (`quoteInBuffer` mode). In bake mode, saves/restores the GL framebuffer binding (`glGetIntegerv(GL_FRAMEBUFFER_BINDING)`) to temporarily render RGBA text then bake it back into the restored pong FBO. Registers "Show Quote" and "Toggle Quote Mode" actions.
+- **`NotifPhase`** — renders transient notification messages as a 3-second RGBA screen overlay. Notifications are produced by `JCthugha.notify()` and polled each frame.
+- **`QrPhase`** — wraps `QrOverlay`; added by `CthughaWindow` only when the remote server is enabled. `show(url)` / `hide()` are thread-safe proxies for the remote server.
 
 ### Core Data Structures
 
@@ -109,4 +125,4 @@ Wave renderers live in `display/wave/` and implement the render-core wave interf
 
 ## Current Branch Context
 
-Branch `web_controls` is active — recent work involves the remote control UI (Javalin server, React SPA, SSE), action system, tab presets, palette browser, and keyboard/remote parameter controls.
+Branch `render_phase` is active — extracted `RenderPhase` interface and five phase implementations (`WavePhase`, `FlashPhase`, `QuotePhase`, `NotifPhase`, `QrPhase`) from the `CthughaWindow` monolith. Wave renderers now write directly to the R8 ping-pong buffer; the RGBA wave overlay FBO and `WaveIndexBakeRenderer` have been deleted. `ActionTreeBuilder.Callbacks` shrunk from 11 to 7 methods; phases register their own actions via `registerActions()`.
