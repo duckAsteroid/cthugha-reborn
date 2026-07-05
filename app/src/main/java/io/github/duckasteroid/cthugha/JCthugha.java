@@ -61,7 +61,7 @@ public class JCthugha extends ParamNode implements Closeable {
 
 
 	private final RandomStringSource stringSource = new RandomStringSource();
-	private volatile String currentQuoteText = null;
+	private volatile Quote currentQuote = null;
 	private Instant quoteExpiry = null;
 	private volatile String pendingNotification = null;
 
@@ -109,11 +109,11 @@ public class JCthugha extends ParamNode implements Closeable {
 		return n;
 	}
 
-	public String getCurrentQuote() {
-		if (currentQuoteText != null && Instant.now().isBefore(quoteExpiry)) {
-			return currentQuoteText;
+	public Quote getCurrentQuote() {
+		if (currentQuote != null && Instant.now().isBefore(quoteExpiry)) {
+			return currentQuote;
 		}
-		currentQuoteText = null;
+		currentQuote = null;
 		return null;
 	}
 
@@ -164,8 +164,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	}
 
 	public void showQuote() {
-		Quote q = stringSource.nextQuote();
-		currentQuoteText = q.quote() + "\n  — " + q.author();
+		currentQuote = stringSource.nextQuote();
 		quoteExpiry = Instant.now().plus(QUOTE_DURATION);
 	}
 

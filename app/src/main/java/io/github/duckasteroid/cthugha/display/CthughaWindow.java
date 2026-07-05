@@ -55,6 +55,8 @@ import io.github.duckasteroid.cthugha.remote.RemoteConfig;
 import io.github.duckasteroid.cthugha.remote.RemoteEventBroadcaster;
 import io.github.duckasteroid.cthugha.remote.RemoteServer;
 import io.github.duckasteroid.cthugha.remote.TokenStore;
+import io.github.duckasteroid.cthugha.strings.Constants;
+import io.github.duckasteroid.cthugha.strings.Quote;
 
 import java.awt.Dimension;
 import java.awt.DisplayMode;
@@ -132,8 +134,11 @@ public class CthughaWindow extends GLWindow {
     private boolean paletteDirty = false;
 
     private StringRenderer quoteRenderer;
+    private StringRenderer attrRenderer;
     private StringRenderer notifRenderer;
-    private String lastQuote = null;
+    private Quote lastQuote = null;
+    private String attrPosition;
+    private String attrAlign;
     private Instant notifExpiry = null;
     private static final Duration NOTIF_DURATION = Duration.ofSeconds(3);
 
@@ -345,8 +350,11 @@ public class CthughaWindow extends GLWindow {
         }
 
         // Font textures first to avoid disturbing the active texture unit
-        FontTexture quoteFont = new FontTextureFactory(new Font("Serif", Font.ITALIC, 28), true).createFontTexture();
+        FontTexture quoteFont = makeFontTexture("quote", "Serif", Font.ITALIC, 36);
+        FontTexture attrFont  = makeFontTexture("attr",  "Serif", Font.PLAIN,  22);
         FontTexture notifFont = new FontTextureFactory(new Font("Monospaced", Font.BOLD, 18), true).createFontTexture();
+        attrPosition = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_POSITION, "below");
+        attrAlign    = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_ALIGN,    "center");
 
         // Ping-pong R8 textures
         pingTex = new Texture();
@@ -422,8 +430,11 @@ public class CthughaWindow extends GLWindow {
 
         quoteRenderer = new StringRenderer(quoteFont);
         quoteRenderer.init(this);
-        quoteRenderer.setTransform(new Matrix4f().translate(40.0f, h / 2.0f, 0.0f));
         quoteRenderer.setTextColor(StandardColors.WHITE.color);
+
+        attrRenderer = new StringRenderer(attrFont);
+        attrRenderer.init(this);
+        attrRenderer.setTextColor(new Vector4f(0.85f, 0.85f, 0.85f, 1.0f));
 
         notifRenderer = new StringRenderer(notifFont);
         notifRenderer.init(this);
@@ -519,12 +530,12 @@ public class CthughaWindow extends GLWindow {
         java.awt.Rectangle win = getWindow();
 
         // Sync quote text whenever it changes
-        String quote = cthugha.getCurrentQuote();
-        if (quote != null && !quote.equals(lastQuote)) {
-            quoteRenderer.setText(quote);
+        Quote quote = cthugha.getCurrentQuote();
+        if (quote != lastQuote) {
+            if (quote != null) {
+                updateQuoteLayout(quote, renderWidth, renderHeight);
+            }
             lastQuote = quote;
-        } else if (quote == null) {
-            lastQuote = null;
         }
 
         // 3. Upload audio data once for all renderers this frame
@@ -564,6 +575,7 @@ public class CthughaWindow extends GLWindow {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             quoteRenderer.doRender(this);
+            attrRenderer.doRender(this);
             glDisable(GL_BLEND);
         }
         waveOverlayFBO.unbind();
@@ -601,6 +613,7 @@ public class CthughaWindow extends GLWindow {
 
         if (!quoteInBuffer && quote != null) {
             quoteRenderer.doRender(this);
+            attrRenderer.doRender(this);
         }
 
         String notif = cthugha.pollNotification();
@@ -629,6 +642,7 @@ public class CthughaWindow extends GLWindow {
         if (radSpecAnalyser   != null) radSpecAnalyser.dispose();
         if (audioPipeline     != null) audioPipeline.dispose();
         if (quoteRenderer     != null) quoteRenderer.dispose();
+        if (attrRenderer      != null) attrRenderer.dispose();
         if (notifRenderer     != null) notifRenderer.dispose();
         if (xBlur             != null) xBlur.dispose();
         if (yBlur             != null) yBlur.dispose();
@@ -692,6 +706,65 @@ public class CthughaWindow extends GLWindow {
         }
         buf.flip();
         return buf;
+    }
+
+    // -------------------------------------------------------------------------
+    // Quote layout helpers
+    // -------------------------------------------------------------------------
+
+    private void updateQuoteLayout(Quote quote, int w, int h) {
+        String quoteText = quote.quote();
+        String attrText  = "— " + quote.author();
+
+        quoteRenderer.setText(quoteText);
+        attrRenderer.setText(attrText);
+
+        float quoteY = h / 2.0f;
+        quoteRenderer.setTransform(new Matrix4f().translate(40.0f, quoteY, 0.0f));
+
+        FontTexture attrFont  = attrRenderer.getFontTexture();
+        FontTexture quoteFont = quoteRenderer.getFontTexture();
+        int gap = 8;
+
+        float attrY;
+        if ("above".equalsIgnoreCase(attrPosition)) {
+            attrY = quoteY - attrFont.getFontHeight() - gap;
+        } else {
+            attrY = quoteY + quoteFont.getHeight(quoteText) + gap;
+        }
+
+        float attrX = switch (attrAlign.toLowerCase()) {
+            case "center" -> (w - attrFont.getWidth(attrText)) / 2.0f;
+            case "right"  -> w - attrFont.getWidth(attrText) - 40.0f;
+            default       -> 40.0f;
+        };
+
+        attrRenderer.setTransform(new Matrix4f().translate(attrX, attrY, 0.0f));
+    }
+
+    private static FontTexture makeFontTexture(String prefix, String defaultName, int defaultStyle, int defaultSize) {
+        String name  = CFG.getConfig(Constants.SECTION, prefix + "_font",  defaultName);
+        int    size  = CFG.getConfigAs(Constants.SECTION, prefix + "_size",  String.valueOf(defaultSize), Integer::parseInt);
+        int    style = parseFontStyle(CFG.getConfig(Constants.SECTION, prefix + "_style", fontStyleName(defaultStyle)));
+        return new FontTextureFactory(new Font(name, style, size), true).createFontTexture();
+    }
+
+    private static int parseFontStyle(String s) {
+        return switch (s.toUpperCase()) {
+            case "BOLD"        -> Font.BOLD;
+            case "ITALIC"      -> Font.ITALIC;
+            case "BOLD_ITALIC" -> Font.BOLD | Font.ITALIC;
+            default            -> Font.PLAIN;
+        };
+    }
+
+    private static String fontStyleName(int style) {
+        return switch (style) {
+            case Font.BOLD              -> "BOLD";
+            case Font.ITALIC            -> "ITALIC";
+            case Font.BOLD | Font.ITALIC -> "BOLD_ITALIC";
+            default                     -> "PLAIN";
+        };
     }
 
     // -------------------------------------------------------------------------

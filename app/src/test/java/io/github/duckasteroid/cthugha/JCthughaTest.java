@@ -46,16 +46,16 @@ class JCthughaTest {
     void showQuoteMakesQuoteAvailable() {
         JCthugha app = new JCthugha();
         app.showQuote();
-        String quote = app.getCurrentQuote();
+        var quote = app.getCurrentQuote();
         assertNotNull(quote);
-        assertTrue(quote.contains("—"), "quote should contain an em-dash attribution");
+        assertNotNull(quote.author(), "quote should have an author");
     }
 
     @Test
     void showQuoteReplacesExistingQuote() {
         JCthugha app = new JCthugha();
         app.showQuote();
-        String first = app.getCurrentQuote();
+        var first = app.getCurrentQuote();
         // Call again; may get same text but should not throw and should be non-null
         app.showQuote();
         assertNotNull(app.getCurrentQuote());
