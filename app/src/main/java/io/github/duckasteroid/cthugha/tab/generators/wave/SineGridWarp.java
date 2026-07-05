@@ -30,6 +30,7 @@ public class SineGridWarp extends AbstractNode implements TabGenerator {
   public SineGridWarp() {
     super("Sine Grid Warp");
     initChildren(freqX, freqY, amplitude, phaseX, phaseY);
+    withResetAction();
   }
 
   @Override

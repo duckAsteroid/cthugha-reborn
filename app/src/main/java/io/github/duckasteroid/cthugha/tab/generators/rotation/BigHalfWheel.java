@@ -13,13 +13,12 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 @AutoService(TabGenerator.class)
 public class BigHalfWheel extends AbstractNode implements TabGenerator {
-  public XYParam center = new XYParam("Wheel centre location", 0, 1, 0.4);
+  public XYParam center = new XYParam("Wheel centre location", 0, 1, 0.4, 0.0);
 
   public BigHalfWheel() {
     super("Big half wheel");
-    // Original had cy = 0 (top of screen); preserve that as the default for y.
-    center.y.setValue(0.0);
     initChildren(center);
+    withResetAction();
   }
 
   @Override

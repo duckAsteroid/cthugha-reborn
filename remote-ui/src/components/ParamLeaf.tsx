@@ -83,6 +83,8 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
         max={node.max}
         disabled={controlled}
         onChange={handleChange}
+        scale={node.uiHints?.['scale']}
+        integer={node.type === 'INTEGER' || node.type === 'LONG'}
       />
     );
   };

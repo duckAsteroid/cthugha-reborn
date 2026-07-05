@@ -14,32 +14,34 @@ public class DoubleParameter extends AbstractValue {
 
   private final double min;
   private final double max;
+  private final double defaultValue;
 
   /** Current value; lies in {@code [min, max]}. */
   public double value;
 
   /**
-   * Creates a parameter with initial value equal to {@code min}.
+   * Creates a parameter with initial value {@code 0.0}.
    *
    * @param description display name
    * @param min         lower bound
    * @param max         upper bound
    */
   public DoubleParameter(String description, double min, double max) {
-    super(description);
-    this.min = min;
-    this.max = max;
+    this(description, min, max, 0.0);
   }
 
   /**
    * @param description display name
    * @param min         lower bound
    * @param max         upper bound
-   * @param value       initial value
+   * @param value       initial value (also used as the reset default)
    */
   public DoubleParameter(String description, double min, double max, double value) {
-    this(description, min, max);
+    super(description);
+    this.min = min;
+    this.max = max;
     this.value = value;
+    this.defaultValue = value;
   }
 
   @Override
@@ -62,6 +64,17 @@ public class DoubleParameter extends AbstractValue {
 
   public Number getMax() {
     return max;
+  }
+
+  @Override
+  public void setNormalisedValue(double normalisedValue) {
+    this.value = min + (max - min) * normalisedValue;
+    fireChangeListeners();
+  }
+
+  @Override
+  public void reset() {
+    setValue(defaultValue);
   }
 
   /**

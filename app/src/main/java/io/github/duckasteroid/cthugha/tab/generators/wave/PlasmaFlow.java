@@ -30,6 +30,7 @@ public class PlasmaFlow extends AbstractNode implements TabGenerator {
   public PlasmaFlow() {
     super("Plasma Flow");
     initChildren(freqA, freqB, amplitude);
+    withResetAction();
   }
 
   @Override

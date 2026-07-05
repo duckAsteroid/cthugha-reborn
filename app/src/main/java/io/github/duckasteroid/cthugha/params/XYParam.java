@@ -48,6 +48,13 @@ public class XYParam extends AbstractNode {
     initChildren(x, y);
   }
 
+  public XYParam(String name, double min, double max, double x, double y) {
+    super(name);
+    this.x = new DoubleParameter("X", min, max, x);
+    this.y = new DoubleParameter("Y", min, max, y);
+    initChildren(this.x, this.y);
+  }
+
   /**
    * Returns {@code true} if either the {@code x} or {@code y} value satisfies {@code test}.
    *

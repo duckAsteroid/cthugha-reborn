@@ -16,5 +16,6 @@ public class RadialWaveModel extends AbstractNode {
         super("RadialWave");
         initFields(getClass());
         withUiHint(UiHint.ICON, "radio");
+        withResetAction();
     }
 }

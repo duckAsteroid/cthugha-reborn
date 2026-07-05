@@ -23,20 +23,18 @@ import java.util.function.DoublePredicate;
  * places), avoiding unnecessary matrix multiplications.</p>
  */
 public class TransformParams extends AbstractNode {
-  public static final double MIN = Double.MIN_VALUE;
-  public static final double MAX = Double.MAX_VALUE;
 
   /** Optional perspective projection applied before the affine components. */
   public final PerspectiveParams perspective = new PerspectiveParams();
 
   /** X and Y scale factors; identity value is 1.0 for both components. */
-  public final XYParam scale = new XYParam("Scale", MIN, MAX, 1.0);
+  public final XYParam scale = new XYParam("Scale", 0.05, 10.0, 1.0);
 
   /** X and Y shear factors; identity value is 0.0 for both components. */
-  public final XYParam shear = new XYParam("Shear", MIN, MAX, 0.0);
+  public final XYParam shear = new XYParam("Shear", -3.0, 3.0, 0.0);
 
   /** X and Y translation offsets in NDC units; identity value is 0.0. */
-  public final XYParam translate = new XYParam("Translation", MIN, MAX, 0.0);
+  public final XYParam translate = new XYParam("Translation", -2.0, 2.0, 0.0);
 
   /** Rotation angle in radians, in the range {@code [0, 2π]}. */
   public final DoubleParameter rotate = new DoubleParameter("Rotation in radians", 0, 2 * Math.PI);

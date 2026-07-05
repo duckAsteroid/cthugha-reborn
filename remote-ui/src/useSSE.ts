@@ -32,6 +32,10 @@ export function useSSE(paths: string[]): Map<string, ParamState> {
       esRef.current = null;
     }
 
+    if (paths.length === 0) {
+      return;
+    }
+
     const url = buildSSEUrl(paths);
     const es = new EventSource(url);
     esRef.current = es;

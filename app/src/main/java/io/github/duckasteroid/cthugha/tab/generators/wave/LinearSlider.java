@@ -19,6 +19,7 @@ public class LinearSlider extends AbstractNode implements TabGenerator {
 
   public LinearSlider() {
     initChildren(focalPoint, speed, horizontal);
+    withResetAction();
   }
 
   @Override

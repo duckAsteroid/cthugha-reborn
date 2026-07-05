@@ -48,6 +48,14 @@ public abstract class AbstractValue extends AbstractNode {
    */
   public abstract Number getValue();
 
+  /** Restores this parameter to its constructor-time default value. */
+  public abstract void reset();
+
+  @Override
+  public void resetToDefaults() {
+    reset();
+  }
+
   /**
    * Sets the current value, clamping or coercing to the concrete type as needed.
    * Concrete subclasses must call {@link #fireChangeListeners()} after updating the stored value.
@@ -75,10 +83,11 @@ public abstract class AbstractValue extends AbstractNode {
     return controlled.get();
   }
 
-  /** Called by the animation system when it binds or releases this parameter. Also fires change listeners. */
+  /** Called by the animation system when it binds or releases this parameter. Fires change listeners only on transition. */
   public void setControlled(boolean controlled) {
-    this.controlled.set(controlled);
-    fireChangeListeners();
+    if (this.controlled.compareAndSet(!controlled, controlled)) {
+      fireChangeListeners();
+    }
   }
 
   /** Registers a listener to be called whenever this parameter's value or controlled state changes. */
@@ -91,9 +100,10 @@ public abstract class AbstractValue extends AbstractNode {
     changeListeners.remove(listener);
   }
 
-  /** Notifies all registered change listeners. Subclasses call this after each value mutation. */
+  /** Notifies all registered change listeners and propagates to ancestor subtree listeners. */
   protected void fireChangeListeners() {
     changeListeners.forEach(Runnable::run);
+    fireSubtreeListeners(getFullPath());
   }
 
   /**

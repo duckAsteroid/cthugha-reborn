@@ -8,6 +8,8 @@ import io.javalin.http.Context;
 import io.javalin.http.HttpResponseException;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.http.sse.SseClient;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import io.github.duckasteroid.cthugha.params.AbstractNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.Action;
 import io.github.duckasteroid.cthugha.params.ActionContext;
@@ -27,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 public class RemoteServer {
 
@@ -66,6 +69,11 @@ public class RemoteServer {
             cfg.staticFiles.add("/remote", Location.CLASSPATH);
             cfg.spaRoot.addFile("/", "/remote/index.html", Location.CLASSPATH);
             cfg.showJavalinBanner = false;
+            // Jetty defaults (min=8, max=250) are far too generous for 1-2 clients.
+            QueuedThreadPool pool = new QueuedThreadPool(
+                    config.maxJettyThreads, config.minJettyThreads, 60_000);
+            pool.setName("jetty");
+            cfg.jetty.threadPool = pool;
         });
 
         app.before(this::authFilter);
@@ -186,17 +194,32 @@ public class RemoteServer {
         });
 
         app.sse("/api/v1/events", client -> {
-            List<String> prefixes = client.ctx().queryParams("path");
-            broadcaster.register(client, prefixes);
+            List<String> pathParams = client.ctx().queryParams("path");
+            List<AbstractNode> nodes;
+            if (pathParams.isEmpty()) {
+                // No filter: subscribe to the entire tree
+                nodes = paramRoot instanceof AbstractNode an ? List.of(an) : List.of();
+            } else {
+                nodes = pathParams.stream()
+                        .map(this::findNode)
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .filter(n -> n instanceof AbstractNode)
+                        .map(n -> (AbstractNode) n)
+                        .collect(Collectors.toList());
+            }
+            broadcaster.register(client, nodes);
             client.onClose(() -> broadcaster.unregister(client));
             client.keepAlive();
         });
 
+        broadcaster.startFlushing(config.animationBroadcastIntervalMs);
         app.start(config.port);
         LOG.info("Remote server started on port {}", config.port);
     }
 
     public void stop() {
+        broadcaster.stopFlushing();
         if (app != null) {
             app.stop();
         }

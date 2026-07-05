@@ -27,6 +27,7 @@ public class CircleInversion extends AbstractNode implements TabGenerator {
   public CircleInversion() {
     super("Circle Inversion");
     initChildren(center, radius);
+    withResetAction();
   }
 
   @Override

@@ -11,8 +11,8 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 @AutoService(TabGenerator.class)
 public class Smoke extends AbstractNode implements TabGenerator {
 
-  public IntegerParameter speed = new IntegerParameter("Speed", 1, 300); // 30 - 300
-  public IntegerParameter randomness = new IntegerParameter("Randomness", 1, 100); // 0 - 100
+  public IntegerParameter speed = new IntegerParameter("Speed", 1, 300, 100);
+  public IntegerParameter randomness = new IntegerParameter("Randomness", 1, 100, 70);
   public IntegerParameter directionVectorX = new IntegerParameter("x", -10, 10, -6);
   public IntegerParameter directionVectorY = new IntegerParameter("y", -10, 10, -4);
 
@@ -25,6 +25,7 @@ public class Smoke extends AbstractNode implements TabGenerator {
     this.speed.setValue( speed);
     this.randomness.setValue(randomness);
     initChildren(this.speed, this.randomness, directionVectorX, directionVectorY);
+    withResetAction();
   }
 
   public TabMapping generate(int width, int height, Random rng) {

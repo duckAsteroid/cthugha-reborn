@@ -28,6 +28,7 @@ public class Shatter extends AbstractNode implements TabGenerator {
   public Shatter() {
     super("Shatter");
     initChildren(cells, zoomStrength);
+    withResetAction();
   }
 
   @Override

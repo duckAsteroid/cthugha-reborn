@@ -16,5 +16,6 @@ public class OscilloscopeModel extends AbstractNode {
         super("Oscilloscope");
         initFields(getClass());
         withUiHint(UiHint.ICON, "activity");
+        withResetAction();
     }
 }

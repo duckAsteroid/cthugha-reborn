@@ -5,9 +5,6 @@ export function initToken(): string | null {
   const t = params.get('token');
   if (t) {
     token = t;
-    const url = new URL(window.location.href);
-    url.searchParams.delete('token');
-    window.history.replaceState({}, '', url.toString());
   }
   return token;
 }

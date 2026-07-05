@@ -51,16 +51,10 @@ public class PaletteLibraryNode extends AbstractNode {
             }
         });
 
-        AbstractAction random   = new AbstractAction("Random",   c -> selector.setValue(rng.nextInt(files.size())));
-        AbstractAction next     = new AbstractAction("Next",     c -> selector.setValue(Math.floorMod(selector.getValue().intValue() + 1, files.size())));
-        AbstractAction previous = new AbstractAction("Previous", c -> selector.setValue(Math.floorMod(selector.getValue().intValue() - 1, files.size())));
+        AbstractAction random = new AbstractAction("Random", c -> selector.setValue(rng.nextInt(files.size())));
         random.withUiHint(UiHint.ICON, "shuffle");
-        next.withUiHint(UiHint.ICON, "skip-forward");
-        previous.withUiHint(UiHint.ICON, "skip-back");
         addChild(selector);
         addChild(random);
-        addChild(next);
-        addChild(previous);
     }
 
     private static String displayName(Path path) {

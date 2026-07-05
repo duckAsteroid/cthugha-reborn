@@ -1,0 +1,15 @@
+{
+  "name" : "freznel interference",
+  "checksum" : "041418603437396026fa9aaffd8a63592af47abaa4f8572686de7e9599798324",
+  "params" : {
+    "Amplitude" : 31.560000000000002,
+    "Frequency" : 0.3,
+    "Source 1/X" : 0.0,
+    "Source 1/Y" : 1.0,
+    "Source 2/X" : 1.0,
+    "Source 2/Y" : 0.0,
+    "Source 3/X" : 0.492,
+    "Source 3/Y" : 0.608,
+    "Sources" : 3
+  }
+}

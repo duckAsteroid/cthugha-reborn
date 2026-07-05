@@ -34,6 +34,7 @@ public class Twist extends AbstractNode implements TabGenerator {
   public Twist() {
     super("Twist");
     initChildren(center, maxAngle, falloff);
+    withResetAction();
   }
 
   @Override

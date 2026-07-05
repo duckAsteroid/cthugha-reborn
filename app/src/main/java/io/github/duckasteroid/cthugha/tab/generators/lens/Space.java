@@ -22,6 +22,7 @@ public class Space extends AbstractNode implements TabGenerator {
   public Space() {
     super("Space");
     initChildren(reverse, randomness, speed);
+    withResetAction();
   }
 
   @Override

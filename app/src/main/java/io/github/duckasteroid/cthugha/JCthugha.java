@@ -66,7 +66,7 @@ public class JCthugha extends AbstractNode implements Closeable {
 	private volatile String pendingNotification = null;
 
 	public JCthugha() {
-		initFields(getClass());
+		super("JCthugha");
 	}
 
 	public void init(Dimension dims, Random rng) throws IOException {

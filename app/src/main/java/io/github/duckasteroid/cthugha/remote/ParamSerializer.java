@@ -96,10 +96,14 @@ public class ParamSerializer {
     }
 
     public ObjectNode buildChangeEvent(String path, AbstractValue value) {
+        return buildChangeEvent(path, value.getValue().doubleValue(), value.isControlled());
+    }
+
+    public ObjectNode buildChangeEvent(String path, double value, boolean controlled) {
         ObjectNode event = mapper.createObjectNode();
         event.put("path", path);
-        event.put("value", value.getValue().doubleValue());
-        event.put("controlled", value.isControlled());
+        event.put("value", value);
+        event.put("controlled", controlled);
         return event;
     }
 }

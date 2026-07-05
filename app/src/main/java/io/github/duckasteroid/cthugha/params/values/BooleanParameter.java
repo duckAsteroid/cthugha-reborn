@@ -16,6 +16,7 @@ public class BooleanParameter extends AbstractValue {
 
   /** Current on/off state; {@code true} corresponds to the numeric value {@code 1}. */
   public boolean value;
+  private final boolean defaultValue;
 
   @SuppressWarnings("unused")
   private static final Function<Integer, Boolean> toBool = (integer -> integer == 1);
@@ -33,11 +34,12 @@ public class BooleanParameter extends AbstractValue {
 
   /**
    * @param name display name
-   * @param b    initial value
+   * @param b    initial value (also used as the reset default)
    */
   public BooleanParameter(String name, boolean b) {
     super(name);
     this.value = b;
+    this.defaultValue = b;
   }
 
   @Override
@@ -64,6 +66,12 @@ public class BooleanParameter extends AbstractValue {
   public void setValue(Number d) {
     int value = (int)Math.round(d.doubleValue());
     this.value = value == 1;
+    fireChangeListeners();
+  }
+
+  @Override
+  public void reset() {
+    this.value = defaultValue;
     fireChangeListeners();
   }
 

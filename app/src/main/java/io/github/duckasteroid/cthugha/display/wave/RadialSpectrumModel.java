@@ -15,5 +15,6 @@ public class RadialSpectrumModel extends AbstractNode {
         super("RadialSpectrum");
         initFields(getClass());
         withUiHint(UiHint.ICON, "pie-chart");
+        withResetAction();
     }
 }

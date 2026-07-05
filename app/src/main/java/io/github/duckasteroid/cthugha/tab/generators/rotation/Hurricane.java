@@ -24,6 +24,7 @@ public class Hurricane extends AbstractNode implements TabGenerator {
   public Hurricane() {
     super("Hurricane");
     initChildren(Randomness, speed, slowY, slowX, reverse, center);
+    withResetAction();
   }
   @Override
   public TabMapping generate(int width, int height, Random rng) {

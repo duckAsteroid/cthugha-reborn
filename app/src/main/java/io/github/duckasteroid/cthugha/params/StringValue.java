@@ -37,5 +37,8 @@ public abstract class StringValue extends AbstractNode {
     public void addChangeListener(Runnable r)    { changeListeners.add(r); }
     public void removeChangeListener(Runnable r) { changeListeners.remove(r); }
 
-    protected void fireChangeListeners() { changeListeners.forEach(Runnable::run); }
+    protected void fireChangeListeners() {
+        changeListeners.forEach(Runnable::run);
+        fireSubtreeListeners(getFullPath());
+    }
 }

@@ -35,6 +35,7 @@ public class ConcentricRings extends AbstractNode implements TabGenerator {
   public ConcentricRings() {
     super("Concentric Rings");
     initChildren(center, ringWidth, deltaAngle, alternate);
+    withResetAction();
   }
 
   @Override

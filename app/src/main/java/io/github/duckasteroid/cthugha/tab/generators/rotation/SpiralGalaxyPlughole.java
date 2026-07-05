@@ -51,6 +51,7 @@ public class SpiralGalaxyPlughole extends AbstractNode implements TabGenerator {
   public SpiralGalaxyPlughole() {
     super("Spiral Galaxy Plughole");
     initChildren(angularSpeed, radialSpeed, plughole, arms, center);
+    withResetAction();
   }
 
   @Override

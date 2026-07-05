@@ -13,5 +13,6 @@ public class SpectrumModel extends AbstractNode {
         super("Spectrum");
         initFields(getClass());
         withUiHint(UiHint.ICON, "bar-chart-2");
+        withResetAction();
     }
 }

@@ -39,6 +39,7 @@ public class LogPolarZoom extends AbstractNode implements TabGenerator {
   public LogPolarZoom() {
     super("Log-Polar Zoom");
     initChildren(center, zoom, rotation);
+    withResetAction();
   }
 
   @Override

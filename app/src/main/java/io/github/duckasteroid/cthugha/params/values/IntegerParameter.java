@@ -14,32 +14,34 @@ public class IntegerParameter extends AbstractValue {
 
   private final int min;
   private final int max;
+  private final int defaultValue;
 
   /** Current value; lies in {@code [min, max]}. */
   public int value;
 
   /**
-   * Creates a parameter with initial value equal to {@code min}.
+   * Creates a parameter with initial value {@code 0}.
    *
    * @param description display name
    * @param min         lower bound (inclusive)
    * @param max         upper bound (inclusive)
    */
   public IntegerParameter(String description, int min, int max) {
-    super(description);
-    this.min = min;
-    this.max = max;
+    this(description, min, max, 0);
   }
 
   /**
    * @param description display name
    * @param min         lower bound (inclusive)
    * @param max         upper bound (inclusive)
-   * @param value       initial value
+   * @param value       initial value (also used as the reset default)
    */
   public IntegerParameter(String description, int min, int max, int value) {
-    this(description, min, max);
+    super(description);
+    this.min = min;
+    this.max = max;
     this.value = value;
+    this.defaultValue = value;
   }
 
   @Override
@@ -62,6 +64,17 @@ public class IntegerParameter extends AbstractValue {
 
   public Number getMax() {
     return max;
+  }
+
+  @Override
+  public void setNormalisedValue(double normalisedValue) {
+    this.value = (int) Math.round(min + (max - min) * normalisedValue);
+    fireChangeListeners();
+  }
+
+  @Override
+  public void reset() {
+    setValue(defaultValue);
   }
 
 }

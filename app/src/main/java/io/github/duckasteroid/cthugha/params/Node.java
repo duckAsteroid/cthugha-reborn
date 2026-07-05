@@ -163,5 +163,11 @@ public interface Node {
    */
   void removeChild(Node child);
 
+  /**
+   * Resets this node (and all descendants) to their constructor-time default values.
+   * Interior nodes recurse; leaf value nodes restore their stored default.
+   */
+  default void resetToDefaults() {}
+
 
 }

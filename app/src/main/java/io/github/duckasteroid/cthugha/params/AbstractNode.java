@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,12 +40,18 @@ public abstract class AbstractNode implements Node {
 
   private boolean remoteAllowed = true;
 
+  /** Slash-delimited path from tree root to this node; computed lazily, cached after first access. */
+  private volatile String cachedFullPath;
+
+  private final CopyOnWriteArrayList<SubtreeChangeListener> subtreeListeners = new CopyOnWriteArrayList<>();
+
   /**
    * Creates a node whose name is the simple class name and whose children are all
    * {@code public} {@link Node}-typed fields discovered via {@link #initFields(Class)}.
    */
   public AbstractNode() {
     this.name = getClass().getSimpleName();
+    this.parent = Optional.empty();
     initFields(getClass());
   }
 
@@ -56,6 +63,7 @@ public abstract class AbstractNode implements Node {
    */
   public AbstractNode(String name) {
     this.name = name;
+    this.parent = Optional.empty();
     this.children = new ArrayList<>();
   }
 
@@ -66,6 +74,9 @@ public abstract class AbstractNode implements Node {
    */
   protected void initChildren(List<? extends Node> children) {
     this.children = new ArrayList<>(children);
+    for (Node child : this.children) {
+      if (child instanceof AbstractNode an) an.setParent(this);
+    }
   }
 
   /**
@@ -75,6 +86,9 @@ public abstract class AbstractNode implements Node {
    */
   protected void initChildren(Node ... children) {
     this.children = new ArrayList<>(Arrays.asList(children));
+    for (Node child : this.children) {
+      if (child instanceof AbstractNode an) an.setParent(this);
+    }
   }
 
   /**
@@ -153,6 +167,48 @@ public abstract class AbstractNode implements Node {
    */
   public void setParent(Node parent) {
     this.parent = Optional.ofNullable(parent);
+    this.cachedFullPath = null;
+  }
+
+  /**
+   * Returns the slash-delimited path from the tree root to this node, excluding the root name.
+   * Computed lazily from parent references on first call and cached; safe to call at 60 fps.
+   */
+  public String getFullPath() {
+    if (cachedFullPath == null) {
+      if (!hasParent() || getParent() == null) {
+        cachedFullPath = "";
+      } else {
+        String parentPath = ((AbstractNode) getParent()).getFullPath();
+        cachedFullPath = parentPath.isEmpty() ? getName() : parentPath + "/" + getName();
+      }
+    }
+    return cachedFullPath;
+  }
+
+  /** Registers a listener that is called whenever any value-typed descendant of this node changes. */
+  public void addSubtreeListener(SubtreeChangeListener listener) {
+    subtreeListeners.add(listener);
+  }
+
+  /** Removes a previously registered subtree listener. */
+  public void removeSubtreeListener(SubtreeChangeListener listener) {
+    subtreeListeners.remove(listener);
+  }
+
+  /**
+   * Called by leaf value nodes after their value changes.  Notifies subtree listeners on this
+   * node and every ancestor, passing the full path of the changed node.
+   */
+  final void fireSubtreeListeners(String fullPath) {
+    AbstractNode current = this;
+    while (current != null) {
+      for (SubtreeChangeListener l : current.subtreeListeners) {
+        l.changed(fullPath, this);
+      }
+      Node p = current.getParent();
+      current = (p instanceof AbstractNode an) ? an : null;
+    }
   }
 
   @Override
@@ -191,6 +247,20 @@ public abstract class AbstractNode implements Node {
   @Override
   public void randomise(Random rng) {
     children.forEach(child -> child.randomise(rng));
+  }
+
+  @Override
+  public void resetToDefaults() {
+    children.forEach(Node::resetToDefaults);
+  }
+
+  /**
+   * Adds a "Reset" action child that calls {@link #resetToDefaults()} on this node.
+   * Returns {@code this} for fluent construction.
+   */
+  public AbstractNode withResetAction() {
+    addChild(new AbstractAction("Reset", ctx -> this.resetToDefaults()));
+    return this;
   }
 
   @Override

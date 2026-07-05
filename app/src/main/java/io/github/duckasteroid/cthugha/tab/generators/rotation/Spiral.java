@@ -36,6 +36,7 @@ public class Spiral extends AbstractNode implements TabGenerator{
   public Spiral() {
     super("Spirals");
     initChildren(nr_spirals, delta_r, delta_a, yinyang, yywidth);
+    withResetAction();
   }
 
   private static final int MAX_NR_SPIRALS = 64;

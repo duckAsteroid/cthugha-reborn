@@ -1,0 +1,9 @@
+22:50:55.738 DEBUG [main] i.g.d.cthugha.config.Config - Using config file cthugha.ini
+22:50:55.742 WARN  [main] i.g.d.cthugha.config.Config - Unable to read ini file cthugha.ini
+22:50:56.376 DEBUG [main] c.a.d.o.u.r.m.ResourceManagerImpl - Loaded binder and exclusivity group for resource type com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject
+22:50:56.379 DEBUG [main] c.a.d.o.u.r.m.ResourceManagerImpl - Loaded binder and exclusivity group for resource type com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject
+22:50:56.381 DEBUG [main] c.a.d.o.u.r.m.ResourceManagerImpl - Loaded binder and exclusivity group for resource type com.asteroid.duck.opengl.util.resources.shader.ShaderProgram
+22:50:56.382 DEBUG [main] c.a.d.o.u.r.m.ResourceManagerImpl - Loaded binder and exclusivity group for resource type com.asteroid.duck.opengl.util.resources.texture.Texture
+22:50:57.778 INFO  [main] c.asteroid.duck.opengl.util.GLWindow - GPU Renderer: Mesa Intel(R) UHD Graphics 630 (CFL GT2)
+22:50:57.884 INFO  [main] i.g.d.cthugha.display.CthughaWindow - Monitor 0: eDP-1 (5232x2943@60Hz at 0,0)
+22:50:57.889 INFO  [main] i.g.d.cthugha.display.CthughaWindow - Monitor 1: DP-5 (5760x3240@60Hz at 5232,0)

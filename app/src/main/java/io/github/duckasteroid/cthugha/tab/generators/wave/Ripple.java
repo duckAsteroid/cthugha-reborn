@@ -30,6 +30,7 @@ public class Ripple extends AbstractNode implements TabGenerator {
   public Ripple() {
     super("Ripple");
     initChildren(source, frequency, amplitude, phase);
+    withResetAction();
   }
 
   @Override

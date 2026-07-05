@@ -34,5 +34,35 @@ public final class UiHint {
     /** Carousel strip with prev/next arrows and optional image preview per option. */
     public static final String CAROUSEL = "CAROUSEL";
 
+    /**
+     * Value for {@link #CONTROL_TYPE} on a {@code ContainerNode}: renders its direct
+     * container children as a horizontal tab strip.  Any child container that has
+     * {@code control-type=EXPANDER} is excluded from the tab strip and rendered below
+     * as a collapsible section instead.
+     */
+    public static final String TABS = "TABS";
+
+    /**
+     * Value for {@link #CONTROL_TYPE} on a {@code ContainerNode} that is a child of a
+     * {@link #TABS} container: the node is excluded from the tab strip and rendered
+     * below the tabs as a collapsible expander instead.
+     */
+    public static final String EXPANDER = "EXPANDER";
+
+    // ---- scale values (used with CONTROL_TYPE = SLIDER or KNOB) ----
+
+    /**
+     * Key: how the slider maps its position to the parameter value.
+     * Absent → linear. Use {@link #SCALE_LOG} for logarithmic / power-curve mapping.
+     */
+    public static final String SCALE = "scale";
+
+    /**
+     * Value for {@link #SCALE}: applies a power-curve ({@code 1-(1-t)^3}) so that
+     * the upper end of the slider has finer resolution than the lower end.
+     * Useful for multipliers that are perceptually sensitive near 1.0.
+     */
+    public static final String SCALE_LOG = "log";
+
     private UiHint() {}
 }

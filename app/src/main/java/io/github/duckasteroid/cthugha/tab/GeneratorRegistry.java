@@ -131,7 +131,9 @@ public class GeneratorRegistry extends AbstractNode {
 
     /** Generates a translation map using the current generator after randomising its params. */
     public TabMapping generate(int width, int height, Random rng) {
+        beginBatch();
         selected.randomise(rng);
+        endBatch();
         return selected.generate(width, height, rng);
     }
 

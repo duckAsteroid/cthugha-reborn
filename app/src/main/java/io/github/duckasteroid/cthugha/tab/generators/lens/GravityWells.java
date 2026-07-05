@@ -24,7 +24,7 @@ public class GravityWells extends AbstractNode implements TabGenerator {
   public IntegerParameter numWells = new IntegerParameter("Wells", 1, 3, 2);
   public XYParam well1 = new XYParam("Well 1", 0, 1, 0.3);
   public XYParam well2 = new XYParam("Well 2", 0, 1, 0.7);
-  public XYParam well3 = new XYParam("Well 3", 0, 1, 0.5);
+  public XYParam well3 = new XYParam("Well 3", 0, 1, 0.5, 0.2);
   /** Gravitational pull strength. Higher = stronger distortion. */
   public DoubleParameter strength  = new DoubleParameter("Strength",  0, 60000, 18000);
   /** Softening radius² — prevents singularities at the well centre. */
@@ -32,8 +32,8 @@ public class GravityWells extends AbstractNode implements TabGenerator {
 
   public GravityWells() {
     super("Gravity Wells");
-    well3.y.setValue(0.2);
     initChildren(numWells, well1, well2, well3, strength, softening);
+    withResetAction();
   }
 
   @Override

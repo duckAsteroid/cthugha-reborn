@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { getParams } from '../api';
 import type { ParamNode } from '../types';
-import { useSSE } from '../useSSE';
 import { ParamContainer } from './ParamContainer';
 
 export function ParamTree() {
@@ -10,11 +9,8 @@ export function ParamTree() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Subscribe to all params (empty path = root subscription)
-  const sseState = useSSE(['']);
-
-  const fetchParams = () => {
-    setLoading(true);
+  const fetchParams = (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
     getParams()
       .then((data) => {
@@ -32,7 +28,7 @@ export function ParamTree() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const handler = () => fetchParams();
+    const handler = () => fetchParams(false);
     window.addEventListener('tree-changed', handler);
     return () => window.removeEventListener('tree-changed', handler);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -70,7 +66,6 @@ export function ParamTree() {
       <ParamContainer
         node={root}
         path=""
-        sseState={sseState}
         defaultOpen={true}
       />
     </div>

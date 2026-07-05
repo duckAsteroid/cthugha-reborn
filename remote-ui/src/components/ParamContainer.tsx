@@ -6,18 +6,31 @@ import { ParamLeaf } from './ParamLeaf';
 import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
-import type { ParamState } from '../useSSE';
+import { TabsContainer } from './TabsContainer';
+import { useSSE } from '../useSSE';
 
 interface ParamContainerProps {
   node: ContainerNode;
   path: string;
-  sseState: Map<string, ParamState>;
   defaultOpen?: boolean;
 }
 
-export function ParamContainer({ node, path, sseState, defaultOpen = false }: ParamContainerProps) {
+export function ParamContainer({ node, path, defaultOpen = false }: ParamContainerProps) {
   const [open, setOpen] = useState(defaultOpen);
   const iconName = node.uiHints?.['icon'];
+
+  const visibleChildren = node.children.filter(child => child.uiHints?.['hidden'] !== 'true');
+
+  const isTabs = node.uiHints?.['control-type'] === 'TABS';
+  // Subscribe to the container's own subtree when open so all descendant changes are caught.
+  // Leaf paths are still used for sseState lookups; the subtree subscription just broadens
+  // which changes the server forwards to this connection.
+  const subscriptionPaths = (!isTabs && open && path) ? [path] : [];
+  const sseState = useSSE(subscriptionPaths);
+
+  if (isTabs) {
+    return <TabsContainer node={node} path={path} />;
+  }
 
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen}>
@@ -36,16 +49,15 @@ export function ParamContainer({ node, path, sseState, defaultOpen = false }: Pa
       </Collapsible.Trigger>
 
       <Collapsible.Content className="pl-4 pr-1 mt-1 space-y-1">
-        {node.children.filter(child => child.uiHints?.['hidden'] !== 'true').map((child) => {
+        {visibleChildren.map((child) => {
           const childPath = path ? `${path}/${child.name}` : child.name;
 
           if (child.type === 'CONTAINER') {
             return (
               <ParamContainer
                 key={child.name}
-                node={child}
+                node={child as ContainerNode}
                 path={childPath}
-                sseState={sseState}
               />
             );
           }

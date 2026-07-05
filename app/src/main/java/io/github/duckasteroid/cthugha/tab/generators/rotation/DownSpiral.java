@@ -24,6 +24,7 @@ public class DownSpiral extends AbstractNode implements TabGenerator {
   public DownSpiral() {
     super("Down spiral tab");
     initChildren(a,b);
+    withResetAction();
   }
 
   @Override

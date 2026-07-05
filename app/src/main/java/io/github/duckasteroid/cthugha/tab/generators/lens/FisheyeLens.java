@@ -33,6 +33,7 @@ public class FisheyeLens extends AbstractNode implements TabGenerator {
   public FisheyeLens() {
     super("Fisheye Lens");
     initChildren(center, strength);
+    withResetAction();
   }
 
   @Override

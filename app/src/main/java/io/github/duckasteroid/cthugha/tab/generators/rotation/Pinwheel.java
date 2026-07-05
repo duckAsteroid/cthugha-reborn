@@ -39,6 +39,7 @@ public class Pinwheel extends AbstractNode implements TabGenerator {
   public Pinwheel() {
     super("Pinwheel");
     initChildren(center, sectors, rotationPerSector, zoom, alternate);
+    withResetAction();
   }
 
   @Override

@@ -25,14 +25,14 @@ public class WaveInterference extends AbstractNode implements TabGenerator {
   public IntegerParameter numSources = new IntegerParameter("Sources", 2, 3, 2);
   public XYParam source1 = new XYParam("Source 1", 0, 1, 0.25);
   public XYParam source2 = new XYParam("Source 2", 0, 1, 0.75);
-  public XYParam source3 = new XYParam("Source 3", 0, 1, 0.5);
+  public XYParam source3 = new XYParam("Source 3", 0, 1, 0.5, 0.15);
   public DoubleParameter frequency = new DoubleParameter("Frequency", 0.005, 0.3, 0.07);
   public DoubleParameter amplitude = new DoubleParameter("Amplitude", 0, 40, 8);
 
   public WaveInterference() {
     super("Wave Interference");
-    source3.y.setValue(0.15);
     initChildren(numSources, source1, source2, source3, frequency, amplitude);
+    withResetAction();
   }
 
   @Override

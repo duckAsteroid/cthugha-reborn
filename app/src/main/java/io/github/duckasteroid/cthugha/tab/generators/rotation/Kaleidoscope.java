@@ -30,6 +30,7 @@ public class Kaleidoscope extends AbstractNode implements TabGenerator {
   public Kaleidoscope() {
     super("Kaleidoscope");
     initChildren(center, arms);
+    withResetAction();
   }
 
   @Override
