@@ -88,8 +88,8 @@ public class JCthugha extends ParamNode implements Closeable {
 		reader = new MapFileReader(maps);
 		paletteMap = reader.random();
 
-		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, "(sin(t * 0.3142) + 1.0) / 2.0");
-		animation.addBinding("radial rotation", radialWave.transform.rotate,   "(sin(t * 0.4398) + 1.0) / 2.0");
+		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, "sine(0.05)");
+		animation.addBinding("radial rotation", radialWave.transform.rotate,   "sine(0.07)");
 	}
 
 	public synchronized Duration doRenderCPU() {

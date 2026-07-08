@@ -44,7 +44,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
           }}
           rows={3}
           spellCheck={false}
-          placeholder="Expression — e.g. (sin(t * 0.31) + 1) / 2  (t = seconds)"
+          placeholder="e.g. sine(10)  or  0.5*sine(1)+0.5*cosine(3)  or  saw(0.5)"
           className={`w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 resize-y border ${
             isDirty
               ? 'border-orange-500 focus:ring-orange-500'

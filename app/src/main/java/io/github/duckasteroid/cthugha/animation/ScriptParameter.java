@@ -51,9 +51,9 @@ public class ScriptParameter extends StringValue implements CompilableValue {
         if (!this.value.isBlank()) {
             try {
                 ClassBodyEvaluator cbe = new ClassBodyEvaluator();
-                cbe.setImplementedInterfaces(new Class<?>[]{ TimeFunction.class });
+                cbe.setExtendedClass(AnimScript.class);
                 cbe.setDefaultImports(new String[]{ "static java.lang.Math.*" });
-                cbe.cook("public double apply(double t) { return (" + this.value + "); }");
+                cbe.cook("public double compute() { return (" + this.value + "); }");
                 fn = (TimeFunction) cbe.getClazz().getDeclaredConstructor().newInstance();
                 lastError = null;
             } catch (Exception e) {
