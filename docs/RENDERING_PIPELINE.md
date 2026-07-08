@@ -11,18 +11,24 @@ of what each visual effect does.
 
 ## Texture vocabulary
 
-All rendering revolves around three named R8 textures (one byte = one palette index per
-pixel) and a RGBA palette LUT:
+All rendering revolves around two R16 indexed textures, one GRAY blur intermediate,
+and a RGBA palette LUT:
 
 | Name | Format | Role |
 |---|---|---|
-| `pingTex` | R8 | Translate source; display source; blur output |
-| `pongTex` | R8 | Translate output; indexed-render target; blur input |
-| `flameTex` | R8 (GRAY) | Intermediate between the two blur passes |
+| `displayTex` | R16 (GL_R16, uint16) | Translate source; display source; blur output |
+| `renderTex` | R16 (GL_R16, uint16) | Translate output; indexed-render target; blur input |
+| `flameTex` | GRAY (render-core DataFormat.GRAY) | Intermediate between the two blur passes |
 | `palette` | 256×1 RGBA | 256-entry colour LUT; uploaded when dirty |
 
+`displayTex` and `renderTex` store palette indices as 16-bit unsigned integers normalised
+to `[0, 1]` when sampled. PaletteRenderer resolves a pixel's palette entry as
+`pixelIndex = sampledValue * totalEntries`. Wave renderers and flash effects write `1.0`
+(the maximum normalised value) to target the last palette entry; the commented-out form
+`index / paletteSize` was the earlier R8-era formula.
+
 The translate map is a separate RG16UI texture (`translateMap`): each texel holds the
-absolute (x, y) pixel coordinates to *read from* in `pingTex`, so it encodes an
+absolute (x, y) pixel coordinates to *read from* in `displayTex`, so it encodes an
 arbitrary per-pixel displacement field.
 
 ---
@@ -33,18 +39,18 @@ arbitrary per-pixel displacement field.
 CPU tick ──────────────────────────────────── JCthugha.doRenderCPU()
 Palette upload (if dirty) ─────────────────── glTexSubImage2D palette
                                                    │
-┌──────── Indexed pass (pongFBO bound) ────────────┤
-│  Translate      pingTex ──[tab map]──► pongTex   │
+┌──────── Indexed pass (renderFBO bound) ──────────┤
+│  Translate      displayTex ──[tab map]──► renderTex │
 │  phase.indexedRender() × N            (wave/flash/quote-in-buffer write here)
 └──────────────────────────────────────────────────┘
                                                    │
 ┌──────── Blur / flame pass ───────────────────────┤
-│  xBlur   pongTex ──► flameTex   (horizontal Gaussian + multiplier=1.0)
-│  yBlur   flameTex ──► pingTex   (vertical Gaussian  + multiplier=fade)
+│  xBlur   renderTex ──► flameTex   (horizontal Gaussian + multiplier=1.0)
+│  yBlur   flameTex ──► displayTex  (vertical Gaussian  + multiplier=fade)
 └──────────────────────────────────────────────────┘
                                                    │
 ┌──────── Screen pass (default FBO) ───────────────┤
-│  PaletteRenderer  pingTex ──[palette LUT]──► RGBA window
+│  PaletteRenderer  displayTex ──[palette LUT]──► RGBA window
 │  phase.screenRender() × N            (overlays: quote, notifs, QR)
 └──────────────────────────────────────────────────┘
 ```
@@ -53,29 +59,31 @@ Palette upload (if dirty) ──────────────────
 
 ## Indexed pass
 
-`CthughaWindow` binds `pongFBO` and hands control to each phase in order.
+`CthughaWindow` binds `renderFBO` and hands control to each phase in order.
 
 ### Translate step
 
 `TranslateTextureRenderer` (render-core) runs a fragment shader that reads the RG16UI
-translation map: for every pixel in `pongTex` it looks up the coordinate stored in
-`translateMap` and samples that pixel from `pingTex`. This is the *displacement* or
+translation map: for every pixel in `renderTex` it looks up the coordinate stored in
+`translateMap` and samples that pixel from `displayTex`. This is the *displacement* or
 *warping* effect — the image never stops moving even when no audio is playing.
 
 ### Phase indexedRender()
 
 Each `RenderPhase` that participates in the indexed pass renders *directly into the
-currently bound R8 FBO* (`pongTex`). Because the framebuffer is R8, the red channel
-of every fragment output is interpreted as a raw palette index (normalised to [0, 1]):
+currently bound R16 FBO* (`renderTex`). Because the framebuffer is R16, the red channel
+of every fragment output is stored as a normalised 16-bit value interpreted as a palette
+index by PaletteRenderer:
 
 ```
-palette index N  →  red channel value  N / 255.0
+palette index N  →  red channel value  N / paletteSize
+pixelIndex       =  sampledValue * totalEntries
 ```
 
-Wave renderers use index 200 (≈ 0.784) as the default wave colour. Flash effects use
-the luma value of the source image as the index, so bright pixels map to high palette
-indices and dark pixels to low ones. Only fragments actually *emitted* by the geometry
-(LINE\_STRIP, filled arcs) overwrite pixels; everything else is unchanged.
+Wave renderers use `red = 1.0` (the last palette entry). Flash effects use the luma
+value of the source image mapped to `[0, 1]`, so bright pixels reach high palette
+indices. Only fragments actually *emitted* by the geometry (LINE\_STRIP, filled arcs)
+overwrite pixels; everything else is unchanged.
 
 ---
 
@@ -84,8 +92,8 @@ indices and dark pixels to low ones. Only fragments actually *emitted* by the ge
 Two `BlurTextureRenderer` passes implement a separable Gaussian blur with a *fade
 multiplier*:
 
-1. **xBlur** — horizontal pass, `pongTex` → `flameTex`, multiplier = 1.0
-2. **yBlur** — vertical pass, `flameTex` → `pingTex`, multiplier = `blurFade` (default 0.99)
+1. **xBlur** — horizontal pass, `renderTex` → `flameTex`, multiplier = 1.0
+2. **yBlur** — vertical pass, `flameTex` → `displayTex`, multiplier = `blurFade` (default 0.99)
 
 The fade multiplier slightly darkens the output each frame, so colours drift toward
 palette index 0 over time. Combined with the translate warp this creates the classic
@@ -95,15 +103,15 @@ Blur can be toggled (`blurEnabled`) and the Gaussian kernel size is adjustable
 (`blurKernelSize`). The kernel size must be odd and is bounded by
 `BlurTextureRenderer.MIN_KERNEL_SIZE` / `MAX_KERNEL_SIZE`.
 
-After both blur passes, `pingTex` is the authoritative indexed frame ready for display.
+After both blur passes, `displayTex` is the authoritative indexed frame ready for display.
 
 ---
 
 ## Screen pass
 
-`CthughaWindow` unbinds all FBOs and calls `PaletteRenderer` to convert `pingTex`
-(R8) to RGBA using the 256-entry palette LUT texture. Each R8 value is used as a
-1D texture coordinate into the palette, outputting the corresponding RGB colour.
+`CthughaWindow` unbinds all FBOs and calls `PaletteRenderer` to convert `displayTex`
+(R16) to RGBA using the 256-entry palette LUT texture. Each R16 normalised value is used
+as a 1D texture coordinate into the palette, outputting the corresponding RGB colour.
 
 Each phase then gets `screenRender()` to draw RGBA overlays on top of the palette
 output. Every phase manages its own blend state (enable/disable `GL_BLEND`).
@@ -131,8 +139,8 @@ All methods are default no-ops so a phase only overrides what it participates in
 
 | Phase | Indexed | Screen | Actions registered |
 |---|---|---|---|
-| `WavePhase` | Renders wave geometry into pongTex | — | Cycle Audio |
-| `FlashPhase` | Bakes flash texture into pongTex | — | Flash Image, Flash White |
+| `WavePhase` | Renders wave geometry into renderTex | — | Cycle Audio |
+| `FlashPhase` | Bakes flash texture into renderTex | — | Flash Image, Flash White |
 | `QuotePhase` | Bakes quote text (if `quoteInBuffer`) | Renders quote overlay | Show Quote, Toggle Quote Mode |
 | `NotifPhase` | — | Renders 3-second notification toast | — |
 | `QrPhase` | — | Renders QR code overlay | — |
@@ -152,28 +160,30 @@ valid palette indices:
 
 | Renderer | Colour config |
 |---|---|
-| `AudioWave` (oscilloscope) | `setLineColour(new Vector4f(WAVE_IDX, 0, 0, 1))` |
-| `RadialWave` | `setLineColour(new Vector4f(WAVE_IDX, 0, 0, 1))` |
-| `SpectrumAnalyser` | `.withBarColors(SPECTRUM_COLOUR, SPECTRUM_COLOUR)` |
-| `RadialSpectrumAnalyser` | `.withColors(SPECTRUM_COLOUR, SPECTRUM_COLOUR, SPECTRUM_COLOUR)` |
+| `AudioWave` (oscilloscope) | `setLineColour(new Vector4f(waveIdx, 0, 0, 1))` |
+| `RadialWave` | `setLineColour(new Vector4f(waveIdx, 0, 0, 1))` |
+| `SpectrumAnalyser` | `.withBarColors(spectrumColour, spectrumColour)` |
+| `RadialSpectrumAnalyser` | `.withColors(spectrumColour, spectrumColour, spectrumColour)` |
 
-`WAVE_IDX = 200f / 255f` (palette index 200). The `withBarColors` / `withColors` calls
-must happen **before** `init()` on the spectrum analysers.
+`waveIdx = 1.0f` (the maximum normalised value — last palette entry). `spectrumColour`
+uses the same value for the red channel and zero for green and blue. The `withBarColors`
+/ `withColors` calls must happen **before** `init()` on the spectrum analysers.
 
 ---
 
 ## FlashPhase in detail
 
 `FlashPhase` uses `TextureBakeRenderer` to write a full-screen texture into the
-currently bound R8 FBO in one draw call:
+currently bound R16 FBO in one draw call:
 
-- **White flash**: a 1×1 RGBA texture with R=0xFF (index 255). Uploaded once at init.
+- **White flash**: a 1×1 RGBA texture with R=0xFF, A=0xFF. The normalised R value (1.0)
+  maps to the last palette entry. Uploaded once at init.
 - **Image flash**: the next PCX file from `RandomImageSource` converted to RGBA where
-  `R = luma(pixel)`, so bright parts of the image map to high palette indices. Uploaded
-  on demand on the GL thread.
+  `R = luma(pixel) / 255`, so bright parts of the image map to high palette indices.
+  Uploaded on demand on the GL thread.
 
 `TextureBakeRenderer`'s fragment shader outputs `vec4(s.r, 0, 0, s.a)` — it routes
-the source red channel directly to the R8 output and uses the alpha channel for
+the source red channel directly to the R16 output and uses the alpha channel for
 transparency so partial-alpha pixels blend with the underlying content.
 
 ---
@@ -188,10 +198,10 @@ The text colour is white RGBA.
 
 **Buffer-bake mode** (`quoteInBuffer = true`):  
 `indexedRender()` uses a GL framebuffer save/restore trick to avoid needing a reference
-to `pongFBO`:
+to `renderFBO`:
 
 ```java
-// save whatever FBO is currently bound (pongFBO, bound by CthughaWindow)
+// save whatever FBO is currently bound (renderFBO, bound by CthughaWindow)
 glGetIntegerv(GL_FRAMEBUFFER_BINDING, savedFbo);
 
 // render RGBA text into a private offscreen RGBA FBO
@@ -200,13 +210,13 @@ glClear(GL_COLOR_BUFFER_BIT);
 quoteRenderer.doRender(ctx);
 textFBO.unbind();
 
-// restore pongFBO and bake the RGBA text → palette indices
+// restore renderFBO and bake the RGBA text → palette indices
 glBindFramebuffer(GL_FRAMEBUFFER, savedFboId);
-textBaker.doRender(ctx);   // TextureBakeRenderer: r → R8 palette index
+textBaker.doRender(ctx);   // TextureBakeRenderer: r → R16 palette index
 ```
 
 This keeps the `RenderPhase` interface clean: no phase ever holds a reference to
-`pongFBO` directly.
+`renderFBO` directly.
 
 ---
 
@@ -247,10 +257,11 @@ directory and exposes palette switching through the remote UI.
 
 ```
 CthughaWindow
-  ├── pingTex / pongTex / flameTex  (R8, owned by window)
-  ├── translateMapTex               (RG16UI, owned by window)
-  ├── paletteTex                    (256×1 RGBA, owned by window)
-  ├── pingFBO / pongFBO / flameFBO  (owned by window)
+  ├── displayTex / renderTex             (R16, owned by window)
+  ├── flameTex                           (GRAY, owned by window — blur intermediate)
+  ├── translateMapTex                    (RG16UI, owned by window)
+  ├── paletteTex                         (256×1 RGBA, owned by window)
+  ├── displayFBO / renderFBO / flameFBO  (owned by window)
   ├── TranslateTextureRenderer      (owned by window)
   ├── BlurTextureRenderer ×2        (owned by window)
   ├── PaletteRenderer               (owned by window)

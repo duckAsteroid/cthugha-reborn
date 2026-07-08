@@ -92,6 +92,8 @@ run {
 	//systemProperty("sun.java2d.opengl", "true")
 	environment '__NV_PRIME_RENDER_OFFLOAD', '1'
 	environment '__GLX_VENDOR_LIBRARY_NAME', 'nvidia'
+	environment 'XAUTHORITY', System.getenv('XAUTHORITY')
+			?: fileTree('/run/user/' + System.getProperty('user.name')).find { it.name.startsWith('.mutter-Xwaylandauth') }?.absolutePath
 
 	def prevAudioSource = ['']
 	doFirst {

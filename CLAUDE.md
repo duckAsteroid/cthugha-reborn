@@ -37,19 +37,19 @@ The `app/src/dist/` directory is the runtime working directory and contains:
 
 The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`'s `GLWindow`). Each frame executes as two passes driven by an ordered list of `RenderPhase` implementations:
 
-**Indexed pass** (while `pongFBO` is bound — writes directly to the R8 `pongTex`):
+**Indexed pass** (while `renderFBO` is bound — writes directly to the R16 `renderTex`):
 1. **CPU tick** (`JCthugha.doRenderCPU()`) — advances animations and frame rate stats; uploads palette LUT when dirty
-2. **Translate** (`TranslateTextureRenderer`) — GPU shader reads the RG16UI translation map and shifts every pixel of `pingTex` into `pongTex`
-3. **`phase.indexedRender()`** for each phase in order — waves, flash effects, and (optionally) baked quote text write palette indices directly into `pongTex`
+2. **Translate** (`TranslateTextureRenderer`) — GPU shader reads the RG16UI translation map and shifts every pixel of `displayTex` into `renderTex`
+3. **`phase.indexedRender()`** for each phase in order — waves, flash effects, and (optionally) baked quote text write palette indices directly into `renderTex`
 
 **Blur** (between passes):
-4. **Two-pass Gaussian blur** (`BlurTextureRenderer` xBlur + yBlur) with fade multiplier — `pongTex` → `flameTex` → `pingTex`, creating the flame spread effect
+4. **Two-pass Gaussian blur** (`BlurTextureRenderer` xBlur + yBlur) with fade multiplier — `renderTex` → `flameTex` → `displayTex`, creating the flame spread effect
 
 **Screen pass** (after palette display, renders RGBA overlays):
-5. **Display** (`PaletteRenderer`) — palette-converts `pingTex` (R8 indices) to RGBA for the window using a 256-entry LUT texture
+5. **Display** (`PaletteRenderer`) — palette-converts `displayTex` (R16 indices) to RGBA for the window using a 256-entry LUT texture
 6. **`phase.screenRender()`** for each phase in order — quote text overlay, notifications, QR code (each phase manages its own blend state)
 
-**Ping-pong textures**: `pingTex` is always the display/translate source; `pongTex` is the translate output/indexed-render target. Both are R8 format (single-byte palette index per pixel).
+**Fixed-role textures**: `displayTex` is always the display/translate source; `renderTex` is the translate output/indexed-render target. Both are R16 format (GL_R16, 16-bit single-channel; palette index stored as `index/paletteSize` normalised to `[0, 1]`). `flameTex` is a GRAY intermediate used only between the two blur passes.
 
 ### Render Phase Components
 
@@ -57,15 +57,15 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`
 
 Five implementations live in `display/phase/`:
 
-- **`WavePhase`** — owns `AudioPipeline` and all four wave/spectrum GL renderers. Renders directly into the R8 pong texture using palette-index–compatible colours (red channel = index/255, so index 200 ≈ 0.784). Registers the "Cycle Audio" action.
-- **`FlashPhase`** — one-shot texture flash effects (PCX image or white) baked into `pongTex` via `TextureBakeRenderer`. Registers "Flash Image" and "Flash White" actions.
-- **`QuotePhase`** — renders the current quote as a screen overlay (default) or baked into the indexed buffer (`quoteInBuffer` mode). In bake mode, saves/restores the GL framebuffer binding (`glGetIntegerv(GL_FRAMEBUFFER_BINDING)`) to temporarily render RGBA text then bake it back into the restored pong FBO. Registers "Show Quote" and "Toggle Quote Mode" actions.
+- **`WavePhase`** — owns `AudioPipeline` and all four wave/spectrum GL renderers. Renders directly into the R16 render texture using palette-index–compatible colours (red channel = 1.0, the maximum normalised value, targeting the last palette entry). Registers the "Cycle Audio" action.
+- **`FlashPhase`** — one-shot texture flash effects (PCX image or white) baked into `renderTex` via `TextureBakeRenderer`. Registers "Flash Image" and "Flash White" actions.
+- **`QuotePhase`** — renders the current quote as a screen overlay (default) or baked into the indexed buffer (`quoteInBuffer` mode). In bake mode, saves/restores the GL framebuffer binding (`glGetIntegerv(GL_FRAMEBUFFER_BINDING)`) to temporarily render RGBA text then bake it back into the restored render FBO. Registers "Show Quote" and "Toggle Quote Mode" actions.
 - **`NotifPhase`** — renders transient notification messages as a 3-second RGBA screen overlay. Notifications are produced by `JCthugha.notify()` and polled each frame.
 - **`QrPhase`** — wraps `QrOverlay`; added by `CthughaWindow` only when the remote server is enabled. `show(url)` / `hide()` are thread-safe proxies for the remote server.
 
 ### Core Data Structures
 
-- **`TabBuffer`** (`tab/TabBuffer.java`) — the central indexed pixel buffer. Stores pixels as 8-bit palette indices in a `ByteBuffer`; also holds the RG16UI translation map. Replaces the former `ScreenBuffer`.
+- **`TabBuffer`** (`tab/TabBuffer.java`) — holds the pre-allocated RG16UI translation map as a direct `ByteBuffer` viewed as a `ShortBuffer`. Filled by `TabMapping.compute()` and uploaded to `translateMapTex` via `glTexSubImage2D`. Replaces the former `ScreenBuffer`.
 - **`PaletteMap`** (`map/PaletteMap.java`) — 256-entry RGB lookup table. Held by `JCthugha`; uploaded to GPU as a texture each frame when dirty.
 - **`AudioSample`** (`audio/AudioSample.java`) — a batch of audio data with built-in downsampling support. Waveform models receive this each frame.
 - **Translation tables** (`tab/`) — `TabMapping` holds pre-computed RG16UI pixel displacement data. `TabGenerator` implementations (`Spiral`, `Hurricane`, `Smoke`, etc. in `tab/generators/`) generate these mappings. `TabStore` saves/loads named presets to `tabs/` directory. `GeneratorRegistry` manages the set of active generators.
@@ -125,4 +125,4 @@ Wave renderers live in `display/wave/` and implement the render-core wave interf
 
 ## Current Branch Context
 
-Branch `render_phase` is active — extracted `RenderPhase` interface and five phase implementations (`WavePhase`, `FlashPhase`, `QuotePhase`, `NotifPhase`, `QrPhase`) from the `CthughaWindow` monolith. Wave renderers now write directly to the R8 ping-pong buffer; the RGBA wave overlay FBO and `WaveIndexBakeRenderer` have been deleted. `ActionTreeBuilder.Callbacks` shrunk from 11 to 7 methods; phases register their own actions via `registerActions()`.
+Branch `render_phase` is active — extracted `RenderPhase` interface and five phase implementations (`WavePhase`, `FlashPhase`, `QuotePhase`, `NotifPhase`, `QrPhase`) from the `CthughaWindow` monolith. Wave renderers now write directly to the R16 indexed buffer (`displayTex`/`renderTex` upgraded from R8 to GL_R16); the RGBA wave overlay FBO and `WaveIndexBakeRenderer` have been deleted. `ActionTreeBuilder.Callbacks` shrunk from 11 to 7 methods; phases register their own actions via `registerActions()`.

@@ -36,7 +36,7 @@ import static org.lwjgl.opengl.GL30.glBindFramebuffer;
  *
  * In indexed-buffer mode ({@code quoteInBuffer=true}) the GL framebuffer binding is saved
  * before rendering text to an internal RGBA offscreen FBO, then restored so the bake
- * renderer can write palette indices into the pong texture — no pongFBO reference needed.
+ * renderer can write palette indices into the render texture — no renderFBO reference needed.
  */
 public class QuotePhase implements RenderPhase {
 
@@ -102,7 +102,7 @@ public class QuotePhase implements RenderPhase {
 
         syncQuoteText(quote, ctx);
 
-        // Save current FBO binding (pongFBO bound by CthughaWindow)
+        // Save current FBO binding (renderFBO bound by CthughaWindow)
         IntBuffer savedFbo = BufferUtils.createIntBuffer(1);
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, savedFbo);
         int savedFboId = savedFbo.get(0);
@@ -118,7 +118,7 @@ public class QuotePhase implements RenderPhase {
         glDisable(GL_BLEND);
         textFBO.unbind();
 
-        // Restore pongFBO and bake RGBA text → palette indices
+        // Restore renderFBO and bake RGBA text → palette indices
         glBindFramebuffer(GL_FRAMEBUFFER, savedFboId);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

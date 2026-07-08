@@ -7,11 +7,13 @@ import io.github.duckasteroid.cthugha.params.ContainerNode;
 import java.io.IOException;
 
 /**
- * A self-contained rendering component that participates in two render phases per frame:
+ * A self-contained rendering component that participates in up to two render phases per frame:
  *
  * <ol>
- *   <li>{@link #indexedRender} — called while {@code pongFBO} is bound; writes palette indices
- *       directly into the R8 ping-pong buffer (waves, flash effects, in-buffer text).</li>
+ *   <li>{@link #indexedRender} — called while {@code renderFBO} is bound; writes palette indices
+ *       directly into the R16 indexed buffer (waves, flash effects, in-buffer text). The red
+ *       channel value {@code index/paletteSize} encodes the palette entry; PaletteRenderer
+ *       resolves it as {@code pixelIndex = sampledValue * totalEntries}.</li>
  *   <li>{@link #screenRender} — called after palette conversion to the screen FBO; renders RGBA
  *       overlays on top of the palette-converted image (text, QR code).</li>
  * </ol>
@@ -23,7 +25,7 @@ public interface RenderPhase {
 
     default void init(RenderContext ctx) throws IOException {}
 
-    /** Called with pongFBO bound; renders directly into the R8 indexed buffer. */
+    /** Called with renderFBO bound; renders directly into the R16 indexed buffer. */
     default void indexedRender(RenderContext ctx) throws IOException {}
 
     /** Called after palette display; renders RGBA overlays onto the screen FBO. */

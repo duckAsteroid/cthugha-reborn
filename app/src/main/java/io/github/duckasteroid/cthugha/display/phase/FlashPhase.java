@@ -22,11 +22,11 @@ import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE;
 
 /**
- * One-shot texture flash effects baked into the R8 indexed buffer.
+ * One-shot texture flash effects baked into the R16 indexed buffer.
  *
- * The flash image texture stores luma in the R channel (palette index) so
- * TextureBakeRenderer can write it directly into pongTex without an RGBA→palette
- * conversion step. The white flash uses palette index 255 (R = 1.0).
+ * The flash image texture stores luma as a normalised float in the R channel so
+ * TextureBakeRenderer can write it directly into renderTex without an RGBA→palette
+ * conversion step. The white flash uses R = 1.0 (the last palette entry).
  */
 public class FlashPhase implements RenderPhase {
 

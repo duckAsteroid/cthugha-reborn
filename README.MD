@@ -52,8 +52,7 @@ variations on the TAB generator code (reverse engineered from C).
 
 ### Flame function
 
-This performs a convolution kernel operation on the pixels (like a blur). The current implementation
-averages values of 4 pixels in any square into the 1 on the bottom left.
+This performs a convolution kernel operation on the pixels (a blur). 
 
 ### Audio Sampling
 
@@ -62,12 +61,7 @@ been read since the last loop.
 
 ### Waveform Rendering
 
-Take the waverform data and render an on screen view of that. There are currently several waveforms:
-  1. A standard oscilliscope linear waveform time series amplitude. This can be split into two for
-stereo channels.
-  2. A circular linear waveform where amplitude represents the radius and time is represented by the
-rotational angle.
-  3. A spectral
+Take the waverform data and render an on screen view of that. 
 
 ### Rendering on screen
 

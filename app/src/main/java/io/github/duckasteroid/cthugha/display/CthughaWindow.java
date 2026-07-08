@@ -57,7 +57,7 @@ import java.util.List;
 import com.asteroid.duck.opengl.util.Monitor;
 
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL30.GL_R8;
+import static org.lwjgl.opengl.GL30.GL_R16;
 import static org.lwjgl.opengl.GL30.GL_RG16UI;
 import static org.lwjgl.opengl.GL30.GL_RG_INTEGER;
 
@@ -76,22 +76,22 @@ public class CthughaWindow extends GLWindow {
     // Palette LUT (256×1 RGBA)
     private Texture paletteTex;
 
-    // Fixed-role R8 textures:
-    //   pingTex = flame output / translate source / display source (always)
-    //   pongTex = translate output / overlay bake target / flame source (always)
-    private Texture pingTex;
-    private Texture pongTex;
-    private FrameBuffer pingFBO;
-    private FrameBuffer pongFBO;
+    // Fixed-role R16 textures (GL_R16, uint16 normalised to [0,1]):
+    //   displayTex = blur output / translate source / display source (always)
+    //   renderTex  = translate output / indexed-render target / blur input (always)
+    private Texture displayTex;
+    private Texture renderTex;
+    private FrameBuffer displayFBO;
+    private FrameBuffer renderFBO;
 
     // RG16UI translation map (x, y coords per pixel as uint16)
     private Texture translateMapTex;
     private TextureUnit translateMapUnit;
 
-    // Pass 1 (pongFBO): translate pingTex → pongTex
+    // Pass 1 (renderFBO): translate displayTex → renderTex
     private TranslateTextureRenderer translateRenderer;
 
-    // Pass 3 (pingFBO): GPU flame — two-pass separable Gaussian blur with fade
+    // Pass 3 (displayFBO): GPU flame — two-pass separable Gaussian blur with fade
     private BlurTextureRenderer xBlur;
     private BlurTextureRenderer yBlur;
     private Texture flameTex;
@@ -105,12 +105,14 @@ public class CthughaWindow extends GLWindow {
     private final DoubleParameter blurFade = new DoubleParameter("Softening", 0.0, 1.0, 0.99)
             {{ withUiHint(UiHint.SCALE, UiHint.SCALE_LOG); }};
 
-    // Pass 4 (default FBO): palette-convert pingTex to RGBA for display
+    // Pass 4 (default FBO): palette-convert displayTex to RGBA for display
     private PaletteRenderer paletteRenderer;
     private TextureUnit paletteUploadUnit;
 
-    // Pre-allocated palette LUT upload buffer (256 RGBA entries)
-    private final ByteBuffer palBuf = BufferUtils.createByteBuffer(256 * 4);
+    // Palette LUT upload buffer — sized for the current palette; recreated if palette size changes
+    private ByteBuffer palBuf;
+    private int palWidth;
+    private int palHeight;
     private boolean paletteDirty = false;
 
     private Double desiredUpdatePeriod = null;
@@ -220,8 +222,8 @@ public class CthughaWindow extends GLWindow {
     public void init() throws IOException {
         java.awt.Rectangle win = getWindow();
         // Render buffer defaults to display size; can be set smaller for a retro low-res look.
-        this.renderWidth  = CFG.getConfigAs("display", "render_width",  String.valueOf(win.width),  Integer::parseInt);
-        this.renderHeight = CFG.getConfigAs("display", "render_height", String.valueOf(win.height), Integer::parseInt);
+        this.renderWidth  = parseDimension(CFG.getConfig("display", "render_width",  String.valueOf(win.width)),  win.width);
+        this.renderHeight = parseDimension(CFG.getConfig("display", "render_height", String.valueOf(win.height)), win.height);
         int w = renderWidth;
         int h = renderHeight;
 
@@ -300,43 +302,47 @@ public class CthughaWindow extends GLWindow {
             qrPhase.show(initialUrl);  // safe to call before init()
         }
 
-        // GL backbone: ping-pong R8 textures
-        pingTex = new Texture();
-        pingTex.setInternalFormat(GL_R8);
-        pingTex.setImageFormat(GL_RED);
-        pingTex.setDataType(GL_UNSIGNED_BYTE);
-        pingTex.setFilter(Filter.NEAREST);
-        pingTex.generate(w, h, 0L);
-        getResourceManager().putTexture("pingTex", pingTex);
+        // GL backbone: fixed-role R16 indexed textures (single-channel, 0-65535 palette index range)
+        displayTex = new Texture();
+        displayTex.setInternalFormat(GL_R16);
+        displayTex.setImageFormat(GL_RED);
+        displayTex.setDataType(GL_UNSIGNED_SHORT);
+        displayTex.setFilter(Filter.NEAREST);
+        displayTex.generate(w, h, 0L);
+        getResourceManager().putTexture("displayTex", displayTex);
 
-        pongTex = new Texture();
-        pongTex.setInternalFormat(GL_R8);
-        pongTex.setImageFormat(GL_RED);
-        pongTex.setDataType(GL_UNSIGNED_BYTE);
-        pongTex.setFilter(Filter.NEAREST);
-        pongTex.generate(w, h, 0L);
-        getResourceManager().putTexture("pongTex", pongTex);
+        renderTex = new Texture();
+        renderTex.setInternalFormat(GL_R16);
+        renderTex.setImageFormat(GL_RED);
+        renderTex.setDataType(GL_UNSIGNED_SHORT);
+        renderTex.setFilter(Filter.NEAREST);
+        renderTex.generate(w, h, 0L);
+        getResourceManager().putTexture("renderTex", renderTex);
 
         // Translation map (RG16UI: absolute pixel coords per texel)
         translateMapTex = buildTranslateMapTexture(cthugha.getTranslateBuffer(), w, h);
         getResourceManager().putTexture("translateMap", translateMapTex);
         translateMapUnit = getResourceManager().nextTextureUnit();
 
-        // Palette LUT (256×1 RGBA)
+        // Palette LUT: 256-wide × (size/256)-tall RGBA texture; width stays 256 for all palette sizes
+        int palSize = cthugha.paletteMap.size();
+        palWidth  = 256;
+        palHeight = (palSize + 255) / 256;
+        palBuf = BufferUtils.createByteBuffer(palSize * 4);
         paletteTex = new Texture();
         paletteTex.setInternalFormat(GL_RGBA);
         paletteTex.setImageFormat(GL_RGBA);
         paletteTex.setDataType(GL_UNSIGNED_BYTE);
         paletteTex.setFilter(Filter.NEAREST);
-        paletteTex.generate(256, 1, fillPaletteBuffer(cthugha.paletteMap));
+        paletteTex.generate(palWidth, palHeight, fillPaletteBuffer(cthugha.paletteMap));
         getResourceManager().putTexture("palette", paletteTex);
 
         // FBOs — constructor immediately does GL setup, must be on GL thread
-        pingFBO = new FrameBuffer(pingTex);
-        pongFBO = new FrameBuffer(pongTex);
+        displayFBO = new FrameBuffer(displayTex);
+        renderFBO = new FrameBuffer(renderTex);
 
-        // Pass 1: translate pingTex → pongTex (via pongFBO)
-        translateRenderer = new TranslateTextureRenderer("pingTex", "translateMap");
+        // Pass 1: translate displayTex → renderTex (via renderFBO)
+        translateRenderer = new TranslateTextureRenderer("displayTex", "translateMap");
         translateRenderer.init(this);
 
         // Pass 3: GPU flame — two-pass separable Gaussian blur with fade
@@ -345,7 +351,7 @@ public class CthughaWindow extends GLWindow {
         getResourceManager().putTexture("flameTex", flameTex);
         flameFBO = new FrameBuffer(flameTex);
 
-        xBlur = new BlurTextureRenderer("pongTex");
+        xBlur = new BlurTextureRenderer("renderTex");
         xBlur.setXAxis(true);
         xBlur.setKernelSize(DEFAULT_KERNEL_SIZE);
         xBlur.addVariable(ShaderVariable.floatVariable("multiplier", () -> 1.0f));
@@ -366,8 +372,8 @@ public class CthughaWindow extends GLWindow {
             yBlur.setKernelSize(blurKernelSize.value);
         });
 
-        // Pass 4: palette-convert pingTex → RGBA for display (default FBO)
-        paletteRenderer = new PaletteRenderer("pingTex");
+        // Pass 4: palette-convert displayTex → RGBA for display (default FBO)
+        paletteRenderer = new PaletteRenderer("displayTex");
         paletteRenderer.init(this);
         paletteUploadUnit = getResourceManager().nextTextureUnit();
         paletteUploadUnit.bind(paletteTex);
@@ -405,31 +411,42 @@ public class CthughaWindow extends GLWindow {
         // Upload palette LUT only when changed
         if (paletteDirty) {
             paletteDirty = false;
+            int newSize   = cthugha.paletteMap.size();
+            int newWidth  = 256;
+            int newHeight = (newSize + 255) / 256;
             paletteUploadUnit.activate();
             glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE,
-                    fillPaletteBuffer(cthugha.paletteMap));
+            if (newWidth != palWidth || newHeight != palHeight) {
+                palWidth  = newWidth;
+                palHeight = newHeight;
+                palBuf = BufferUtils.createByteBuffer(newSize * 4);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, palWidth, palHeight, 0,
+                        GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(cthugha.paletteMap));
+            } else {
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, palWidth, palHeight,
+                        GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(cthugha.paletteMap));
+            }
         }
 
         java.awt.Rectangle win = getWindow();
         glViewport(0, 0, renderWidth, renderHeight);
 
-        // Indexed pass: translate pingTex → pongTex, then phases write directly into pongTex
-        pongFBO.bind();
+        // Indexed pass: translate displayTex → renderTex, then phases write directly into renderTex
+        renderFBO.bind();
         translateRenderer.doRender(this);
         for (RenderPhase p : phases) p.indexedRender(this);
-        pongFBO.unbind();
+        renderFBO.unbind();
 
         // Flame: two-pass Gaussian blur with fade
         flameFBO.bind();
         xBlur.doRender(this);
         flameFBO.unbind();
 
-        pingFBO.bind();
+        displayFBO.bind();
         yBlur.doRender(this);
-        pingFBO.unbind();
+        displayFBO.unbind();
 
-        // Display: pingTex (R8) → RGBA via palette LUT → default FBO (window viewport)
+        // Display: displayTex (R16) → RGBA via palette LUT → default FBO (window viewport)
         glViewport(0, 0, win.width, win.height);
         paletteRenderer.doRender(this);
 
@@ -448,8 +465,8 @@ public class CthughaWindow extends GLWindow {
         if (paletteRenderer   != null) paletteRenderer.dispose();
         if (paletteUploadUnit != null) paletteUploadUnit.dispose();
         if (translateRenderer != null) translateRenderer.dispose();
-        if (pingFBO           != null) pingFBO.dispose();
-        if (pongFBO           != null) pongFBO.dispose();
+        if (displayFBO        != null) displayFBO.dispose();
+        if (renderFBO         != null) renderFBO.dispose();
         if (stdinInjector     != null) stdinInjector.close();
         if (remoteServer      != null) remoteServer.stop();
         try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing audio", e); }

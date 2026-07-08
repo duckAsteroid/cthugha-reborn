@@ -11,10 +11,10 @@ import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import java.io.IOException;
 
 /**
- * Samples an RGBA texture and writes R channel as a palette index into the
- * currently bound R8 FBO. A channel controls transparency: A=0 preserves the
- * underlying content; A=1 overwrites with the palette index.
- * Used for one-shot effects (white flash, PCX image flash) baked into pongFBO.
+ * Samples an RGBA texture and writes the R channel as a normalised palette index into the
+ * currently bound R16 FBO. The alpha channel controls transparency: A=0 preserves the
+ * underlying content; A=1 overwrites with the new palette index value.
+ * Used for one-shot effects (white flash, PCX image flash) baked into renderFBO.
  */
 public class TextureBakeRenderer implements RenderedItem {
 

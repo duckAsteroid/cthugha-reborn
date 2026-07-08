@@ -1,0 +1,10 @@
+{
+  "name" : "simple pour",
+  "checksum" : "089e1f45a6687006d9c23074de49afb3c3939afd4f1c10138e723d1cec49c6d9",
+  "params" : {
+    "Center/X" : 0.529,
+    "Center/Y" : 0.517,
+    "Max Speed" : 4.3645,
+    "Sphere Radius" : 2.0
+  }
+}

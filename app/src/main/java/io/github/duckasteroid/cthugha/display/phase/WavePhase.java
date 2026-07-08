@@ -23,18 +23,14 @@ import org.joml.Vector4f;
 import java.io.IOException;
 
 /**
- * Renders all audio-reactive wave visualisations directly into the R8 ping-pong buffer.
+ * Renders all audio-reactive wave visualisations directly into the R16 indexed buffer.
  *
- * Wave renderers use R-channel = palette index / 255 so they write palette indices directly
- * into pongTex (which is R8) without needing an RGBA intermediate or a bake pass.
- * Palette index 200 is used as the default wave colour.
+ * All wave renderers use {@code waveIdx = 1.0f} (the maximum normalised R16 value), which
+ * PaletteRenderer resolves to the last palette entry via
+ * {@code pixelIndex = sampledValue * totalEntries}. Only the red channel is non-zero; green
+ * and blue are 0 so no colour information leaks into the palette lookup.
  */
 public class WavePhase implements RenderPhase {
-
-    /** Palette index 200, normalised to [0,1] for the R8 red channel. */
-    private static final float WAVE_IDX = 200f / 255f;
-    private static final Vector4f WAVE_COLOUR    = new Vector4f(WAVE_IDX, 0f, 0f, 1f);
-    private static final Vector3f SPECTRUM_COLOUR = new Vector3f(WAVE_IDX, 0f, 0f);
 
     private final JCthugha cthugha;
     private AudioPipeline audioPipeline;
@@ -49,31 +45,36 @@ public class WavePhase implements RenderPhase {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
+        // pos = index / paletteSize so PaletteRenderer resolves pixelIndex = pos * totalEntries = index
+        float waveIdx = 1.0f; //200f / cthugha.paletteMap.size();
+        Vector4f waveColour     = new Vector4f(waveIdx, 0f, 0f, 1f);
+        Vector3f spectrumColour = new Vector3f(waveIdx, 0f, 0f);
+
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
 
         oscWave = new AudioWave(audioPipeline.getPboSink());
-        oscWave.setLineColour(WAVE_COLOUR);
+        oscWave.setLineColour(waveColour);
         oscWave.setLineWidth(2.0f);
         oscWave.setClearBeforeRender(false);
         oscWave.init(ctx);
 
         radWave = new RadialWave(audioPipeline.getPboSink());
-        radWave.setLineColour(WAVE_COLOUR);
+        radWave.setLineColour(waveColour);
         radWave.setLineWidth(2.0f);
         radWave.setClearBeforeRender(false);
         radWave.init(ctx);
 
         // withBarColors must be called before init()
         specAnalyser = new SpectrumAnalyser(audioPipeline.getFreqProc())
-                .withBarColors(SPECTRUM_COLOUR, SPECTRUM_COLOUR);
+                .withBarColors(spectrumColour, spectrumColour);
         specAnalyser.setClearBeforeRender(false);
         audioPipeline.getFreqProc().addSink(specAnalyser);
         specAnalyser.init(ctx);
 
         // withColors must be called before init()
         radSpecAnalyser = new RadialSpectrumAnalyser(audioPipeline.getFreqProc())
-                .withColors(SPECTRUM_COLOUR, SPECTRUM_COLOUR, SPECTRUM_COLOUR);
+                .withColors(spectrumColour, spectrumColour, spectrumColour);
         radSpecAnalyser.setClearBeforeRender(false);
         audioPipeline.getFreqProc().addSink(radSpecAnalyser);
         radSpecAnalyser.init(ctx);

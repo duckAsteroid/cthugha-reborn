@@ -5,7 +5,15 @@ import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 /**
- * A map of colors - usually loaded from a .MAP file
+ * A 256-entry RGB colour lookup table loaded from a {@code .MAP} file.
+ *
+ * Each entry is a packed {@code 0xRRGGBB} integer. The active palette is held by
+ * {@code JCthugha} and uploaded to the GPU as a 256×1 RGBA texture ({@code paletteTex})
+ * whenever {@code paletteDirty} is set. {@code PaletteRenderer} uses this texture to
+ * convert R16 palette-index values in {@code displayTex} to on-screen RGBA colours.
+ *
+ * <p>The constructor calls {@link #ensureForegroundUnique()} to guarantee the last entry
+ * (used as the "foreground" wave colour) is unique within the palette.</p>
  */
 public class PaletteMap {
   private final String name;
@@ -18,9 +26,10 @@ public class PaletteMap {
   }
 
   private void ensureForegroundUnique() {
-    final int color = colors[255];
+    final int last = colors.length - 1;
+    final int color = colors[last];
     int channel = 0;
-    while(Arrays.stream(colors).filter(c -> c == colors[255]).count() > 1) {
+    while(Arrays.stream(colors).filter(c -> c == colors[last]).count() > 1) {
       Color c = new Color(color);
       switch (channel) {
         case 0:
@@ -51,8 +60,12 @@ public class PaletteMap {
           c = new Color(c.getRed(), c.getGreen(), blue);
           break;
       }
-      colors[255] = c.getRGB();
+      colors[last] = c.getRGB();
     }
+  }
+
+  public int size() {
+    return colors.length;
   }
 
   public String getName() {
@@ -64,7 +77,7 @@ public class PaletteMap {
   }
 
   public BufferedImage getPaletteImage(int height) {
-    BufferedImage image = new BufferedImage(256, height, BufferedImage.TYPE_INT_RGB);
+    BufferedImage image = new BufferedImage(colors.length, height, BufferedImage.TYPE_INT_RGB);
     for(int i=0; i< colors.length; i++) {
       for (int y = 0; y < height; y++) {
         image.setRGB(i, y, colors[i]);

@@ -5,6 +5,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.IntStream;
 
 /**
  * Holds the pre-allocated RG16UI translation map buffer and fills it from a {@link TabMapping}.
@@ -22,13 +24,19 @@ public class TabBuffer {
     this.shortBuffer = byteBuffer.asShortBuffer();
   }
 
+  /**
+   * Fills the translation map in parallel, one row per task.
+   * {@link TabMapping#compute} uses absolute ShortBuffer indices so concurrent row
+   * writes never overlap. Each worker thread gets its own {@link ThreadLocalRandom}
+   * rather than sharing the caller's {@code rng}, which is not thread-safe.
+   */
   public void fill(TabMapping mapper, Random rng) {
-    shortBuffer.rewind();
-    for (int y = 0; y < height; y++) {
+    IntStream.range(0, height).parallel().forEach(y -> {
+      Random rowRng = ThreadLocalRandom.current();
       for (int x = 0; x < width; x++) {
-        mapper.compute(x, y, shortBuffer, (y * width + x) * 2, rng);
+        mapper.compute(x, y, shortBuffer, (y * width + x) * 2, rowRng);
       }
-    }
+    });
     byteBuffer.rewind();
   }
 
