@@ -15,8 +15,8 @@ import io.github.duckasteroid.cthugha.display.TextureBakeRenderer;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
-import io.github.duckasteroid.cthugha.strings.Constants;
-import io.github.duckasteroid.cthugha.strings.Quote;
+import io.github.duckasteroid.cthugha.quote.Constants;
+import io.github.duckasteroid.cthugha.quote.Quote;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
@@ -64,8 +64,9 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        FontTexture quoteFont = makeFontTexture("quote", "Serif", Font.ITALIC,  36);
-        FontTexture attrFont  = makeFontTexture("attr",  "Serif", Font.PLAIN,   22);
+        java.awt.Rectangle win = ctx.getWindow();
+        FontTexture quoteFont = makeFontTexture("quote", "Serif", Font.ITALIC, Constants.DEFAULT_QUOTE_SIZE, win.height);
+        FontTexture attrFont  = makeFontTexture("attr",  "Serif", Font.PLAIN,  Constants.DEFAULT_ATTR_SIZE,  win.height);
         attrPosition = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_POSITION, "below");
         attrAlign    = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_ALIGN,    "center");
 
@@ -78,7 +79,6 @@ public class QuotePhase implements RenderPhase {
         attrRenderer.setTextColor(new Vector4f(0.85f, 0.85f, 0.85f, 1f));
 
         // In-buffer bake resources: RGBA offscreen FBO + bake renderer
-        java.awt.Rectangle win = ctx.getWindow();
         textOverlayTex = new Texture();
         textOverlayTex.setInternalFormat(GL_RGBA8);
         textOverlayTex.setImageFormat(GL_RGBA);
@@ -180,12 +180,13 @@ public class QuotePhase implements RenderPhase {
         quoteRenderer.setText(quoteText);
         attrRenderer.setText(attrText);
 
+        float quoteX = 40.0f;
         float quoteY = h / 2.0f;
-        quoteRenderer.setTransform(new Matrix4f().translate(40.0f, quoteY, 0.0f));
+        quoteRenderer.setTransform(new Matrix4f().translate(quoteX, quoteY, 0.0f));
 
         FontTexture attrFont  = attrRenderer.getFontTexture();
         FontTexture quoteFont = quoteRenderer.getFontTexture();
-        int gap = 8;
+        int gap = quoteFont.getFontHeight() / 3;
 
         float attrY;
         if ("above".equalsIgnoreCase(attrPosition)) {
@@ -194,22 +195,38 @@ public class QuotePhase implements RenderPhase {
             attrY = quoteY + quoteFont.getHeight(quoteText) + gap;
         }
 
+        float quoteW = quoteFont.getWidth(quoteText);
         float attrX = switch (attrAlign.toLowerCase()) {
-            case "center" -> (w - attrFont.getWidth(attrText)) / 2.0f;
-            case "right"  -> w - attrFont.getWidth(attrText) - 40.0f;
-            default       -> 40.0f;
+            case "center" -> quoteX + (quoteW - attrFont.getWidth(attrText)) / 2.0f;
+            case "right"  -> quoteX + quoteW - attrFont.getWidth(attrText);
+            default       -> quoteX;
         };
         attrRenderer.setTransform(new Matrix4f().translate(attrX, attrY, 0.0f));
     }
 
     private static FontTexture makeFontTexture(String prefix, String defaultName,
-                                               int defaultStyle, int defaultSize) {
-        String name  = CFG.getConfig(Constants.SECTION, prefix + "_font",  defaultName);
-        int    size  = CFG.getConfigAs(Constants.SECTION, prefix + "_size",
-                String.valueOf(defaultSize), Integer::parseInt);
-        int    style = parseFontStyle(CFG.getConfig(Constants.SECTION, prefix + "_style",
+                                               int defaultStyle, String defaultSize, int refHeight) {
+        String name     = CFG.getConfig(Constants.SECTION, prefix + "_font", defaultName);
+        String sizeStr  = CFG.getConfig(Constants.SECTION, prefix + "_size", defaultSize);
+        int    size     = parseFontSize(sizeStr, refHeight);
+        int    style    = parseFontStyle(CFG.getConfig(Constants.SECTION, prefix + "_style",
                 fontStyleName(defaultStyle)));
         return new FontTextureFactory(new Font(name, style, size), true).createFontTexture();
+    }
+
+    /** Parses "36", "36px", or "5%" (capped at 120px to bound atlas size). */
+    private static int parseFontSize(String value, int refHeight) {
+        String v = value.trim();
+        int px;
+        if (v.endsWith("%")) {
+            double pct = Double.parseDouble(v.substring(0, v.length() - 1));
+            px = (int) Math.round(refHeight * pct / 100.0);
+        } else if (v.endsWith("px")) {
+            px = Integer.parseInt(v.substring(0, v.length() - 2).trim());
+        } else {
+            px = Integer.parseInt(v);
+        }
+        return Math.min(px, 120);
     }
 
     private static int parseFontStyle(String s) {

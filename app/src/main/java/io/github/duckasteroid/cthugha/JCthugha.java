@@ -17,9 +17,9 @@ import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import com.asteroid.duck.opengl.util.stats.Stats;
 import com.asteroid.duck.opengl.util.stats.StatsFactory;
-import io.github.duckasteroid.cthugha.strings.Constants;
-import io.github.duckasteroid.cthugha.strings.Quote;
-import io.github.duckasteroid.cthugha.strings.RandomStringSource;
+import io.github.duckasteroid.cthugha.quote.Constants;
+import io.github.duckasteroid.cthugha.quote.Quote;
+import io.github.duckasteroid.cthugha.quote.RandomQuoteSource;
 import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
 import io.github.duckasteroid.cthugha.tab.TabBuffer;
 import io.github.duckasteroid.cthugha.tab.TabStore;
@@ -67,7 +67,7 @@ public class JCthugha extends ParamNode implements Closeable {
 
 
 
-	private final RandomStringSource stringSource = new RandomStringSource();
+	private final RandomQuoteSource quoteSource = new RandomQuoteSource();
 	private volatile Quote currentQuote = null;
 	private Instant quoteExpiry = null;
 	private volatile String pendingNotification = null;
@@ -180,7 +180,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	}
 
 	public void showQuote() {
-		currentQuote = stringSource.nextQuote();
+		currentQuote = quoteSource.nextQuote();
 		quoteExpiry = Instant.now().plus(QUOTE_DURATION);
 	}
 
