@@ -26,7 +26,8 @@ import static org.lwjgl.opengl.GL11.*;
  * displayed for a configurable duration before disappearing.
  *
  * <p>Configurable in the {@code [Notifications]} INI section:
- * {@code font}, {@code size}, {@code style}, {@code color}, {@code x}, {@code y}, {@code duration}.
+ * {@code font}, {@code size}, {@code style}, {@code color},
+ * {@code location}, {@code padding}, {@code duration}.
  */
 public class NotifPhase implements RenderPhase {
 
@@ -37,6 +38,11 @@ public class NotifPhase implements RenderPhase {
     private StringRenderer notifRenderer;
     private Instant notifExpiry = null;
     private Duration notifDuration;
+
+    /** One of: TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT */
+    private String location;
+    /** Padding in pixels from the nearest edge(s). */
+    private int paddingPx;
 
     public NotifPhase(JCthugha cthugha) {
         this.cthugha = cthugha;
@@ -52,8 +58,8 @@ public class NotifPhase implements RenderPhase {
         int size  = parseFontSize(sizeStr, win.height);
         int style = parseFontStyle(styleStr);
 
-        float x = CFG.getConfigAs(SECTION, "x", "20", Float::parseFloat);
-        float y = CFG.getConfigAs(SECTION, "y", "30", Float::parseFloat);
+        location  = CFG.getConfig(SECTION, "location", "TOP_LEFT").trim().toUpperCase();
+        paddingPx = parseDimension(CFG.getConfig(SECTION, "padding", "1%"), win.height);
 
         Vector4f color = parseColor(CFG.getConfig(SECTION, "color", "YELLOW"));
 
@@ -63,7 +69,6 @@ public class NotifPhase implements RenderPhase {
         FontTexture font = new FontTextureFactory(new Font(fontName, style, size), true).createFontTexture();
         notifRenderer = new StringRenderer(font);
         notifRenderer.init(ctx);
-        notifRenderer.setTransform(new Matrix4f().translate(x, y, 0.0f));
         notifRenderer.setTextColor(color);
     }
 
@@ -73,6 +78,7 @@ public class NotifPhase implements RenderPhase {
         if (notif != null) {
             notifRenderer.setText(notif);
             notifExpiry = Instant.now().plus(notifDuration);
+            updateTransform(notif, ctx.getWindow());
         }
         if (notifExpiry == null || Instant.now().isAfter(notifExpiry)) {
             notifExpiry = null;
@@ -93,19 +99,41 @@ public class NotifPhase implements RenderPhase {
     @Override
     public void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {}
 
-    /** Parses "18", "18px", or "2%" (capped at 120px to bound atlas size). */
+    /**
+     * Recomputes the text transform based on location + padding.
+     * y uses baseline coordinates: TOP adds fontHeight so the ascent clears the padding margin;
+     * BOTTOM subtracts padding so the descent sits just inside the edge.
+     */
+    private void updateTransform(String text, Rectangle win) {
+        FontTexture font = notifRenderer.getFontTexture();
+        int fontHeight   = font.getFontHeight();
+        float textWidth  = font.getWidth(text);
+
+        boolean right  = location.contains("RIGHT");
+        boolean bottom = location.contains("BOTTOM");
+
+        float x = right  ? win.width  - paddingPx - textWidth : paddingPx;
+        float y = bottom ? win.height - paddingPx              : paddingPx + fontHeight;
+
+        notifRenderer.setTransform(new Matrix4f().translate(x, y, 0.0f));
+    }
+
+    /** Parses "18", "18px", or "2%" of refHeight (capped at 120px to bound atlas size). */
     private static int parseFontSize(String value, int refHeight) {
+        return Math.min(parseDimension(value, refHeight), 120);
+    }
+
+    /** Parses "20", "20px", or "2%" of refDim — no cap. */
+    private static int parseDimension(String value, int refDim) {
         String v = value.trim();
-        int px;
         if (v.endsWith("%")) {
             double pct = Double.parseDouble(v.substring(0, v.length() - 1));
-            px = (int) Math.round(refHeight * pct / 100.0);
+            return (int) Math.round(refDim * pct / 100.0);
         } else if (v.endsWith("px")) {
-            px = Integer.parseInt(v.substring(0, v.length() - 2).trim());
+            return Integer.parseInt(v.substring(0, v.length() - 2).trim());
         } else {
-            px = Integer.parseInt(v);
+            return Integer.parseInt(v);
         }
-        return Math.min(px, 120);
     }
 
     private static int parseFontStyle(String s) {
