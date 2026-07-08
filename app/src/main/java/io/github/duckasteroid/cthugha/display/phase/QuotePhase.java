@@ -42,8 +42,10 @@ public class QuotePhase implements RenderPhase {
 
     private static final Config CFG = Config.singleton();
 
+    public enum Mode { OVERLAY, BUFFER, BOTH }
+
     private final JCthugha cthugha;
-    private boolean quoteInBuffer = false;
+    private Mode mode = Mode.OVERLAY;
 
     // Screen overlay renderers
     private StringRenderer quoteRenderer;
@@ -96,7 +98,7 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void indexedRender(RenderContext ctx) {
-        if (!quoteInBuffer) return;
+        if (mode == Mode.OVERLAY) return;
         Quote quote = cthugha.getCurrentQuote();
         if (quote == null) return;
 
@@ -128,7 +130,7 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void screenRender(RenderContext ctx) {
-        if (quoteInBuffer) return;
+        if (mode == Mode.BUFFER) return;
         Quote quote = cthugha.getCurrentQuote();
         syncQuoteText(quote, ctx);
         if (quote == null) return;
@@ -148,8 +150,9 @@ public class QuotePhase implements RenderPhase {
         generalGroup.addChild(showQuote);
 
         AbstractAction toggleMode = new AbstractAction("Toggle Quote Mode", ctx -> {
-            quoteInBuffer = !quoteInBuffer;
-            cthugha.notify("quote: " + (quoteInBuffer ? "in buffer" : "overlay"));
+            Mode[] values = Mode.values();
+            mode = values[(mode.ordinal() + 1) % values.length];
+            cthugha.notify("quote: " + mode.name().toLowerCase());
         });
         toggleMode.withUiHint(UiHint.ICON, "message-square");
         generalGroup.addChild(toggleMode);
@@ -208,34 +211,10 @@ public class QuotePhase implements RenderPhase {
                                                int defaultStyle, String defaultSize, int refHeight) {
         String name     = CFG.getConfig(Constants.SECTION, prefix + "_font", defaultName);
         String sizeStr  = CFG.getConfig(Constants.SECTION, prefix + "_size", defaultSize);
-        int    size     = parseFontSize(sizeStr, refHeight);
-        int    style    = parseFontStyle(CFG.getConfig(Constants.SECTION, prefix + "_style",
+        int    size     = PhaseConfig.parseFontSize(sizeStr, refHeight);
+        int    style    = PhaseConfig.parseFontStyle(CFG.getConfig(Constants.SECTION, prefix + "_style",
                 fontStyleName(defaultStyle)));
         return new FontTextureFactory(new Font(name, style, size), true).createFontTexture();
-    }
-
-    /** Parses "36", "36px", or "5%" (capped at 120px to bound atlas size). */
-    private static int parseFontSize(String value, int refHeight) {
-        String v = value.trim();
-        int px;
-        if (v.endsWith("%")) {
-            double pct = Double.parseDouble(v.substring(0, v.length() - 1));
-            px = (int) Math.round(refHeight * pct / 100.0);
-        } else if (v.endsWith("px")) {
-            px = Integer.parseInt(v.substring(0, v.length() - 2).trim());
-        } else {
-            px = Integer.parseInt(v);
-        }
-        return Math.min(px, 120);
-    }
-
-    private static int parseFontStyle(String s) {
-        return switch (s.toUpperCase()) {
-            case "BOLD"        -> Font.BOLD;
-            case "ITALIC"      -> Font.ITALIC;
-            case "BOLD_ITALIC" -> Font.BOLD | Font.ITALIC;
-            default            -> Font.PLAIN;
-        };
     }
 
     private static String fontStyleName(int style) {

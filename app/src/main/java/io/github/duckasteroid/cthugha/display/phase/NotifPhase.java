@@ -55,13 +55,13 @@ public class NotifPhase implements RenderPhase {
         String fontName = CFG.getConfig(SECTION, "font",  "Monospaced");
         String sizeStr  = CFG.getConfig(SECTION, "size",  "18");
         String styleStr = CFG.getConfig(SECTION, "style", "BOLD");
-        int size  = parseFontSize(sizeStr, win.height);
-        int style = parseFontStyle(styleStr);
+        int size  = PhaseConfig.parseFontSize(sizeStr, win.height);
+        int style = PhaseConfig.parseFontStyle(styleStr);
 
         location  = CFG.getConfig(SECTION, "location", "TOP_LEFT").trim().toUpperCase();
-        paddingPx = parseDimension(CFG.getConfig(SECTION, "padding", "1%"), win.height);
+        paddingPx = PhaseConfig.parseDimension(CFG.getConfig(SECTION, "padding", "1%"), win.height);
 
-        Vector4f color = parseColor(CFG.getConfig(SECTION, "color", "YELLOW"));
+        Vector4f color = PhaseConfig.parseColor(CFG.getConfig(SECTION, "color", "YELLOW"), StandardColors.YELLOW.color);
 
         notifDuration = Duration.ofSeconds(
                 CFG.getConfigAs(SECTION, "duration", "3", Integer::parseInt));
@@ -118,54 +118,4 @@ public class NotifPhase implements RenderPhase {
         notifRenderer.setTransform(new Matrix4f().translate(x, y, 0.0f));
     }
 
-    /** Parses "18", "18px", or "2%" of refHeight (capped at 120px to bound atlas size). */
-    private static int parseFontSize(String value, int refHeight) {
-        return Math.min(parseDimension(value, refHeight), 120);
-    }
-
-    /** Parses "20", "20px", or "2%" of refDim — no cap. */
-    private static int parseDimension(String value, int refDim) {
-        String v = value.trim();
-        if (v.endsWith("%")) {
-            double pct = Double.parseDouble(v.substring(0, v.length() - 1));
-            return (int) Math.round(refDim * pct / 100.0);
-        } else if (v.endsWith("px")) {
-            return Integer.parseInt(v.substring(0, v.length() - 2).trim());
-        } else {
-            return Integer.parseInt(v);
-        }
-    }
-
-    private static int parseFontStyle(String s) {
-        return switch (s.toUpperCase()) {
-            case "BOLD"        -> Font.BOLD;
-            case "ITALIC"      -> Font.ITALIC;
-            case "BOLD_ITALIC" -> Font.BOLD | Font.ITALIC;
-            default            -> Font.PLAIN;
-        };
-    }
-
-    /** Parses a StandardColors name (e.g. "YELLOW") or hex "#RRGGBB" / "#RRGGBBAA". */
-    private static Vector4f parseColor(String s) {
-        String v = s.trim().toUpperCase();
-        try {
-            return StandardColors.valueOf(v).color;
-        } catch (IllegalArgumentException ignored) {}
-        if (v.startsWith("#")) {
-            String hex = v.substring(1);
-            if (hex.length() == 6) {
-                int r = Integer.parseInt(hex.substring(0, 2), 16);
-                int g = Integer.parseInt(hex.substring(2, 4), 16);
-                int b = Integer.parseInt(hex.substring(4, 6), 16);
-                return new Vector4f(r / 255f, g / 255f, b / 255f, 1f);
-            } else if (hex.length() == 8) {
-                int r = Integer.parseInt(hex.substring(0, 2), 16);
-                int g = Integer.parseInt(hex.substring(2, 4), 16);
-                int b = Integer.parseInt(hex.substring(4, 6), 16);
-                int a = Integer.parseInt(hex.substring(6, 8), 16);
-                return new Vector4f(r / 255f, g / 255f, b / 255f, a / 255f);
-            }
-        }
-        return StandardColors.YELLOW.color;
-    }
 }
