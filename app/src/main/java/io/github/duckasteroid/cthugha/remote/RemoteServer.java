@@ -13,6 +13,7 @@ import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
+import io.github.duckasteroid.cthugha.params.CompilableValue;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.StringValue;
 import org.slf4j.Logger;
@@ -124,7 +125,11 @@ public class RemoteServer {
             }
             if (node instanceof StringValue sv) {
                 sv.setValue(body.get("value").asText());
-                ctx.json(serializer.serialize(node).toString());
+                ObjectNode response = serializer.serialize(node);
+                if (sv instanceof CompilableValue cv && cv.getLastCompileError() != null) {
+                    response.put("compileError", cv.getLastCompileError());
+                }
+                ctx.json(response.toString());
                 return;
             }
             if (!(node instanceof AbstractValue param)) {

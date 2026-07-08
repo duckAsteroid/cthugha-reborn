@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Manages a collection of {@link AnimationBinding}s that drive param-model values from
- * render-core timer functions.
+ * user-supplied time expressions.
  *
  * <p>Wire bindings with {@link #addBinding} before calling {@link #init(Clock)}, then call
  * {@link #tick()} once per frame to push updated values into all active targets.</p>
@@ -29,16 +29,16 @@ public class AnimationSystem extends ParamNode {
     }
 
     /**
-     * Registers a new wave-driven binding. The binding appears as a child of this node in the
-     * param tree, exposing its own {@code enabled}, {@code frequency}, and {@code phase} params.
+     * Registers a script-driven binding. The binding appears as a child of this node in the
+     * param tree, exposing its own {@code enabled} and {@code script} params.
      *
-     * @param name      display name for this binding in the param tree
-     * @param target    the parameter to animate
-     * @param frequency initial oscillation frequency in Hz
+     * @param name          display name for this binding in the param tree
+     * @param target        the parameter to animate
+     * @param defaultScript initial expression, e.g. {@code "(sin(t * 0.31) + 1.0) / 2.0"}
      * @return the created binding (for further configuration)
      */
-    public AnimationBinding addBinding(String name, AbstractValue target, double frequency) {
-        AnimationBinding binding = new AnimationBinding(name, target, frequency);
+    public AnimationBinding addBinding(String name, AbstractValue target, String defaultScript) {
+        AnimationBinding binding = new AnimationBinding(name, target, defaultScript);
         bindings.add(binding);
         addChild(binding);
         return binding;

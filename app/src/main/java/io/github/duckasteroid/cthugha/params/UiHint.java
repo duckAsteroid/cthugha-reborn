@@ -64,5 +64,12 @@ public final class UiHint {
      */
     public static final String SCALE_LOG = "log";
 
+    /**
+     * Value for {@link #CONTROL_TYPE} on a {@code StringNode}: renders a resizable
+     * multi-line code editor.  Submit with Ctrl+Enter.  Compile errors are returned
+     * in the PATCH response as {@code "compileError"}.
+     */
+    public static final String CODE_EDITOR = "CODE_EDITOR";
+
     private UiHint() {}
 }

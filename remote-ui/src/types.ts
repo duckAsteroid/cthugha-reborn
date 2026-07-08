@@ -36,6 +36,10 @@ export interface StringNode {
   uiHints?: Record<string, string>;
 }
 
+export interface StringPatchResult extends StringNode {
+  compileError?: string;
+}
+
 export type ParamNode = ContainerNode | LeafNode | ActionNode | StringNode;
 
 export interface SSEParamChangedEvent {

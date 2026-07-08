@@ -1,5 +1,5 @@
 import { getToken } from './token';
-import type { LeafNode, ParamNode, ServerInfo } from './types';
+import type { LeafNode, ParamNode, ServerInfo, StringPatchResult } from './types';
 
 const BASE_URL = window.location.origin;
 
@@ -55,8 +55,8 @@ export async function randomise(path: string): Promise<ParamNode> {
   });
 }
 
-export async function patchStringParam(path: string, value: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/params/${path}`, {
+export async function patchStringParam(path: string, value: string): Promise<StringPatchResult> {
+  return apiFetch<StringPatchResult>(`/api/v1/params/${path}`, {
     method: 'PATCH',
     body: JSON.stringify({ value }),
   });

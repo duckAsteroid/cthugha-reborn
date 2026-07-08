@@ -88,8 +88,8 @@ public class JCthugha extends ParamNode implements Closeable {
 		reader = new MapFileReader(maps);
 		paletteMap = reader.random();
 
-		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, 0.05);
-		animation.addBinding("radial rotation", radialWave.transform.rotate, 0.07);
+		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, "(sin(t * 0.3142) + 1.0) / 2.0");
+		animation.addBinding("radial rotation", radialWave.transform.rotate,   "(sin(t * 0.4398) + 1.0) / 2.0");
 	}
 
 	public synchronized Duration doRenderCPU() {
@@ -147,6 +147,20 @@ public class JCthugha extends ParamNode implements Closeable {
 	public void regenerateTranslation() {
 		translate.fill(translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
 		notify(translateSource.getLastGenerated());
+	}
+
+	/** Computes a randomised translation into a fresh buffer (safe to call off the GL thread). */
+	public TabBuffer computeNewTranslation() {
+		TabBuffer newBuf = new TabBuffer(new Dimension(bufferWidth, bufferHeight));
+		newBuf.fill(translateSource.generate(bufferWidth, bufferHeight, rng), rng);
+		return newBuf;
+	}
+
+	/** Computes a regenerated translation into a fresh buffer (safe to call off the GL thread). */
+	public TabBuffer computeRegeneratedTranslation() {
+		TabBuffer newBuf = new TabBuffer(new Dimension(bufferWidth, bufferHeight));
+		newBuf.fill(translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
+		return newBuf;
 	}
 
 	public void loadPalette(PaletteMap map) {

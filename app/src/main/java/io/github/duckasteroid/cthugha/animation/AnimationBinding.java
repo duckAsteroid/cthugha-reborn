@@ -1,47 +1,46 @@
 package io.github.duckasteroid.cthugha.animation;
 
 import com.asteroid.duck.opengl.util.timer.Clock;
-import com.asteroid.duck.opengl.util.timer.function.WaveFunction;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
-import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 /**
- * Drives a single {@link AbstractValue} parameter using a {@link WaveFunction}.
+ * Drives a single {@link AbstractValue} parameter using a user-supplied {@link ScriptParameter}.
  *
- * <p>Each frame, {@link #tick()} reads the current {@link #frequency} and {@link #phase} params,
- * evaluates the sine wave, normalises its [-1, 1] output to [0, 1], and pushes the result into
- * the target parameter via {@link AbstractValue#setNormalisedValue(double)}.</p>
+ * <p>Each frame, {@link #tick()} evaluates the compiled {@link TimeFunction} with the current
+ * elapsed time in seconds and pushes the clamped result into the target via
+ * {@link AbstractValue#setNormalisedValue(double)}.</p>
  */
 public class AnimationBinding extends ParamNode {
 
     public final BooleanParameter enabled = new BooleanParameter("enabled", true);
-    public final DoubleParameter frequency = new DoubleParameter("frequency", 0.01, 10.0, 0.2);
-    public final DoubleParameter phase = new DoubleParameter("phase", 0.0, 2 * Math.PI, 0.0);
+    public final ScriptParameter script;
 
     private final AbstractValue target;
-    private WaveFunction fn;
+    private Clock clock;
 
-    public AnimationBinding(String name, AbstractValue target, double frequency) {
+    public AnimationBinding(String name, AbstractValue target, String defaultScript) {
         super(name);
         this.target = target;
-        this.frequency.value = frequency;
+        this.script = new ScriptParameter("script", defaultScript);
         initFields(getClass());
     }
 
+    /** Stores the clock and compiles the initial script. Call once from {@code init()}. */
     void init(Clock clock) {
-        fn = new WaveFunction(clock, frequency.value, phase.value);
+        this.clock = clock;
+        script.compile();
     }
 
     void tick() {
+        TimeFunction fn = script.getFunction();
         if (!enabled.value || fn == null) {
             target.setControlled(false);
             return;
         }
         target.setControlled(true);
-        fn.setFrequency(frequency.value);
-        fn.setPhase(phase.value);
-        target.setNormalisedValue((fn.value() + 1.0) / 2.0);
+        double t = clock.elapsed();
+        target.setNormalisedValue(Math.max(0.0, Math.min(1.0, fn.apply(t))));
     }
 }
