@@ -7,3 +7,4 @@ build/
 /remote-ui/dist/
 /app/src/dist/logs/
 /app/src/dist/*.mp4
+/app/logs/*.log

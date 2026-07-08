@@ -22,6 +22,9 @@ import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.phase.QrPhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
+import io.github.duckasteroid.cthugha.display.phase.WorkPhase;
+import io.github.duckasteroid.cthugha.tab.TabBuffer;
+import io.github.duckasteroid.cthugha.work.BackgroundWorkQueue;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
@@ -118,6 +121,7 @@ public class CthughaWindow extends GLWindow {
     private Double desiredUpdatePeriod = null;
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
+    private final BackgroundWorkQueue workQueue = new BackgroundWorkQueue();
     private final StdinKeyInjector stdinInjector;
 
     private CthughaActionContext actionContext;
@@ -237,15 +241,32 @@ public class CthughaWindow extends GLWindow {
 
         // Create phase list from JCthugha factory
         phases = new ArrayList<>(cthugha.createPhases());
+        phases.add(new WorkPhase(workQueue));
 
         // Wire translation-layer callbacks before starting the remote server so SSE events work.
         cthugha.translateSource.setOnRegenerateNeeded(() -> {
-            cthugha.regenerateTranslation();
-            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+            boolean started = workQueue.submit("translateMap", "Tab calculating…", wctx -> {
+                wctx.setStatus("Computing…");
+                TabBuffer newBuf =cthugha.computeRegeneratedTranslation();
+                wctx.enqueueRenderAction(rc -> {
+                    cthugha.loadTabBuffer(newBuf);
+                    cthugha.notify(cthugha.translateSource.getLastGenerated());
+                    rebuildTranslateMap();
+                });
+            });
+            if (!started) cthugha.notify("Tab calculation in progress");
         });
         cthugha.translateSource.setOnNewGeneratorSelected(() -> {
-            cthugha.newTranslation(cthugha.rng);
-            renderActions.enqueue("rebuildTranslateMap", rc -> rebuildTranslateMap());
+            boolean started = workQueue.submit("translateMap", "Tab calculating…", wctx -> {
+                wctx.setStatus("Computing…");
+                TabBuffer newBuf =cthugha.computeNewTranslation();
+                wctx.enqueueRenderAction(rc -> {
+                    cthugha.loadTabBuffer(newBuf);
+                    cthugha.notify(cthugha.translateSource.getLastGenerated());
+                    rebuildTranslateMap();
+                });
+            });
+            if (!started) cthugha.notify("Tab calculation in progress");
         });
 
         // Remote setup: create QrPhase and add to phase list before tree build
@@ -404,6 +425,7 @@ public class CthughaWindow extends GLWindow {
     @Override
     public void render() throws IOException {
         renderActions.processAll(this);
+        workQueue.processAll(this);
 
         // CPU pipeline: advance parameter animators
         cthugha.doRenderCPU();
