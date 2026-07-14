@@ -18,8 +18,8 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 @AutoService(TabGenerator.class)
 public class DownSpiral extends ParamNode implements TabGenerator {
-  public DoubleParameter a = new DoubleParameter("A", 0, Float.MAX_VALUE, 0.75);
-  public DoubleParameter b = new DoubleParameter("B", 1, Float.MAX_VALUE, 1500);
+  public DoubleParameter a = new DoubleParameter("A", 0, 5, 0.75);
+  public DoubleParameter b = new DoubleParameter("B", 1, 3000, 1500);
 
   public DownSpiral() {
     super("Down spiral tab");
