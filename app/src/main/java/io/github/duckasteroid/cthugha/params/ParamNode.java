@@ -41,6 +41,8 @@ public abstract class ParamNode implements Node {
 
   private boolean remoteAllowed = true;
 
+  private boolean persistExclude = false;
+
   private String description;
 
   /** Slash-delimited path from tree root to this node; computed lazily, cached after first access. */
@@ -150,6 +152,20 @@ public abstract class ParamNode implements Node {
   @Override
   public boolean isRemoteAllowed() {
     return remoteAllowed;
+  }
+
+  /**
+   * Excludes this node (and its descendants) from "screen config" capture/apply and returns
+   * {@code this} for fluent construction. See {@link #isPersistExcluded()}.
+   */
+  public ParamNode withNoPersist() {
+    this.persistExclude = true;
+    return this;
+  }
+
+  @Override
+  public boolean isPersistExcluded() {
+    return persistExclude;
   }
 
   /**

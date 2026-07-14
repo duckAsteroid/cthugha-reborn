@@ -150,6 +150,16 @@ public interface Node {
   }
 
   /**
+   * Returns {@code true} if this node (and its descendants) should be skipped when capturing
+   * or applying a named "screen config" snapshot. Defaults to {@code false}; set to {@code true}
+   * on subtrees that are transient UI state rather than part of the visual configuration
+   * (e.g. a "Save Name" text field, or the config library node itself).
+   */
+  default boolean isPersistExcluded() {
+    return false;
+  }
+
+  /**
    * Returns a human-readable explanation of what this parameter does, or {@code null} if none
    * has been set. Surfaced in the remote UI as an on-demand hint (tap-to-expand, not a hover
    * tooltip, since the primary client is a phone). Purely descriptive — never parsed or relied

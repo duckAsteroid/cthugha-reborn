@@ -107,6 +107,10 @@ Wave renderers live in `display/wave/` and implement the render-core wave interf
 
 `PaletteLibraryNode` (`map/`) extends `ParamNode` and exposes the available `.MAP` palette files as a browseable parameter node, allowing the remote UI to list and switch palettes.
 
+### Screen Configs
+
+The `screenconfig/` package implements named, resolution-independent snapshots of the whole parameter tree (waves, animations, blur, active palette, active tab generator and its own params) — surfaced as the "Configs" tab. `ScreenConfigParams` captures/applies an order-preserving flat map of every leaf value, skipping subtrees marked `Node.isPersistExcluded()` (set via `ParamNode.withNoPersist()`, independent of the remote-visibility and UI-hint mechanisms). `ScreenConfigStore` persists named configs as JSON under `configs/`. See `SCREEN_CONFIGS.md` for the full design.
+
 ## Key Dependencies
 
 | Library | Purpose |

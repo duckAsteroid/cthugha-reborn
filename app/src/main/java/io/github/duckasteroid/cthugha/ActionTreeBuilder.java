@@ -12,6 +12,7 @@ import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
+import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigLibraryNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,6 +161,9 @@ public class ActionTreeBuilder {
         }));
         renderGroup.addChild(blurNode);
 
+        // ---- Configs tab: named whole-tree snapshots ("screen configs") ----
+        ScreenConfigLibraryNode configsGroup = new ScreenConfigLibraryNode(cthugha.screenConfigStore, cthugha);
+
         // ---- General group: persistent expander below the tabs ----
         generalGroup = new ContainerNode("General");
         generalGroup.withUiHint(UiHint.ICON, "settings");
@@ -196,6 +200,7 @@ public class ActionTreeBuilder {
         cthugha.addChild(waveGroup);
         cthugha.addChild(tabGroup);
         cthugha.addChild(renderGroup);
+        cthugha.addChild(configsGroup);
         cthugha.addChild(generalGroup);
     }
 

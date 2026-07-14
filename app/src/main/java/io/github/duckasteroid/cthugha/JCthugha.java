@@ -20,6 +20,7 @@ import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.quote.Constants;
 import io.github.duckasteroid.cthugha.quote.Quote;
 import io.github.duckasteroid.cthugha.quote.RandomQuoteSource;
+import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigStore;
 import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
 import io.github.duckasteroid.cthugha.tab.TabBuffer;
 import io.github.duckasteroid.cthugha.tab.TabStore;
@@ -53,6 +54,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public AnimationSystem animation = new AnimationSystem();
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
 	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
+	public ScreenConfigStore screenConfigStore = new ScreenConfigStore(java.nio.file.Paths.get("configs"));
 
 	public PaletteMap paletteMap;
 	public int bufferWidth;

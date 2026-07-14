@@ -157,6 +157,11 @@ The remote UI renders it as a tap-to-expand info toggle next to the control (`In
 
 See `REMOTE_CONTROL.md` for the full remote API design.
 
+A third, independent gate — `isPersistExcluded()` / `withNoPersist()` — controls whether a node is
+included when the whole tree is captured as a named "screen config" snapshot. It's deliberately
+kept separate from `getUiHints()` since that map is serialised to the browser on every tree fetch,
+while persistence exclusion is a backend-only concern. See `SCREEN_CONFIGS.md`.
+
 ---
 
 ## Data flow summary

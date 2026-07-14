@@ -99,6 +99,7 @@ public class GeneratorRegistry extends ParamNode {
         if (tabStore != null) {
             presetsNode = new AllPresetsNode(tabStore, generators);
             saveName = new StringParameter("Save Name", "");
+            saveName.withNoPersist();
             saveName.withDescription("Name to save the current generator's parameters under. "
                 + "If left blank, a name is generated from the generator and a timestamp.");
             saveAction = buildSaveAction(tabStore);
