@@ -31,6 +31,9 @@ public class Kaleidoscope extends ParamNode implements TabGenerator {
     super("Kaleidoscope");
     initChildren(center, arms);
     withResetAction();
+
+    center.withDescription("Centre point the screen is divided into sectors around and mirrored toward.");
+    arms.withDescription("Number of angular sectors folded into one another; higher values produce more, narrower mirrored wedges.");
   }
 
   @Override

@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import { HelpCircle } from 'lucide-react';
 import type { StringNode } from '../types';
 import { patchStringParam } from '../api';
+import { InfoButton } from './InfoButton';
 
 interface StringLeafProps {
   path: string;
@@ -40,6 +41,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
   const [committedValue, setCommittedValue] = useState(node.value);
   const [compileError, setCompileError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const isDirty = localValue !== committedValue;
 
@@ -68,16 +70,26 @@ export function StringLeaf({ path, node }: StringLeafProps) {
           {isDirty && (
             <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" aria-label="unsaved changes" />
           )}
-          <button
-            onClick={() => setShowHelp(v => !v)}
-            aria-label="Script reference"
-            className={`ml-auto p-0.5 rounded transition-colors ${
-              showHelp ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
-            }`}
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            {node.description && (
+              <InfoButton open={showInfo} onToggle={() => setShowInfo(v => !v)} />
+            )}
+            <button
+              onClick={() => setShowHelp(v => !v)}
+              aria-label="Script reference"
+              className={`p-0.5 rounded transition-colors ${
+                showHelp ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
+
+        {/* Description */}
+        {showInfo && node.description && (
+          <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
+        )}
 
         {/* Editor */}
         <textarea
@@ -148,7 +160,15 @@ export function StringLeaf({ path, node }: StringLeafProps) {
 
   return (
     <div className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-neutral-900/50">
-      <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
+        {node.description && (
+          <InfoButton open={showInfo} onToggle={() => setShowInfo(v => !v)} />
+        )}
+      </div>
+      {showInfo && node.description && (
+        <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
+      )}
       <input
         type="text"
         value={localValue}

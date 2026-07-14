@@ -41,6 +41,8 @@ public abstract class ParamNode implements Node {
 
   private boolean remoteAllowed = true;
 
+  private String description;
+
   /** Slash-delimited path from tree root to this node; computed lazily, cached after first access. */
   private volatile String cachedFullPath;
 
@@ -148,6 +150,20 @@ public abstract class ParamNode implements Node {
   @Override
   public boolean isRemoteAllowed() {
     return remoteAllowed;
+  }
+
+  /**
+   * Sets a human-readable description for this node and returns {@code this} for fluent
+   * construction. See {@link #getDescription()}.
+   */
+  public ParamNode withDescription(String description) {
+    this.description = description;
+    return this;
+  }
+
+  @Override
+  public String getDescription() {
+    return description;
   }
 
   @Override

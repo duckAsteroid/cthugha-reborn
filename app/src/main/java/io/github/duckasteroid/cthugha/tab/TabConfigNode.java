@@ -43,6 +43,8 @@ public class TabConfigNode extends ParamNode {
             }
         });
         load.withUiHint(UiHint.ICON, "folder-open");
+        load.withDescription("Applies this preset's saved parameters to the generator and "
+            + "loads (or regenerates) its translation map, replacing the active buffer.");
         addChild(load);
 
         AbstractAction delete = new AbstractAction("Delete", ctx -> {
@@ -58,6 +60,7 @@ public class TabConfigNode extends ParamNode {
             }
         });
         delete.withUiHint(UiHint.ICON, "trash-2");
+        delete.withDescription("Permanently removes this saved preset from disk.");
         addChild(delete);
     }
 }

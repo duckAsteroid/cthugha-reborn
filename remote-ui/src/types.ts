@@ -10,6 +10,7 @@ export interface ContainerNode {
   type: 'CONTAINER';
   children: ParamNode[];
   uiHints?: Record<string, string>;
+  description?: string;
 }
 
 export interface LeafNode {
@@ -21,12 +22,14 @@ export interface LeafNode {
   controlled: boolean;
   uiHints?: Record<string, string>;
   options?: EnumOption[];
+  description?: string;
 }
 
 export interface ActionNode {
   name: string;
   type: 'ACTION';
   uiHints?: Record<string, string>;
+  description?: string;
 }
 
 export interface StringNode {
@@ -34,6 +37,7 @@ export interface StringNode {
   type: 'STRING';
   value: string;
   uiHints?: Record<string, string>;
+  description?: string;
 }
 
 export interface StringPatchResult extends StringNode {

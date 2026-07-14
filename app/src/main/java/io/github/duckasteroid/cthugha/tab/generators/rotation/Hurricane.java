@@ -25,6 +25,13 @@ public class Hurricane extends ParamNode implements TabGenerator {
     super("Hurricane");
     initChildren(Randomness, speed, slowY, slowX, reverse, center);
     withResetAction();
+
+    Randomness.withDescription("Amount of per-pixel random variation added to the spin speed; 0 gives perfectly uniform rotation, higher values add turbulence to the swirl.");
+    speed.withDescription("Base rotational speed of the hurricane swirl around its centre; higher values spin and warp pixels faster.");
+    slowY.withDescription("Scales the horizontal displacement down the further a pixel is from the centre, damping the swirl on that axis.");
+    slowX.withDescription("Scales the vertical displacement down the further a pixel is from the centre, damping the swirl on that axis.");
+    reverse.withDescription("Reverses the direction of rotation.");
+    center.withDescription("Eye of the hurricane; rotational displacement is computed relative to this point.");
   }
   @Override
   public TabMapping generate(int width, int height, Random rng) {

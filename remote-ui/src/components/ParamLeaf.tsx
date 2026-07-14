@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Lock } from 'lucide-react';
 import type { LeafNode } from '../types';
 import { patchParam } from '../api';
@@ -7,6 +8,7 @@ import { ToggleControl } from './controls/ToggleControl';
 import { EnumControl } from './controls/EnumControl';
 import { CarouselControl } from './controls/CarouselControl';
 import { NodeIcon } from './NodeIcon';
+import { InfoButton } from './InfoButton';
 
 interface ParamLeafProps {
   path: string;
@@ -20,6 +22,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
   const value = liveValue ?? node.value;
   const controlled = liveControlled ?? node.controlled;
   const iconName = node.uiHints?.['icon'];
+  const [showInfo, setShowInfo] = useState(false);
 
   const handleChange = async (newValue: number) => {
     try {
@@ -97,7 +100,13 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
         {controlled && (
           <Lock className="w-3 h-3 text-neutral-500 shrink-0" aria-label="Controlled by animator" />
         )}
+        {node.description && (
+          <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+        )}
       </div>
+      {showInfo && node.description && (
+        <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
+      )}
       {renderControl()}
     </div>
   );

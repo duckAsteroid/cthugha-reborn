@@ -28,6 +28,11 @@ public class ParamSerializer {
         obj.put("name", node.getName());
         obj.put("type", node.getNodeType().name());
 
+        String description = node.getDescription();
+        if (description != null && !description.isBlank()) {
+            obj.put("description", description);
+        }
+
         Map<String, String> hints = node.getUiHints();
         if (!hints.isEmpty()) {
             ObjectNode hintsNode = mapper.createObjectNode();

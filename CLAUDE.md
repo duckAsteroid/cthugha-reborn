@@ -76,7 +76,7 @@ Five implementations live in `display/phase/`:
 
 `Action` / `AbstractAction` (`params/`) extend the tree with invokable operations. Actions receive a typed `ActionContext` (sub-interfaces like `TabActionContext`, `PaletteActionContext`, `CthughaActionContext`) that provides access to runtime state without coupling actions to the window.
 
-`ParamSerializer` (`remote/`) serializes the full parameter tree to JSON for the remote API. `UiHint` annotations on parameters guide how the remote UI renders each control.
+`ParamSerializer` (`remote/`) serializes the full parameter tree to JSON for the remote API. `UiHint` annotations on parameters guide how the remote UI renders each control. `Node.withDescription(String)` attaches an optional human-readable explanation, surfaced in the remote UI as a tap-to-expand info toggle (`InfoButton` in `remote-ui`) rather than a hover tooltip, since the primary client is a phone.
 
 ### Animation System
 

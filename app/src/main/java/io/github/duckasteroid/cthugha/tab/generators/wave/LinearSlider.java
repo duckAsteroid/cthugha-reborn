@@ -20,6 +20,10 @@ public class LinearSlider extends ParamNode implements TabGenerator {
   public LinearSlider() {
     initChildren(focalPoint, speed, horizontal);
     withResetAction();
+
+    focalPoint.withDescription("Position along the focal axis, as a fraction of the screen dimension, that pixels slide away from; pixels farther from this point slide faster.");
+    speed.withDescription("Maximum slide speed in pixels per frame, reached at the edge farthest from the focal point. Negative values reverse the direction.");
+    horizontal.withDescription("When on, the focal axis is a horizontal row and pixels slide left/right; when off, the focal axis is a vertical column and pixels slide up/down.");
   }
 
   @Override

@@ -29,6 +29,9 @@ public class Shatter extends ParamNode implements TabGenerator {
     super("Shatter");
     initChildren(cells, zoomStrength);
     withResetAction();
+
+    cells.withDescription("Number of Voronoi seed points the screen is divided into; each pixel is displaced relative to its nearest seed.");
+    zoomStrength.withDescription("Displacement applied within each cell relative to its seed. Positive values pull content toward the seed (shatter); negative values push it away (explosion).");
   }
 
   @Override

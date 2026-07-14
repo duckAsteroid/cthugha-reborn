@@ -28,6 +28,9 @@ public class CircleInversion extends ParamNode implements TabGenerator {
     super("Circle Inversion");
     initChildren(center, radius);
     withResetAction();
+
+    center.withDescription("Centre of the inversion circle, as a fraction of screen width/height.");
+    radius.withDescription("Inversion radius as a fraction of the shorter screen dimension.");
   }
 
   @Override

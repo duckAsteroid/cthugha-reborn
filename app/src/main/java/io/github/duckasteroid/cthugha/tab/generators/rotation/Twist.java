@@ -35,6 +35,10 @@ public class Twist extends ParamNode implements TabGenerator {
     super("Twist");
     initChildren(center, maxAngle, falloff);
     withResetAction();
+
+    center.withDescription("Centre point the twist rotation is applied around.");
+    maxAngle.withDescription("Peak rotation angle at the centre (r=0), in radians; positive values twist counter-clockwise.");
+    falloff.withDescription("Radius, in pixels, at which the twist strength decays to about 37% of its peak value.");
   }
 
   @Override

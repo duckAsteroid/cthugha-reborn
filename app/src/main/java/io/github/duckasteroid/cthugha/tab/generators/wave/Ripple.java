@@ -31,6 +31,11 @@ public class Ripple extends ParamNode implements TabGenerator {
     super("Ripple");
     initChildren(source, frequency, amplitude, phase);
     withResetAction();
+
+    source.withDescription("Origin point of the ripple, as a fraction of the screen width and height.");
+    frequency.withDescription("Spatial frequency of the concentric rings; higher values pack the rings closer together.");
+    amplitude.withDescription("Maximum pixel displacement at the peak of each ring.");
+    phase.withDescription("Phase offset of the sine wave, shifting the rings inward or outward from the source.");
   }
 
   @Override

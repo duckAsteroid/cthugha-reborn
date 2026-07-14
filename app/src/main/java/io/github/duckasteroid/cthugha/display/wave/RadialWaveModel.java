@@ -18,5 +18,9 @@ public class RadialWaveModel extends ParamNode {
         initFields(getClass());
         withUiHint(UiHint.ICON, "radio");
         withResetAction();
+
+        amplitude.withDescription("Radial scale of the waveform trace.");
+        lineWidth.withDescription("Thickness of the drawn line, in pixels.");
+        ellipse.withDescription("Bend the trace around an ellipse instead of a circle.");
     }
 }

@@ -34,6 +34,9 @@ public class FisheyeLens extends ParamNode implements TabGenerator {
     super("Fisheye Lens");
     initChildren(center, strength);
     withResetAction();
+
+    center.withDescription("Centre of the lens distortion, as a fraction of screen width/height.");
+    strength.withDescription("Distortion strength. Positive values barrel (fisheye) the image; negative values pincushion it.");
   }
 
   @Override

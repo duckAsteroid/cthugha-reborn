@@ -138,6 +138,23 @@ myParam
 sensitiveAction.withNoRemote();
 ```
 
+A node can also carry an optional, purely descriptive `description` string via `withDescription(...)`,
+included in the JSON payload when non-blank. It's for humans, not code — nothing parses or relies on
+it. Because `withDescription`/`withUiHint`/etc. return `ParamNode` (not the concrete subtype), chain
+them as separate statements rather than on a typed field declaration:
+
+```java
+public DoubleParameter zoom = new DoubleParameter("Zoom", 50, 4000, 250);
+
+public MyGenerator() {
+    // ...
+    zoom.withDescription("Pixels per unit of the complex plane. Higher = more magnified.");
+}
+```
+
+The remote UI renders it as a tap-to-expand info toggle next to the control (`InfoButton` in
+`remote-ui/src/components`) rather than a hover tooltip, since the primary client is a phone.
+
 See `REMOTE_CONTROL.md` for the full remote API design.
 
 ---

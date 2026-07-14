@@ -46,6 +46,15 @@ public class Mandelbrot extends ParamNode implements TabGenerator {
     super("Mandelbrot");
     initChildren(center, zoom, maxIterations, spin, displacement, juliaMode, juliaC);
     withResetAction();
+
+    center.withDescription("Point in the complex plane mapped to the middle of the screen.");
+    zoom.withDescription("Pixels per unit of the complex plane. Higher = more magnified.");
+    maxIterations.withDescription("Escape-time iteration cap. Higher = sharper boundary, slower to generate.");
+    spin.withDescription("Extra rotation applied to the displacement angle, scaled by escape time.");
+    displacement.withDescription("Maximum pixel displacement for a point that escapes on the very last iteration.");
+    juliaMode.withDescription("When on, screen position is the Julia orbit seed and Julia Constant supplies c, "
+        + "instead of a Mandelbrot set (c = screen position, z0 = 0).");
+    juliaC.withDescription("Fixed complex constant c used when Julia Mode is on.");
   }
 
   @Override

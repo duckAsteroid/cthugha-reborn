@@ -25,6 +25,12 @@ public class AnimationBinding extends ParamNode {
         this.target = target;
         this.script = new ScriptParameter("script", defaultScript);
         initFields(getClass());
+
+        enabled.withDescription("Turns this animation binding on or off. When off, the target "
+            + "parameter reverts to manual/remote control.");
+        script.withDescription("Expression evaluated each frame using elapsed time in seconds "
+            + "as t (e.g. \"(sin(t * 0.31) + 1.0) / 2.0\"); the result is clamped to [0,1] and "
+            + "pushed into the target parameter.");
     }
 
     /** Stores the clock and compiles the initial script. Call once from {@code init()}. */

@@ -27,5 +27,12 @@ public class PerspectiveParams extends ParamNode {
         super("Perspective");
         initFields(getClass());
         withUiHint(UiHint.ICON, "eye");
+
+        enabled.withDescription("Turns on the 3-D perspective projection. When off, the "
+            + "enclosing transform stays purely 2-D affine.");
+        fovY.withDescription("Vertical field of view of the perspective projection, in degrees. "
+            + "Wider angles exaggerate depth distortion.");
+        zDistance.withDescription("Distance the geometry is pushed away from the camera after "
+            + "projection is applied. Larger values shrink the apparent perspective effect.");
     }
 }

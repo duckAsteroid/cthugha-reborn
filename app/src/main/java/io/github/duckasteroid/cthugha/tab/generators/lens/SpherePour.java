@@ -27,6 +27,10 @@ public class SpherePour extends ParamNode implements TabGenerator {
     super("Sphere Pour");
     initChildren(center, maxSpeed, sphereRadius);
     withResetAction();
+
+    center.withDescription("Centre of the sphere, as a fraction of screen width/height.");
+    maxSpeed.withDescription("Maximum outward displacement in pixels, applied at the very centre of the sphere.");
+    sphereRadius.withDescription("Sphere boundary radius as a fraction of the shorter screen dimension. Pixels outside this radius stay stationary.");
   }
 
   @Override

@@ -48,6 +48,8 @@ public class XYParam extends ParamNode {
     this.x = new DoubleParameter("X", min, max, value);
     this.y = new DoubleParameter("Y", min, max, value);
     initChildren(x, y);
+    x.withDescription("Horizontal component of the " + name + " value.");
+    y.withDescription("Vertical component of the " + name + " value.");
   }
 
   public XYParam(String name, double min, double max, double x, double y) {
@@ -55,6 +57,8 @@ public class XYParam extends ParamNode {
     this.x = new DoubleParameter("X", min, max, x);
     this.y = new DoubleParameter("Y", min, max, y);
     initChildren(this.x, this.y);
+    this.x.withDescription("Horizontal component of the " + name + " value.");
+    this.y.withDescription("Vertical component of the " + name + " value.");
   }
 
   /**

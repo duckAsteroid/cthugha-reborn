@@ -18,5 +18,9 @@ public class OscilloscopeModel extends ParamNode {
         initFields(getClass());
         withUiHint(UiHint.ICON, "activity");
         withResetAction();
+
+        amplitude.withDescription("Vertical scale of the waveform trace.");
+        lineWidth.withDescription("Thickness of the drawn line, in pixels.");
+        ellipse.withDescription("Bend the trace around an ellipse instead of drawing it as a straight horizontal line.");
     }
 }

@@ -125,6 +125,9 @@ public class ActionTreeBuilder {
 
         ContainerNode blurNode = new ContainerNode("Blur");
         blurNode.withUiHint(UiHint.ICON, "wind");
+        blurEnabled.withDescription("Turns the flame-spread blur pass on or off.");
+        blurKernelSize.withDescription("Size of the Gaussian blur kernel, in pixels. Larger spreads the flame further per frame.");
+        blurFade.withDescription("How much brightness the blurred image loses each frame. Higher fades trails out faster.");
         blurNode.addChild(blurEnabled);
         blurNode.addChild(blurKernelSize);
         blurNode.addChild(blurFade);

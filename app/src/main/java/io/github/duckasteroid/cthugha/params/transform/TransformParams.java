@@ -52,6 +52,18 @@ public class TransformParams extends ParamNode {
     super(name);
     rotate.withUiHint(UiHint.ICON, "rotate-cw");
     initChildren(perspective, scale, shear, translate, rotate, rotateCenter);
+
+    perspective.withDescription("Optional 3-D perspective projection applied before the affine "
+        + "components below (scale, translate, shear, rotate).");
+    scale.withDescription("X/Y scale factors applied to the geometry. 1.0 on both axes is "
+        + "identity (no scaling).");
+    shear.withDescription("X/Y shear factors applied to the geometry. 0.0 on both axes is "
+        + "identity (no shear).");
+    translate.withDescription("X/Y translation offset in NDC units. 0.0 on both axes is "
+        + "identity (no offset).");
+    rotate.withDescription("Rotation angle in radians, applied around Rotation Center Point.");
+    rotateCenter.withDescription("Pivot point for the rotation, in NDC space where (0,0) is the "
+        + "screen centre.");
   }
 
   /** Returns a predicate that is true when a double equals {@code expected} to {@code dp} decimal places. */

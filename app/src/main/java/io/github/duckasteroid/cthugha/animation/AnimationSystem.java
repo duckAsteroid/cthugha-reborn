@@ -26,6 +26,8 @@ public class AnimationSystem extends ParamNode {
         super("Animation");
         addChild(enabled);
         withUiHint(UiHint.ICON, "zap");
+        enabled.withDescription("Master switch for all animation bindings. When off, every "
+            + "binding stops updating and releases control of its target parameter.");
     }
 
     /**

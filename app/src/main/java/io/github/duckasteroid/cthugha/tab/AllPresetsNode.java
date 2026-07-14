@@ -25,6 +25,8 @@ public class AllPresetsNode extends ParamNode {
     public AllPresetsNode(TabStore store, List<TabGenerator> generators) {
         super("Presets");
         withUiHint(UiHint.ICON, "bookmark");
+        withDescription("Every saved translation-table preset across all generators, grouped "
+            + "by the generator that created them.");
         this.store = store;
         this.generators = generators;
         refresh();

@@ -36,6 +36,11 @@ public class ConcentricRings extends ParamNode implements TabGenerator {
     super("Concentric Rings");
     initChildren(center, ringWidth, deltaAngle, alternate);
     withResetAction();
+
+    center.withDescription("Centre point the concentric rings are measured from.");
+    ringWidth.withDescription("Thickness of each ring in pixels; smaller values pack more, narrower rings around the centre.");
+    deltaAngle.withDescription("Rotation applied per ring, in radians; each successive ring outward is rotated this much further than the last.");
+    alternate.withDescription("When on, odd-numbered rings rotate in the opposite direction, giving a meshing-gears look instead of a uniform swirl.");
   }
 
   @Override

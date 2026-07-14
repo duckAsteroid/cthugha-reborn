@@ -33,6 +33,13 @@ public class WaveInterference extends ParamNode implements TabGenerator {
     super("Wave Interference");
     initChildren(numSources, source1, source2, source3, frequency, amplitude);
     withResetAction();
+
+    numSources.withDescription("Number of active radial wave sources (2 or 3); unused sources are ignored.");
+    source1.withDescription("Position of the first wave source, as a fraction of the screen width and height.");
+    source2.withDescription("Position of the second wave source, as a fraction of the screen width and height.");
+    source3.withDescription("Position of the third wave source, as a fraction of the screen width and height; only used when Sources is 3.");
+    frequency.withDescription("Spatial frequency shared by all sources; higher values pack each source's rings closer together.");
+    amplitude.withDescription("Maximum pixel displacement contributed by a single source at close range; contributions from all active sources are summed.");
   }
 
   @Override

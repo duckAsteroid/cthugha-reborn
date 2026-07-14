@@ -23,6 +23,10 @@ public class Space extends ParamNode implements TabGenerator {
     super("Space");
     initChildren(reverse, randomness, speed);
     withResetAction();
+
+    reverse.withDescription("Flips the flow direction: off expands content outward from the centre (flying toward the camera); on pulls it inward toward the centre.");
+    randomness.withDescription("Size of the central zone where pixels are occasionally redirected to a random source pixel, creating a star-spawn jitter near the centre. Only active when Reverse is off.");
+    speed.withDescription("Speed of the radial flow toward or away from the centre.");
   }
 
   @Override

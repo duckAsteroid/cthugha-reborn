@@ -40,6 +40,10 @@ public class LogPolarZoom extends ParamNode implements TabGenerator {
     super("Log-Polar Zoom");
     initChildren(center, zoom, rotation);
     withResetAction();
+
+    center.withDescription("Centre point the zoom and spiral rotate around, as a fraction of screen width/height.");
+    zoom.withDescription("Translation in log(r) space. Positive values spiral content inward (zoom in); negative values expand it outward.");
+    rotation.withDescription("Translation in angle (theta) space, in radians. Adds angular spin to the zoom, producing the Droste spiral effect.");
   }
 
   @Override

@@ -52,6 +52,12 @@ public class SpiralGalaxyPlughole extends ParamNode implements TabGenerator {
     super("Spiral Galaxy Plughole");
     initChildren(angularSpeed, radialSpeed, plughole, arms, center);
     withResetAction();
+
+    angularSpeed.withDescription("Angular rotation applied per frame; positive values spin counter-clockwise. In plughole mode this is scaled by 20/r so rotation is faster near the centre.");
+    radialSpeed.withDescription("Radial pull applied to the source pixel; positive values draw pixels inward toward the centre (plughole), negative values push them outward (explosion).");
+    plughole.withDescription("Switches between plughole mode (angular speed scales as 1/r, fast near the centre, slow at the edge) and galaxy mode (constant angular speed at every radius).");
+    arms.withDescription("Number of spiral arms; 1 produces a simple vortex or galaxy, 2-8 create a multi-arm galaxy pattern.");
+    center.withDescription("Centre of the spiral as a fraction of the screen dimensions.");
   }
 
   @Override

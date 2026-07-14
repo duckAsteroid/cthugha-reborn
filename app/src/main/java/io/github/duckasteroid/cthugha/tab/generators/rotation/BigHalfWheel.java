@@ -19,6 +19,8 @@ public class BigHalfWheel extends ParamNode implements TabGenerator {
     super("Big half wheel");
     initChildren(center);
     withResetAction();
+
+    center.withDescription("Pivot point the wheel warp rotates around; pixels are swept along a 45-degree-offset spiral centred here, with the screen edges handled separately to close the wheel.");
   }
 
   @Override

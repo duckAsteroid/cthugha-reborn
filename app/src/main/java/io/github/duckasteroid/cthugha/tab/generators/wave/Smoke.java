@@ -26,6 +26,11 @@ public class Smoke extends ParamNode implements TabGenerator {
     this.randomness.setValue(randomness);
     initChildren(this.speed, this.randomness, directionVectorX, directionVectorY);
     withResetAction();
+
+    this.speed.withDescription("Retained for preset compatibility; not read by this generator's translation calculation.");
+    this.randomness.withDescription("Retained for preset compatibility; not read by this generator's translation calculation.");
+    directionVectorX.withDescription("Constant horizontal drift, in pixels per frame, applied to every pixel each time the map is generated.");
+    directionVectorY.withDescription("Constant vertical drift, in pixels per frame, applied to every pixel each time the map is generated.");
   }
 
   public TabMapping generate(int width, int height, Random rng) {

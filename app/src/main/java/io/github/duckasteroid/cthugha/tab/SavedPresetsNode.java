@@ -25,6 +25,8 @@ public class SavedPresetsNode extends ParamNode {
         this.store = store;
         this.generator = generator;
         withUiHint(UiHint.ICON, "bookmark");
+        withDescription("Saved translation-table presets for this generator; each entry can be "
+            + "loaded or deleted.");
         refresh();
     }
 

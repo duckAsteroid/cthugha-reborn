@@ -150,6 +150,16 @@ public interface Node {
   }
 
   /**
+   * Returns a human-readable explanation of what this parameter does, or {@code null} if none
+   * has been set. Surfaced in the remote UI as an on-demand hint (tap-to-expand, not a hover
+   * tooltip, since the primary client is a phone). Purely descriptive — never parsed or relied
+   * on by any code path.
+   */
+  default String getDescription() {
+    return null;
+  }
+
+  /**
    * Adds {@code child} as a direct child of this node and sets this node as its parent.
    *
    * @param child the node to attach

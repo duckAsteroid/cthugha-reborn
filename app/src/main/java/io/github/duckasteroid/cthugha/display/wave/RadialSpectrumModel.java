@@ -16,5 +16,9 @@ public class RadialSpectrumModel extends ParamNode {
         initFields(getClass());
         withUiHint(UiHint.ICON, "pie-chart");
         withResetAction();
+
+        enabled.withDescription("Draws the frequency spectrum as bars radiating around a circle into the render buffer.");
+        repeats.withDescription("Number of times the full spectrum is tiled around the circle. Each successive tile alternates direction so bass and treble meet at the seams, giving rotational symmetry (2 = mirrored halves, 4 = four symmetric quadrants).");
+        transform.withDescription("Position, scale, rotation and shear applied to the radial spectrum.");
     }
 }

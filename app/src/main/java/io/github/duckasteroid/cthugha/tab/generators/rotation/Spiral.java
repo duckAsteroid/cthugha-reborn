@@ -37,6 +37,12 @@ public class Spiral extends ParamNode implements TabGenerator{
     super("Spirals");
     initChildren(nr_spirals, delta_r, delta_a, yinyang, yywidth);
     withResetAction();
+
+    nr_spirals.withDescription("Number of independent spiral centres scattered across the screen; 0 uses a single spiral centred on the screen.");
+    delta_r.withDescription("Radial growth rate of the spiral per pixel; 0 produces a simple rotation with no inward/outward spiralling.");
+    delta_a.withDescription("Angular increment of the spiral per pixel; controls how tightly the spiral winds.");
+    yinyang.withDescription("When on, the rotation direction alternates in radial bands, producing a yin/yang pattern instead of a single consistent spiral direction.");
+    yywidth.withDescription("Radial width of each constant-direction band when Yin/Yang mode is enabled.");
   }
 
   private static final int MAX_NR_SPIRALS = 64;

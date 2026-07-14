@@ -31,6 +31,10 @@ public class PlasmaFlow extends ParamNode implements TabGenerator {
     super("Plasma Flow");
     initChildren(freqA, freqB, amplitude);
     withResetAction();
+
+    freqA.withDescription("Primary spatial frequency of the flow field. Lower values produce broad, smooth swells; higher values produce tight, rippling turbulence.");
+    freqB.withDescription("Secondary spatial frequency that cross-couples the X and Y axes, breaking up the grid symmetry a single frequency would produce.");
+    amplitude.withDescription("Maximum pixel displacement contributed by the flow field.");
   }
 
   @Override

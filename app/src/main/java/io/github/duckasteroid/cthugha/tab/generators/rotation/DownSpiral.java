@@ -25,6 +25,9 @@ public class DownSpiral extends ParamNode implements TabGenerator {
     super("Down spiral tab");
     initChildren(a,b);
     withResetAction();
+
+    a.withDescription("Compression factor applied to pixels along the top, bottom, left and right screen edges as they are pulled toward the centre.");
+    b.withDescription("Divisor applied to the radial distance when computing the spiral displacement; higher values produce a tighter, more gradual spiral.");
   }
 
   @Override

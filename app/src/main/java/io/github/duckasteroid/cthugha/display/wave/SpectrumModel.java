@@ -14,5 +14,8 @@ public class SpectrumModel extends ParamNode {
         initFields(getClass());
         withUiHint(UiHint.ICON, "bar-chart-2");
         withResetAction();
+
+        enabled.withDescription("Draws the frequency spectrum as a row of bars into the render buffer.");
+        transform.withDescription("Position, scale, rotation and shear applied to the spectrum bars.");
     }
 }

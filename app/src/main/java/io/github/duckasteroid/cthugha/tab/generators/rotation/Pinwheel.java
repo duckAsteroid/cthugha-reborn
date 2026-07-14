@@ -40,6 +40,12 @@ public class Pinwheel extends ParamNode implements TabGenerator {
     super("Pinwheel");
     initChildren(center, sectors, rotationPerSector, zoom, alternate);
     withResetAction();
+
+    center.withDescription("Centre point the screen is divided into sectors around.");
+    sectors.withDescription("Number of angular sectors the screen is divided into.");
+    rotationPerSector.withDescription("Rotation applied within each sector, in radians, giving the spinning-fan or rotary-shutter look.");
+    zoom.withDescription("Radial zoom applied within each sector. 1.0 leaves it unchanged; values above 1 pull the sector's content inward toward the centre.");
+    alternate.withDescription("Alternates the rotation direction on odd-numbered sectors, reinforcing the pinwheel motion.");
   }
 
   @Override

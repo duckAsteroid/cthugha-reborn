@@ -31,6 +31,12 @@ public class SineGridWarp extends ParamNode implements TabGenerator {
     super("Sine Grid Warp");
     initChildren(freqX, freqY, amplitude, phaseX, phaseY);
     withResetAction();
+
+    freqX.withDescription("Controls how many wave cycles span the screen height (affects X displacement).");
+    freqY.withDescription("Controls how many wave cycles span the screen width (affects Y displacement).");
+    amplitude.withDescription("Maximum pixel displacement produced by either sine wave.");
+    phaseX.withDescription("Phase offset of the X-displacement wave, which is sampled from the Y position.");
+    phaseY.withDescription("Phase offset of the Y-displacement wave, which is sampled from the X position.");
   }
 
   @Override

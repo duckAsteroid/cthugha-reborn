@@ -90,12 +90,17 @@ public class GeneratorRegistry extends ParamNode {
         generatorSelector = new EnumParameter<>("Generator", names);
         generatorSelector.withUiHint(UiHint.CONTROL_TYPE, UiHint.CAROUSEL);
         generatorSelector.withUiHint(UiHint.ICON, "cpu");
+        generatorSelector.withDescription("Selects which translation-table generator (Spiral, "
+            + "Hurricane, Smoke, etc.) computes the pixel displacement map. Switching swaps in "
+            + "that generator's own parameters and regenerates the map.");
 
         selected = generators.get(0);
 
         if (tabStore != null) {
             presetsNode = new AllPresetsNode(tabStore, generators);
             saveName = new StringParameter("Save Name", "");
+            saveName.withDescription("Name to save the current generator's parameters under. "
+                + "If left blank, a name is generated from the generator and a timestamp.");
             saveAction = buildSaveAction(tabStore);
         } else {
             presetsNode = null;
@@ -257,6 +262,8 @@ public class GeneratorRegistry extends ParamNode {
             }
         });
         save.withUiHint(UiHint.ICON, "save");
+        save.withDescription("Saves the active generator's current parameters and translation "
+            + "buffer as a named preset under Save Name (or an auto-generated name).");
         return save;
     }
 }

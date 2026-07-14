@@ -34,6 +34,13 @@ public class GravityWells extends ParamNode implements TabGenerator {
     super("Gravity Wells");
     initChildren(numWells, well1, well2, well3, strength, softening);
     withResetAction();
+
+    numWells.withDescription("Number of gravity wells active (1-3); the unused well positions are ignored.");
+    well1.withDescription("Position of the first gravity well, as a fraction of screen width/height.");
+    well2.withDescription("Position of the second gravity well, as a fraction of screen width/height.");
+    well3.withDescription("Position of the third gravity well, as a fraction of screen width/height.");
+    strength.withDescription("Gravitational pull strength. Higher values pull content toward the wells more strongly; negative values push it away.");
+    softening.withDescription("Softening radius squared, preventing a singularity (infinite displacement) at each well's centre.");
   }
 
   @Override
