@@ -55,13 +55,11 @@ public class WavePhase implements RenderPhase {
 
         oscWave = new AudioWave(audioPipeline.getPboSink());
         oscWave.setLineColour(waveColour);
-        oscWave.setLineWidth(2.0f);
         oscWave.setClearBeforeRender(false);
         oscWave.init(ctx);
 
         radWave = new RadialWave(audioPipeline.getPboSink());
         radWave.setLineColour(waveColour);
-        radWave.setLineWidth(2.0f);
         radWave.setClearBeforeRender(false);
         radWave.init(ctx);
 
@@ -87,6 +85,7 @@ public class WavePhase implements RenderPhase {
         OscilloscopeModel om = cthugha.oscilloscope;
         if (om.enabled.value) {
             float amp = (float) om.amplitude.value;
+            oscWave.setLineWidth((float) om.lineWidth.value);
             oscWave.setAmplitudeFunction(
                     om.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
             oscWave.setTransform(om.transform.applyTo(new Matrix4f()));
@@ -96,6 +95,7 @@ public class WavePhase implements RenderPhase {
         RadialWaveModel rm = cthugha.radialWave;
         if (rm.enabled.value) {
             float amp = (float) rm.amplitude.value;
+            radWave.setLineWidth((float) rm.lineWidth.value);
             radWave.setAmplitudeFunction(
                     rm.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
             radWave.setTransform(rm.transform.applyTo(new Matrix4f()));

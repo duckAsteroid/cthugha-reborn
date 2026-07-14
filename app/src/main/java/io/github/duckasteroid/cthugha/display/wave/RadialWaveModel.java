@@ -9,6 +9,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 public class RadialWaveModel extends ParamNode {
     public BooleanParameter enabled = new BooleanParameter("enabled", false);
     public DoubleParameter amplitude = new DoubleParameter("amplitude", 0.1, 10.0, 0.2);
+    public DoubleParameter lineWidth = new DoubleParameter("lineWidth", 0.5, 10.0, 2.0);
     public BooleanParameter ellipse = new BooleanParameter("ellipse", false);
     public TransformParams transform = new TransformParams("transform");
 
