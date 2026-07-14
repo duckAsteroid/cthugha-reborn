@@ -6,6 +6,8 @@ import { ParamLeaf } from './ParamLeaf';
 import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
+import { ActionToolbar } from './ActionToolbar';
+import type { ToolbarEntry } from './ActionToolbar';
 import { useSSE } from '../useSSE';
 import type { ParamState } from '../useSSE';
 
@@ -53,8 +55,25 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
   // Subscribe to the active tab's full subtree so all descendant changes are caught.
   const sseState = useSSE(activeTabPath ? [activeTabPath] : []);
 
+  // Expander containers (e.g. "General") hold a mix of top-level actions and sub-containers.
+  // Actions are pulled out and rendered as an icon toolbar above the tabs; anything else
+  // (e.g. the "Remote" sub-container) stays as a collapsible section below the tabs.
+  const expanderData = expanders.map(exp => {
+    const expPath = path ? `${path}/${exp.name}` : exp.name;
+    const toolbarActions: ToolbarEntry[] = exp.children
+      .filter((c): c is ActionNode => c.type === 'ACTION' && c.uiHints?.['hidden'] !== 'true')
+      .map(c => ({ path: `${expPath}/${c.name}`, node: c }));
+    const remainingChildren = exp.children.filter(c => c.type !== 'ACTION');
+    return { expPath, toolbarActions, remainingNode: { ...exp, children: remainingChildren } };
+  });
+  const toolbarActions = expanderData.flatMap(e => e.toolbarActions);
+  const remainingExpanders = expanderData.filter(e =>
+    e.remainingNode.children.some(c => c.uiHints?.['hidden'] !== 'true'),
+  );
+
   return (
     <div className="flex flex-col gap-2">
+      <ActionToolbar actions={toolbarActions} />
       <RadixTabs.Root value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-1">
         <RadixTabs.List className="flex gap-1 border-b border-neutral-700 pb-1">
           {tabs.map(tab => {
@@ -86,10 +105,9 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
         })}
       </RadixTabs.Root>
 
-      {expanders.map(exp => {
-        const expPath = path ? `${path}/${exp.name}` : exp.name;
-        return <ParamContainer key={exp.name} node={exp} path={expPath} />;
-      })}
+      {remainingExpanders.map(({ expPath, remainingNode }) => (
+        <ParamContainer key={remainingNode.name} node={remainingNode} path={expPath} />
+      ))}
     </div>
   );
 }
