@@ -3,6 +3,7 @@ package io.github.duckasteroid.cthugha;
 
 import io.github.duckasteroid.cthugha.animation.AnimationSystem;
 import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.display.AudioSourceNode;
 import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
 import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
 import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
@@ -52,6 +53,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public SpectrumModel spectrum = new SpectrumModel();
 	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
 	public AnimationSystem animation = new AnimationSystem();
+	public AudioSourceNode audioSource = new AudioSourceNode();
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
 	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
 	public ScreenConfigStore screenConfigStore = new ScreenConfigStore(java.nio.file.Paths.get("configs"));

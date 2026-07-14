@@ -198,6 +198,7 @@ public class ActionTreeBuilder {
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);
         cthugha.addChild(waveGroup);
+        cthugha.addChild(cthugha.audioSource);
         cthugha.addChild(tabGroup);
         cthugha.addChild(renderGroup);
         cthugha.addChild(configsGroup);

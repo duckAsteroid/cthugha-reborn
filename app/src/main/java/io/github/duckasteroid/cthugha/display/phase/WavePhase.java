@@ -53,6 +53,15 @@ public class WavePhase implements RenderPhase {
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
 
+        cthugha.audioSource.setOnSourceSelected(name -> {
+            if (audioPipeline.selectSource(name)) {
+                cthugha.notify("audio: " + name);
+            } else {
+                cthugha.notify("audio: source unavailable");
+            }
+        });
+        cthugha.audioSource.syncSelected(audioPipeline.getSelectedSourceName());
+
         oscWave = new AudioWave(audioPipeline.getPboSink());
         oscWave.setLineColour(waveColour);
         oscWave.setClearBeforeRender(false);

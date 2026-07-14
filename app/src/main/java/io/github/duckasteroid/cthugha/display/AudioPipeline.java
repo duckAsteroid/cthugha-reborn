@@ -59,6 +59,31 @@ public class AudioPipeline {
         return src;
     }
 
+    public String getSelectedSourceName() {
+        return lineAcquirer.getSelectedSource().getName();
+    }
+
+    /**
+     * Switches capture to the source with this exact name, if one is currently available.
+     * Cycles through every source at most once; leaves the selection unchanged if not found.
+     *
+     * @return {@code true} if a matching source was found and selected
+     */
+    public boolean selectSource(String name) {
+        AudioDataSource first = lineAcquirer.getSelectedSource();
+        if (first.getName().equals(name)) return true;
+        AudioDataSource s;
+        do {
+            lineAcquirer.next();
+            s = lineAcquirer.getSelectedSource();
+            if (s.getName().equals(name)) {
+                audioReader.setLine(s);
+                return true;
+            }
+        } while (s != first);
+        return false;
+    }
+
     private void selectPreferredSource(String nameFragment) {
         AudioDataSource first = lineAcquirer.getSelectedSource();
         if (first.getName().toLowerCase().contains(nameFragment)) return;
