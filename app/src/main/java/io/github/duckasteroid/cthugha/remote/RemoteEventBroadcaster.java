@@ -128,7 +128,19 @@ public class RemoteEventBroadcaster {
         }
     }
 
+    /**
+     * Sends one event to {@code client}, skipping the call entirely if it's already terminated.
+     *
+     * <p>Without this guard, a client whose connection died mid-batch (e.g. a phone locking or
+     * losing WiFi) logs one Javalin "SseClient has been terminated" warning per remaining pending
+     * event in {@link #flush}'s batch for that client — {@code sendEvent} on an already-terminated
+     * {@link SseClient} doesn't throw, it just logs and returns, so the previous try/catch here
+     * never caught it. Checking {@link SseClient#terminated()} first turns a burst of duplicate
+     * warnings (one per queued param change) into at most the one Javalin already logs internally
+     * when it first discovers the dead connection.</p>
+     */
     private void sendToClient(SseClient client, String eventName, String data) {
+        if (client.terminated()) return;
         try {
             client.sendEvent(eventName, data);
         } catch (Exception e) {
