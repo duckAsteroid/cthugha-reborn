@@ -13,4 +13,4 @@ build/
 *~
 /app/src/dist/configs/
 /app/src/dist/tabs/Spiral/
-/app/src/dist/tabs/GravityWells/3_simple_wells/4000x2000.tab
+/app/src/dist/tabs/**/*.tab
