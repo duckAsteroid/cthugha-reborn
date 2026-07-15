@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { EnumOption } from '../../types';
-import { ImageOff, Search } from 'lucide-react';
+import { ArrowDownAZ, ArrowUpAZ, ImageOff, Search } from 'lucide-react';
+
+type SortDir = 'none' | 'asc' | 'desc';
 
 interface GridControlProps {
   value: number;
@@ -11,6 +13,7 @@ interface GridControlProps {
 
 export function GridControl({ value, options, disabled, onChange }: GridControlProps) {
   const [search, setSearch] = useState('');
+  const [sortDir, setSortDir] = useState<SortDir>('none');
 
   const groups = useMemo(
     () => Array.from(new Set(options.map((o) => o.group).filter((g): g is string => !!g))).sort(),
@@ -20,7 +23,7 @@ export function GridControl({ value, options, disabled, onChange }: GridControlP
   if (options.length === 0) return null;
 
   const query = search.trim().toLowerCase();
-  const filtered = options
+  let filtered = options
     .map((opt, idx) => ({ opt, idx }))
     .filter(
       ({ opt }) =>
@@ -29,20 +32,53 @@ export function GridControl({ value, options, disabled, onChange }: GridControlP
         (opt.group ?? '').toLowerCase().includes(query),
     );
 
+  if (sortDir !== 'none') {
+    filtered = [...filtered].sort((a, b) => {
+      const cmp = a.opt.label.localeCompare(b.opt.label, undefined, { sensitivity: 'base' });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  const cycleSort = () =>
+    setSortDir((d) => (d === 'none' ? 'asc' : d === 'asc' ? 'desc' : 'none'));
+
   return (
     <div className={`flex flex-col gap-2 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
-      {groups.length > 1 && (
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-neutral-800 border border-neutral-600 rounded">
-          <Search className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search or filter by tag…"
-            className="w-full bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none"
-          />
-        </div>
-      )}
+      <div className="flex items-center gap-1.5">
+        {groups.length > 1 && (
+          <div className="flex-1 flex items-center gap-1.5 px-2 py-1 bg-neutral-800 border border-neutral-600 rounded">
+            <Search className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search or filter by tag…"
+              className="w-full bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none"
+            />
+          </div>
+        )}
+        <button
+          onClick={cycleSort}
+          title={
+            sortDir === 'none'
+              ? 'Sort A→Z'
+              : sortDir === 'asc'
+                ? 'Sort Z→A'
+                : 'Clear sort'
+          }
+          className={`shrink-0 p-1.5 rounded border transition-colors ${
+            sortDir !== 'none'
+              ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+              : 'border-neutral-600 text-neutral-400 hover:bg-neutral-800'
+          }`}
+        >
+          {sortDir === 'desc' ? (
+            <ArrowDownAZ className="w-3.5 h-3.5" />
+          ) : (
+            <ArrowUpAZ className="w-3.5 h-3.5" />
+          )}
+        </button>
+      </div>
 
       {groups.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
