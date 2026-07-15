@@ -17,6 +17,8 @@ public class RemoteConfig {
     public int maxJettyThreads = 8;
     /** Minimum milliseconds between SSE broadcasts for animation-controlled parameters (default 100 = 10 fps). */
     public long animationBroadcastIntervalMs = 100;
+    /** Fixed bearer token, e.g. for local dev so the same URL survives app restarts. Null = random per-rotation (default). */
+    public String fixedToken = null;
 
     public static RemoteConfig parse(String[] args) {
         RemoteConfig config = new RemoteConfig();
@@ -37,6 +39,8 @@ public class RemoteConfig {
         try { config.maxJettyThreads = Integer.parseInt(iniMaxThreads.trim()); } catch (NumberFormatException ignored) {}
         String iniAnimInterval = Config.singleton().getConfig("remote", "animation_broadcast_interval_ms", "");
         try { config.animationBroadcastIntervalMs = Long.parseLong(iniAnimInterval.trim()); } catch (NumberFormatException ignored) {}
+        String iniToken = Config.singleton().getConfig("remote", "token", "");
+        if (!iniToken.isBlank()) config.fixedToken = iniToken.trim();
 
         for (String arg : args) {
             if (arg.equals("--no-remote")) {
@@ -48,6 +52,8 @@ public class RemoteConfig {
                 config.qrTimeoutSeconds = Integer.parseInt(arg.substring("--remote-qr-timeout=".length()));
             } else if (arg.startsWith("--remote-interface=")) {
                 config.networkInterface = arg.substring("--remote-interface=".length());
+            } else if (arg.startsWith("--remote-token=")) {
+                config.fixedToken = arg.substring("--remote-token=".length());
             }
         }
 

@@ -345,7 +345,7 @@ qr_logo_size = 10
 ```
 
 ```
-cthugha [--no-remote] [--remote-port=N] [--remote-qr-timeout=N] [--remote-interface=NAME]
+cthugha [--no-remote] [--remote-port=N] [--remote-qr-timeout=N] [--remote-interface=NAME] [--remote-token=VALUE]
 ```
 
 | `[remote]` ini key | CLI flag | Default | Meaning |
@@ -355,8 +355,11 @@ cthugha [--no-remote] [--remote-port=N] [--remote-qr-timeout=N] [--remote-interf
 | `qr_display_seconds` | `--remote-qr-timeout=N` | `30` | Seconds before the QR overlay auto-hides (0 = never) |
 | `qr_logo_size` | — | `0` | Logo area as % of QR modules (0–30) |
 | `network_interface` | `--remote-interface=NAME` | auto-detect | NIC whose IP is advertised in the QR URL; trusts the named interface even if the OS marks it virtual (e.g. USB ethernet adapters) |
+| `token` | `--remote-token=VALUE` | random per-rotation | Pins the bearer token to a fixed value instead of a random one, so the same `?token=` URL keeps working across app restarts. **Local development only** — a fixed token is not secret-strength and defeats the point of rotation; never set this for a machine reachable beyond your own dev LAN. |
 | `min_threads` / `max_threads` | — | `2` / `8` | Jetty thread pool bounds |
 | `animation_broadcast_interval_ms` | — | `100` | SSE flush interval (see Change Events above) |
+
+When `token` is set, `TokenStore.rotate` (called at startup and by the "Rotate Token" action) always (re)sets the token back to the fixed value rather than drawing new randomness — so pressing `R` redisplays the QR code but the URL/token itself doesn't change.
 
 `RemoteConfig.parse` reads the ini first, then lets CLI flags override individual fields (`--no-remote` short-circuits `enabled` to `false` regardless of the ini). When the server is disabled, no port is bound, `QrPhase` is never added to the render phase list, and the `Remote` param-tree node (and its `Rotate Token` action) is never created.
 

@@ -294,7 +294,7 @@ public class CthughaWindow extends GLWindow {
 
         // Start remote server and add remote node to the param tree
         if (remoteConfig != null && remoteConfig.enabled) {
-            tokenStore = new TokenStore();
+            tokenStore = new TokenStore(remoteConfig.fixedToken);
             broadcaster = new RemoteEventBroadcaster();
             remoteServer = new RemoteServer(cthugha, tokenStore, broadcaster, remoteConfig, actionContext);
             remoteServer.start();

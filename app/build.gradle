@@ -89,6 +89,8 @@ run {
 	systemProperty("slf4j.internal.verbosity", "WARN")
 	systemProperty("joml.nounsafe", "true")
 	jvmArgs "--enable-native-access=ALL-UNNAMED"
+	// Fixed remote-control token for local dev, so the same browser session/URL survives app restarts.
+	args "--remote-token=THIS_IS_A_TEST"
 	//systemProperty("sun.java2d.opengl", "true")
 	environment '__NV_PRIME_RENDER_OFFLOAD', '1'
 	environment '__GLX_VENDOR_LIBRARY_NAME', 'nvidia'
