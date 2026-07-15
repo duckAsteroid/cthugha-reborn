@@ -11,3 +11,6 @@ build/
 /app/logs/*.log
 /logs/*.log
 *~
+/app/src/dist/configs/
+/app/src/dist/tabs/Spiral/
+/app/src/dist/tabs/GravityWells/3_simple_wells/4000x2000.tab
