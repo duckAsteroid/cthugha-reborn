@@ -31,15 +31,15 @@ export function SearchListControl({ value, options, disabled, onChange }: Search
         />
       </div>
 
-      <div className="max-h-64 overflow-y-auto flex flex-col gap-0.5">
+      <div className="max-h-64 overflow-y-auto flex flex-col gap-1">
         {filtered.map(({ opt, idx }) => (
           <button
             key={idx}
             onClick={() => onChange(idx)}
-            className={`text-left px-2 py-1.5 rounded text-sm truncate transition-colors ${
+            className={`text-left px-2 py-1.5 rounded-lg border text-sm truncate transition-colors ${
               idx === value
-                ? 'bg-indigo-950/40 text-indigo-300'
-                : 'text-neutral-300 hover:bg-neutral-800'
+                ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+                : 'border-transparent bg-neutral-900/50 text-neutral-200 hover:bg-neutral-800'
             }`}
           >
             {opt.label}
