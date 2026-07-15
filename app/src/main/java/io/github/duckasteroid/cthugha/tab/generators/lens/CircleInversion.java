@@ -20,7 +20,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 @AutoService(TabGenerator.class)
 public class CircleInversion extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   /** Inversion radius as a fraction of the shorter screen dimension. */
   public DoubleParameter radius = new DoubleParameter("Radius", 0.05, 1.5, 0.4);
 

@@ -29,7 +29,7 @@ import java.util.Random;
 @AutoService(TabGenerator.class)
 public class Mandelbrot extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", -2.0, 2.0, -0.5, 0.0);
+  public XYParam center = new XYParam("Center", -2.0, 2.0, -0.5, 0.0).withPadControl();
   /** Pixels per unit of the complex plane. Higher = more magnified. */
   public DoubleParameter zoom = new DoubleParameter("Zoom", 50, 4000, 250);
   /** Escape-time iteration cap. */
@@ -40,7 +40,7 @@ public class Mandelbrot extends ParamNode implements TabGenerator {
   public DoubleParameter displacement = new DoubleParameter("Displacement", 0, 400, 120);
   /** When on, screen position is the Julia orbit seed z0 and {@link #juliaC} supplies c. */
   public BooleanParameter juliaMode = new BooleanParameter("Julia Mode");
-  public XYParam juliaC = new XYParam("Julia Constant", -2.0, 2.0, -0.4, 0.6);
+  public XYParam juliaC = new XYParam("Julia Constant", -2.0, 2.0, -0.4, 0.6).withPadControl();
 
   public Mandelbrot() {
     super("Mandelbrot");

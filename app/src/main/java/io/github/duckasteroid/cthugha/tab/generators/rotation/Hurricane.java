@@ -19,7 +19,7 @@ public class Hurricane extends ParamNode implements TabGenerator {
   private BooleanParameter slowY = new BooleanParameter("SlowY");
   private BooleanParameter slowX = new BooleanParameter("SlowX");;
   private BooleanParameter reverse = new BooleanParameter("revers");;
-  private XYParam center = new XYParam("Center", 0, 1, 0.5);
+  private XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
 
   public Hurricane() {
     super("Hurricane");

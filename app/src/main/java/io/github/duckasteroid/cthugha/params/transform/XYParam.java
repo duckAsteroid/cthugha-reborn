@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.params.transform;
 
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.UiHint;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import org.joml.Vector2f;
@@ -76,5 +77,16 @@ public class XYParam extends ParamNode {
   /** Returns the current x/y values as a JOML {@link Vector2f}. */
   public Vector2f toVector2f() {
     return new Vector2f((float) x.value, (float) y.value);
+  }
+
+  /**
+   * Marks this XY parameter as a 2-D position (e.g. a centre point or source location), so
+   * the remote UI renders its {@code X}/{@code Y} children as a single draggable point on a
+   * rectangular pad instead of two separate sliders. Returns {@code this} for fluent
+   * construction.
+   */
+  public XYParam withPadControl() {
+    withUiHint(UiHint.CONTROL_TYPE, UiHint.XY_PAD);
+    return this;
   }
 }

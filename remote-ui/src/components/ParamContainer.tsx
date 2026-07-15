@@ -7,7 +7,9 @@ import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
 import { TabsContainer } from './TabsContainer';
+import { XYPadParam } from './XYPadParam';
 import { useSSE } from '../useSSE';
+import { isRenderable } from '../nodeUtils';
 
 interface ParamContainerProps {
   node: ContainerNode;
@@ -19,17 +21,26 @@ export function ParamContainer({ node, path, defaultOpen = false }: ParamContain
   const [open, setOpen] = useState(defaultOpen);
   const iconName = node.uiHints?.['icon'];
 
-  const visibleChildren = node.children.filter(child => child.uiHints?.['hidden'] !== 'true');
+  const visibleChildren = node.children.filter(isRenderable);
 
   const isTabs = node.uiHints?.['control-type'] === 'TABS';
+  const isXYPad = node.uiHints?.['control-type'] === 'XY_PAD';
   // Subscribe to the container's own subtree when open so all descendant changes are caught.
   // Leaf paths are still used for sseState lookups; the subtree subscription just broadens
   // which changes the server forwards to this connection.
-  const subscriptionPaths = (!isTabs && open && path) ? [path] : [];
+  const subscriptionPaths = (!isTabs && !isXYPad && open && path) ? [path] : [];
   const sseState = useSSE(subscriptionPaths);
 
   if (isTabs) {
     return <TabsContainer node={node} path={path} />;
+  }
+
+  if (isXYPad) {
+    return <XYPadParam node={node} path={path} />;
+  }
+
+  if (visibleChildren.length === 0) {
+    return null;
   }
 
   return (

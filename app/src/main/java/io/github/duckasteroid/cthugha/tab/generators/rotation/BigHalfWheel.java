@@ -13,7 +13,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 
 @AutoService(TabGenerator.class)
 public class BigHalfWheel extends ParamNode implements TabGenerator {
-  public XYParam center = new XYParam("Wheel centre location", 0, 1, 0.4, 0.0);
+  public XYParam center = new XYParam("Wheel centre location", 0, 1, 0.4, 0.0).withPadControl();
 
   public BigHalfWheel() {
     super("Big half wheel");

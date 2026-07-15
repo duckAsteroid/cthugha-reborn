@@ -27,7 +27,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 @AutoService(TabGenerator.class)
 public class Pinwheel extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   public IntegerParameter sectors = new IntegerParameter("Sectors", 2, 16, 6);
   /** Rotation applied to each sector, in radians. */
   public DoubleParameter rotationPerSector = new DoubleParameter("Rotation per sector (rad)", -PI, PI, PI / 6.0);

@@ -24,7 +24,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 @AutoService(TabGenerator.class)
 public class Kaleidoscope extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   public IntegerParameter arms = new IntegerParameter("Arms", 2, 16, 6);
 
   public Kaleidoscope() {

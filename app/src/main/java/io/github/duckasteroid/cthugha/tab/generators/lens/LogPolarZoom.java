@@ -30,7 +30,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 @AutoService(TabGenerator.class)
 public class LogPolarZoom extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   /** Translation in log(r) space. Small values (0.05–0.3) give a gentle zoom. */
   public DoubleParameter zoom     = new DoubleParameter("Zoom",     -1.0, 1.0,  0.12);
   /** Translation in θ space (radians). Adds angular spin to the zoom. */

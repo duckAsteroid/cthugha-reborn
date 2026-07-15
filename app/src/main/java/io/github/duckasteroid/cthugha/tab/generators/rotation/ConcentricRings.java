@@ -24,7 +24,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 @AutoService(TabGenerator.class)
 public class ConcentricRings extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   /** Thickness of each ring in pixels. */
   public DoubleParameter ringWidth = new DoubleParameter("Ring width", 5, 100, 30);
   /** Rotation applied per ring, in radians. */

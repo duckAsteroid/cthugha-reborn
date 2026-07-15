@@ -17,7 +17,7 @@ import java.util.Random;
 @AutoService(TabGenerator.class)
 public class SpherePour extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   /** Maximum displacement in pixels applied at the very centre of the sphere. */
   public DoubleParameter maxSpeed = new DoubleParameter("Max Speed", 0.5, 30.0, 4.0);
   /** Sphere boundary radius as a fraction of the shorter screen dimension. */

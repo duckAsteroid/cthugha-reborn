@@ -43,7 +43,7 @@ public class TransformParams extends ParamNode {
   public final DoubleParameter rotate = new DoubleParameter("Rotation in radians", 0, 2 * Math.PI);
 
   /** Centre point for rotation in NDC space (origin = screen centre). */
-  public final XYParam rotateCenter = new XYParam("Rotation center point", -1, 1, 0);
+  public final XYParam rotateCenter = new XYParam("Rotation center point", -1, 1, 0).withPadControl();
 
   /**
    * @param name display name for this transform parameter group

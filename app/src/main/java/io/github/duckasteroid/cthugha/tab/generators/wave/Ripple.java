@@ -22,7 +22,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 @AutoService(TabGenerator.class)
 public class Ripple extends ParamNode implements TabGenerator {
 
-  public XYParam source = new XYParam("Source", 0, 1, 0.5);
+  public XYParam source = new XYParam("Source", 0, 1, 0.5).withPadControl();
   public DoubleParameter frequency = new DoubleParameter("Frequency", 0.01, 0.5, 0.1);
   public DoubleParameter amplitude = new DoubleParameter("Amplitude", 0, 50, 10);
   public DoubleParameter phase = new DoubleParameter("Phase", 0, 2 * PI, 0);

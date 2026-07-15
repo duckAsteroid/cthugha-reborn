@@ -25,7 +25,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 @AutoService(TabGenerator.class)
 public class Twist extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   /** Peak rotation at r=0, in radians. Positive = counter-clockwise. */
   public DoubleParameter maxAngle = new DoubleParameter("Max angle (rad)", -PI, PI, PI / 3.0);
   /** Radius (pixels) at which the twist drops to ~37% of its peak. */

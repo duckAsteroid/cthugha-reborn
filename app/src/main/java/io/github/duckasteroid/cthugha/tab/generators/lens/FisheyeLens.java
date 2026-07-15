@@ -26,7 +26,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 @AutoService(TabGenerator.class)
 public class FisheyeLens extends ParamNode implements TabGenerator {
 
-  public XYParam center = new XYParam("Center", 0, 1, 0.5);
+  public XYParam center = new XYParam("Center", 0, 1, 0.5).withPadControl();
   /** Distortion strength. Positive = barrel (fisheye). Negative = pincushion. */
   public DoubleParameter strength = new DoubleParameter("Strength", -3.0, 3.0, 1.2);
 

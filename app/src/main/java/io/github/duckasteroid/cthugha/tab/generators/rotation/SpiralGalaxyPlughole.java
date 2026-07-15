@@ -46,7 +46,7 @@ public class SpiralGalaxyPlughole extends ParamNode implements TabGenerator {
   public IntegerParameter arms = new IntegerParameter("Arms", 1, 8, 1);
 
   /** Centre of the spiral as a fraction of the screen dimensions (0.5, 0.5 = middle). */
-  public XYParam center = new XYParam("Center", 0.0, 1.0, 0.5);
+  public XYParam center = new XYParam("Center", 0.0, 1.0, 0.5).withPadControl();
 
   public SpiralGalaxyPlughole() {
     super("Spiral Galaxy Plughole");

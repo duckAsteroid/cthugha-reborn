@@ -10,6 +10,7 @@ import { ActionToolbar } from './ActionToolbar';
 import type { ToolbarEntry } from './ActionToolbar';
 import { useSSE } from '../useSSE';
 import type { ParamState } from '../useSSE';
+import { isRenderable, flattenSoleContainer } from '../nodeUtils';
 
 interface TabsContainerProps {
   node: ContainerNode;
@@ -40,7 +41,7 @@ function renderChild(child: ParamNode, basePath: string, sseState: Map<string, P
 }
 
 export function TabsContainer({ node, path }: TabsContainerProps) {
-  const visibleChildren = node.children.filter(c => c.uiHints?.['hidden'] !== 'true');
+  const visibleChildren = node.children.filter(isRenderable);
   const tabs = visibleChildren.filter(
     c => c.type === 'CONTAINER' && c.uiHints?.['control-type'] !== 'EXPANDER',
   ) as ContainerNode[];
@@ -67,9 +68,7 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
     return { expPath, toolbarActions, remainingNode: { ...exp, children: remainingChildren } };
   });
   const toolbarActions = expanderData.flatMap(e => e.toolbarActions);
-  const remainingExpanders = expanderData.filter(e =>
-    e.remainingNode.children.some(c => c.uiHints?.['hidden'] !== 'true'),
-  );
+  const remainingExpanders = expanderData.filter(e => isRenderable(e.remainingNode));
 
   return (
     <div className="flex flex-col gap-2">
@@ -96,10 +95,11 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
 
         {tabs.map(tab => {
           const tabPath = path ? `${path}/${tab.name}` : tab.name;
-          const tabChildren = tab.children.filter(c => c.uiHints?.['hidden'] !== 'true');
+          const visibleTabChildren = tab.children.filter(isRenderable);
+          const { children: tabChildren, path: contentPath } = flattenSoleContainer(visibleTabChildren, tabPath);
           return (
             <RadixTabs.Content key={tab.name} value={tab.name} className="space-y-1 pt-1">
-              {tabChildren.map(child => renderChild(child, tabPath, sseState))}
+              {tabChildren.map(child => renderChild(child, contentPath, sseState))}
             </RadixTabs.Content>
           );
         })}
