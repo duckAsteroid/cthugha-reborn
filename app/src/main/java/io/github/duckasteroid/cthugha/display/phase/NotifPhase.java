@@ -8,7 +8,7 @@ import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.config.Config;
-import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
@@ -97,7 +97,7 @@ public class NotifPhase implements RenderPhase {
 
     // No param-tree actions — notifications are produced by other components calling cthugha.notify().
     @Override
-    public void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {}
+    public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {}
 
     /**
      * Recomputes the text transform based on location + padding.

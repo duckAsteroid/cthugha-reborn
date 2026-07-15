@@ -46,4 +46,9 @@ public class RandomQuoteSource {
     public Quote nextQuote() {
         return quotes.get(rnd.nextInt(quotes.size()));
     }
+
+    /** Returns all loaded quotes, in load order. */
+    public List<Quote> quotes() {
+        return quotes;
+    }
 }

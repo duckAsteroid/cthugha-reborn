@@ -14,7 +14,7 @@ import java.io.IOException;
  * Samples an RGBA texture and writes the R channel as a normalised palette index into the
  * currently bound R16 FBO. The alpha channel controls transparency: A=0 preserves the
  * underlying content; A=1 overwrites with the new palette index value.
- * Used for one-shot effects (white flash, PCX image flash) baked into renderFBO.
+ * Used for one-shot effects (white flash, PNG image flash) baked into renderFBO.
  */
 public class TextureBakeRenderer implements RenderedItem {
 

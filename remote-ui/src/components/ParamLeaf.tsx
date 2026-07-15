@@ -7,6 +7,8 @@ import { KnobControl } from './controls/KnobControl';
 import { ToggleControl } from './controls/ToggleControl';
 import { EnumControl } from './controls/EnumControl';
 import { CarouselControl } from './controls/CarouselControl';
+import { GridControl } from './controls/GridControl';
+import { SearchListControl } from './controls/SearchListControl';
 import { NodeIcon } from './NodeIcon';
 import { InfoButton } from './InfoButton';
 
@@ -46,9 +48,30 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
     if (node.type === 'ENUM') {
       const count = Math.max(1, Math.round(node.max) + 1);
       const options = node.options ?? Array.from({ length: count }, (_, i) => ({ label: String(i) }));
-      if (node.uiHints?.['control-type'] === 'CAROUSEL') {
+      const enumControlType = node.uiHints?.['control-type'];
+      if (enumControlType === 'CAROUSEL') {
         return (
           <CarouselControl
+            value={Math.round(value)}
+            options={options}
+            disabled={controlled}
+            onChange={handleChange}
+          />
+        );
+      }
+      if (enumControlType === 'GRID') {
+        return (
+          <GridControl
+            value={Math.round(value)}
+            options={options}
+            disabled={controlled}
+            onChange={handleChange}
+          />
+        );
+      }
+      if (enumControlType === 'LIST') {
+        return (
+          <SearchListControl
             value={Math.round(value)}
             options={options}
             disabled={controlled}

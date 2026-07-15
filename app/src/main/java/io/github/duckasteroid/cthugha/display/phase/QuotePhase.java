@@ -12,7 +12,7 @@ import com.asteroid.duck.opengl.util.text.StringRenderer;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.TextureBakeRenderer;
-import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.quote.Constants;
@@ -143,16 +143,11 @@ public class QuotePhase implements RenderPhase {
     }
 
     @Override
-    public void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {
-        AbstractAction showQuote = new AbstractAction("Show Quote",
-                ctx -> cthugha.showQuote());
-        showQuote.withUiHint(UiHint.ICON, "quote");
-        generalGroup.addChild(showQuote);
-
+    public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {
         AbstractAction toggleMode = new AbstractAction("Toggle Quote Mode", ctx -> {
             Mode[] values = Mode.values();
             mode = values[(mode.ordinal() + 1) % values.length];
-            cthugha.notify("quote: " + mode.name().toLowerCase());
+            cthugha.notify("quote: " + (mode == Mode.BUFFER ? "in buffer" : mode.name().toLowerCase()));
         });
         toggleMode.withUiHint(UiHint.ICON, "message-square");
         generalGroup.addChild(toggleMode);

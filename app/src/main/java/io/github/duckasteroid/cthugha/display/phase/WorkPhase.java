@@ -7,7 +7,7 @@ import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
 import io.github.duckasteroid.cthugha.config.Config;
-import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.work.BackgroundWorkQueue;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -115,5 +115,5 @@ public class WorkPhase implements RenderPhase {
     }
 
     @Override
-    public void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {}
+    public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {}
 }

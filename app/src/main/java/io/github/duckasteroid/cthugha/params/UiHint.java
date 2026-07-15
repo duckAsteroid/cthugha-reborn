@@ -34,6 +34,12 @@ public final class UiHint {
     /** Carousel strip with prev/next arrows and optional image preview per option. */
     public static final String CAROUSEL = "CAROUSEL";
 
+    /** Thumbnail grid, one tile per option; tapping a tile selects it immediately. */
+    public static final String GRID = "GRID";
+
+    /** Searchable, scrollable text list; tapping a row selects it immediately. */
+    public static final String LIST = "LIST";
+
     /**
      * Value for {@link #CONTROL_TYPE} on a {@code ContainerNode}: renders its direct
      * container children as a horizontal tab strip.  Any child container that has
@@ -70,6 +76,15 @@ public final class UiHint {
      * in the PATCH response as {@code "compileError"}.
      */
     public static final String CODE_EDITOR = "CODE_EDITOR";
+
+    /**
+     * Value for {@link #CONTROL_TYPE} on an {@code XYParam} container: renders its
+     * {@code X}/{@code Y} children as a single draggable point on a 2-D pad (a rectangle
+     * shaped like the render buffer, with a crosshair marking the current position) instead
+     * of two separate sliders. See
+     * {@link io.github.duckasteroid.cthugha.params.transform.XYParam#withPadControl()}.
+     */
+    public static final String XY_PAD = "XY_PAD";
 
     private UiHint() {}
 }

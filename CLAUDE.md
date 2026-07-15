@@ -27,7 +27,7 @@ Requires Java 17. This is a Gradle multi-project build (`:app` + `:remote-ui`).
 The `app/src/dist/` directory is the runtime working directory and contains:
 - `cthugha.ini` — configuration file (parsed by ini4j)
 - `maps/` — palette map files for color translation effects
-- `pcx/` — PCX image files used as flash visualizations
+- `images/` — PNG image files used as flash visualizations
 - `glsl/` — GLSL shader source files loaded at runtime (do NOT delete; not embedded in jar)
 - `tabs/` — saved tab (translation table) preset files
 
@@ -58,8 +58,8 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`
 Five implementations live in `display/phase/`:
 
 - **`WavePhase`** — owns `AudioPipeline` and all four wave/spectrum GL renderers. Renders directly into the R16 render texture using palette-index–compatible colours (red channel = 1.0, the maximum normalised value, targeting the last palette entry). Registers the "Cycle Audio" action.
-- **`FlashPhase`** — one-shot texture flash effects (PCX image or white) baked into `renderTex` via `TextureBakeRenderer`. Registers "Flash Image" and "Flash White" actions.
-- **`QuotePhase`** — renders the current quote as a screen overlay (default) or baked into the indexed buffer (`quoteInBuffer` mode). In bake mode, saves/restores the GL framebuffer binding (`glGetIntegerv(GL_FRAMEBUFFER_BINDING)`) to temporarily render RGBA text then bake it back into the restored render FBO. Registers "Show Quote" and "Toggle Quote Mode" actions.
+- **`FlashPhase`** — one-shot texture flash effects (PNG image or white) baked into `renderTex` via `TextureBakeRenderer`. Registers the "Flash White" action; picking a specific image (or a random one) happens via the "Images" tab's `ImagesLibraryNode`.
+- **`QuotePhase`** — renders the current quote as a screen overlay (default) or baked into the indexed buffer (`quoteInBuffer` mode). In bake mode, saves/restores the GL framebuffer binding (`glGetIntegerv(GL_FRAMEBUFFER_BINDING)`) to temporarily render RGBA text then bake it back into the restored render FBO. Registers the "Toggle Quote Mode" action; picking a specific quote (or a random one) happens via the "Quotes" tab's `QuotesLibraryNode`.
 - **`NotifPhase`** — renders transient notification messages as a 3-second RGBA screen overlay. Notifications are produced by `JCthugha.notify()` and polled each frame.
 - **`QrPhase`** — wraps `QrOverlay`; added by `CthughaWindow` only when the remote server is enabled. `show(url)` / `hide()` are thread-safe proxies for the remote server.
 
@@ -122,7 +122,6 @@ The `screenconfig/` package implements named, resolution-independent snapshots o
 | Jackson 2.17.2 | JSON serialization of parameter tree |
 | QR code gen 1.8.0 | QR code generation for remote URL |
 | JTransforms 3.1 | FFT for spectrum analysis |
-| Apache Commons Imaging | PCX image loading |
 | ini4j | INI config file parsing |
 | SLF4J + Logback | Logging |
 | JUnit 5 + Mockito | Testing |

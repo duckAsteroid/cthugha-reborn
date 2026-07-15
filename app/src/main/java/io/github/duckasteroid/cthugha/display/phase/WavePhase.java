@@ -13,7 +13,7 @@ import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
-import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import org.joml.Matrix4f;
@@ -126,7 +126,7 @@ public class WavePhase implements RenderPhase {
     }
 
     @Override
-    public void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {
+    public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {
         AbstractAction cycleAudio = new AbstractAction("Cycle Audio",
                 ctx -> cthugha.notify("audio: " + cycleAudioSource()));
         cycleAudio.withUiHint(UiHint.ICON, "mic");

@@ -28,14 +28,9 @@ class QuotePhaseTest {
     }
 
     @Test
-    void registerActionsAddsTwoEntries() {
+    void registerActionsAddsOneEntry() {
         long count = group.getChildren().count();
-        assertEquals(2, count, "Show Quote + Toggle Quote Mode");
-    }
-
-    @Test
-    void showQuoteActionNamedCorrectly() {
-        assertTrue(group.getChild("Show Quote").isPresent());
+        assertEquals(1, count, "Toggle Quote Mode");
     }
 
     @Test
@@ -51,10 +46,12 @@ class QuotePhaseTest {
     }
 
     @Test
-    void toggleQuoteModeFlipsBackToOverlay() {
+    void toggleQuoteModeCyclesBackToOverlayAfterThreeToggles() {
         Action toggle = (Action) group.getChild("Toggle Quote Mode").orElseThrow();
         toggle.execute(null);
-        app.pollNotification();  // consume first
+        app.pollNotification();  // consume "in buffer"
+        toggle.execute(null);
+        assertEquals("quote: both", app.pollNotification());
         toggle.execute(null);
         assertEquals("quote: overlay", app.pollNotification());
     }

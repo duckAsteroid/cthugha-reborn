@@ -57,6 +57,8 @@ public class JCthugha extends ParamNode implements Closeable {
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
 	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
 	public ScreenConfigStore screenConfigStore = new ScreenConfigStore(java.nio.file.Paths.get("configs"));
+	public FlashPhase flashPhase = new FlashPhase();
+	public final QuotePhase quotePhase = new QuotePhase(this);
 
 	public PaletteMap paletteMap;
 	public int bufferWidth;
@@ -187,8 +189,8 @@ public class JCthugha extends ParamNode implements Closeable {
 	public List<RenderPhase> createPhases() {
 		List<RenderPhase> list = new ArrayList<>();
 		list.add(new WavePhase(this));
-		list.add(new FlashPhase());
-		list.add(new QuotePhase(this));
+		list.add(flashPhase);
+		list.add(quotePhase);
 		list.add(new NotifPhase(this));
 		return list;
 	}
@@ -198,8 +200,18 @@ public class JCthugha extends ParamNode implements Closeable {
 	}
 
 	public void showQuote() {
-		currentQuote = quoteSource.nextQuote();
+		showQuote(quoteSource.nextQuote());
+	}
+
+	/** Shows a specific quote (e.g. picked from the remote UI's Quotes tab). */
+	public void showQuote(Quote quote) {
+		currentQuote = quote;
 		quoteExpiry = Instant.now().plus(QUOTE_DURATION);
+	}
+
+	/** All quotes available for selection in the remote UI's Quotes tab. */
+	public List<Quote> quotes() {
+		return quoteSource.quotes();
 	}
 
 	public void toggleNotifications() {

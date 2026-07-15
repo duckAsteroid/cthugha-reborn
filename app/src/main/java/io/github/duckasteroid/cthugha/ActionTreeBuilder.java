@@ -3,15 +3,18 @@ package io.github.duckasteroid.cthugha;
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
+import io.github.duckasteroid.cthugha.img.ImagesLibraryNode;
 import io.github.duckasteroid.cthugha.map.PaletteActionContext;
 import io.github.duckasteroid.cthugha.map.PaletteLibraryNode;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
+import io.github.duckasteroid.cthugha.quote.QuotesLibraryNode;
 import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigLibraryNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,6 +167,20 @@ public class ActionTreeBuilder {
         // ---- Configs tab: named whole-tree snapshots ("screen configs") ----
         ScreenConfigLibraryNode configsGroup = new ScreenConfigLibraryNode(cthugha.screenConfigStore, cthugha);
 
+        // ---- Images tab: flash-image picker ----
+        ParamNode imagesGroup;
+        try {
+            imagesGroup = new ImagesLibraryNode(cthugha.flashPhase);
+        } catch (IOException e) {
+            LOG.error("Failed to build images library node", e);
+            ContainerNode fallback = new ContainerNode("Images");
+            fallback.withUiHint(UiHint.ICON, "image");
+            imagesGroup = fallback;
+        }
+
+        // ---- Quotes tab: quote picker ----
+        QuotesLibraryNode quotesGroup = new QuotesLibraryNode(cthugha.quotes(), cthugha);
+
         // ---- General group: persistent expander below the tabs ----
         generalGroup = new ContainerNode("General");
         generalGroup.withUiHint(UiHint.ICON, "settings");
@@ -189,11 +206,14 @@ public class ActionTreeBuilder {
         generalGroup.addChild(action("Toggle Debug", "bug", ctx -> cthugha.toggleDebug()));
         generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
 
-        // Each phase registers its own actions (Flash Image, Flash White, Show Quote,
-        // Toggle Quote Mode, Cycle Audio, etc.)
+        // Each phase registers its own actions (Flash White, Toggle Quote Mode, Cycle Audio,
+        // etc.); the Flash/Quote phases register into their own tabs instead of General.
         for (RenderPhase phase : phases) {
+            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase) continue;
             phase.registerActions(generalGroup, renderActions);
         }
+        cthugha.flashPhase.registerActions(imagesGroup, renderActions);
+        cthugha.quotePhase.registerActions(quotesGroup, renderActions);
 
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);
@@ -201,6 +221,8 @@ public class ActionTreeBuilder {
         cthugha.addChild(cthugha.audioSource);
         cthugha.addChild(tabGroup);
         cthugha.addChild(renderGroup);
+        cthugha.addChild(imagesGroup);
+        cthugha.addChild(quotesGroup);
         cthugha.addChild(configsGroup);
         cthugha.addChild(generalGroup);
     }

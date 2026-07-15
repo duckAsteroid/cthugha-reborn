@@ -37,8 +37,6 @@ dependencies {
 	// JOML — vector/matrix types used in render-core API
 	implementation 'org.joml:joml:1.10.9'
 
-	// Apache imaging for PCX support
-	implementation 'org.apache.commons:commons-imaging:1.0-alpha3'
 	// Fast Fourier Transform
 	implementation 'com.github.wendykierp:JTransforms:3.1:with-dependencies'
 	// Apache lang for primitive array utils

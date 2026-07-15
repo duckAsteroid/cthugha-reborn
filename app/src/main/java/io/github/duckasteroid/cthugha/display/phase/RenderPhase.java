@@ -2,7 +2,7 @@ package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
-import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 
 import java.io.IOException;
 
@@ -34,5 +34,5 @@ public interface RenderPhase {
     default void dispose() {}
 
     /** Optionally attach param-tree actions to the General group. */
-    default void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {}
+    default void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {}
 }

@@ -178,7 +178,7 @@ currently bound R16 FBO in one draw call:
 
 - **White flash**: a 1×1 RGBA texture with R=0xFF, A=0xFF. The normalised R value (1.0)
   maps to the last palette entry. Uploaded once at init.
-- **Image flash**: the next PCX file from `RandomImageSource` converted to RGBA where
+- **Image flash**: the selected PNG file from `RandomImageSource` converted to RGBA where
   `R = luma(pixel) / 255`, so bright parts of the image map to high palette indices.
   Uploaded on demand on the GL thread.
 

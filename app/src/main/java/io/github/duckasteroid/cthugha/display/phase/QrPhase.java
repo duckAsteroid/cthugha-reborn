@@ -2,7 +2,7 @@ package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
-import io.github.duckasteroid.cthugha.params.ContainerNode;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.remote.QrOverlay;
 
 import java.io.IOException;
@@ -36,7 +36,7 @@ public class QrPhase implements RenderPhase {
     }
 
     @Override
-    public void registerActions(ContainerNode generalGroup, RenderActionQueue renderActions) {}
+    public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {}
 
     public void show(String url) { qrOverlay.show(url); }
     public void hide()           { qrOverlay.hide(); }

@@ -4,7 +4,6 @@ import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
 import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
-import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.display.phase.WavePhase;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
@@ -25,7 +24,9 @@ import java.util.List;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 /**
@@ -46,6 +47,12 @@ class ActionTreePathTest {
         MapFileReader mockReader = mock(MapFileReader.class);
         when(mockReader.paletteFiles()).thenReturn(List.of(Path.of("maps/FAKE.MAP")));
         app.reader = mockReader;
+
+        // Spy (not mock) so registerActions()/requestFlash() keep their real behaviour —
+        // only the disk listing is stubbed, since the test doesn't run from src/dist.
+        FlashPhase flashSpy = spy(new FlashPhase());
+        doReturn(List.of(Path.of("images/FAKE.PNG"))).when(flashSpy).imageFiles();
+        app.flashPhase = flashSpy;
 
         PaletteActionContext ctx = mock(PaletteActionContext.class);
         when(ctx.currentPalette()).thenReturn(null);
@@ -69,12 +76,12 @@ class ActionTreePathTest {
             @Override public void exitApplication() {}
         };
 
-        // Phase objects register their own actions (Flash Image, Flash White, etc.)
+        // Phase objects register their own actions (Flash White, etc.)
         // No GL init() needed — registerActions() is pure param-tree wiring.
         List<RenderPhase> phases = List.of(
                 new WavePhase(app),
-                new FlashPhase(),
-                new QuotePhase(app),
+                app.flashPhase,
+                app.quotePhase,
                 new NotifPhase(app));
 
         new ActionTreeBuilder(app, ctx, new RenderActionQueue(), blurEnabled, blurKernelSize, blurFade, noOp)
@@ -91,12 +98,12 @@ class ActionTreePathTest {
             "General/Screenshot",
             "General/Record 5s",
             "Render/Palette/Random",
-            "General/Flash Image",
-            "General/Flash White",
-            "General/Show Quote",
+            "Images/Random",
+            "Images/Flash White",
+            "Quotes/Random",
             "General/Toggle Debug",
             "General/Toggle Notifications",
-            "General/Toggle Quote Mode",
+            "Quotes/Toggle Quote Mode",
             "General/Cycle Audio",
             // Blur
             "Render/Blur/Fade -",

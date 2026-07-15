@@ -9,6 +9,7 @@ import io.javalin.http.HttpResponseException;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.http.sse.SseClient;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.action.Action;
@@ -19,6 +20,7 @@ import io.github.duckasteroid.cthugha.params.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -91,6 +93,18 @@ public class RemoteServer {
             }
             ctx.contentType("image/png");
             ctx.result(Files.newInputStream(file));
+        });
+
+        app.get("/api/v1/images/preview/*", ctx -> {
+            String name = ctx.path().substring("/api/v1/images/preview/".length());
+            RandomImageSource imageSource = new RandomImageSource(Paths.get("images"));
+            Optional<Path> file = imageSource.findByDisplayName(name);
+            if (file.isEmpty()) {
+                ctx.status(404);
+                return;
+            }
+            ctx.contentType("image/png");
+            ImageIO.write(imageSource.loadImage(file.get()), "png", ctx.outputStream());
         });
 
         app.get("/api/v1/params", ctx ->
@@ -238,7 +252,8 @@ public class RemoteServer {
     private void authFilter(Context ctx) {
         String path = ctx.path();
         // Only API paths require auth; static files and SPA root are public.
-        if (!path.startsWith("/api/") || path.equals("/api/v1/info") || path.startsWith("/api/v1/maps/preview/")) {
+        if (!path.startsWith("/api/") || path.equals("/api/v1/info")
+                || path.startsWith("/api/v1/maps/preview/") || path.startsWith("/api/v1/images/preview/")) {
             return;
         }
         String auth = ctx.header("Authorization");
