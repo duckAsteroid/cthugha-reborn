@@ -1,18 +1,26 @@
 package io.github.duckasteroid.cthugha.img;
 
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class RandomImageSource {
   final Random rnd = new Random();
   private final Path imageDir;
+  private final Map<Path, CachedThumbnail> thumbnailCache = new ConcurrentHashMap<>();
+
+  private record CachedThumbnail(long mtimeMillis, byte[] pngBytes) {}
 
   public RandomImageSource(Path imageDir) {
     this.imageDir = imageDir;
@@ -47,6 +55,44 @@ public class RandomImageSource {
   public BufferedImage nextImage() throws IOException {
     List<Path> paths = imageFiles();
     return loadImage(paths.get(rnd.nextInt(paths.size())));
+  }
+
+  /**
+   * Returns a PNG-encoded thumbnail of {@code image}, scaled so its longest side is at most
+   * {@code maxDim} pixels. Thumbnails are cached in memory keyed by file modification time, so
+   * repeat requests (e.g. the remote UI's image grid) skip re-decoding and re-scaling.
+   */
+  public byte[] loadThumbnail(Path image, int maxDim) throws IOException {
+    long mtimeMillis = Files.getLastModifiedTime(image).toMillis();
+    CachedThumbnail cached = thumbnailCache.get(image);
+    if (cached != null && cached.mtimeMillis() == mtimeMillis) {
+      return cached.pngBytes();
+    }
+    BufferedImage scaled = scale(loadImage(image), maxDim);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ImageIO.write(scaled, "png", out);
+    byte[] pngBytes = out.toByteArray();
+    thumbnailCache.put(image, new CachedThumbnail(mtimeMillis, pngBytes));
+    return pngBytes;
+  }
+
+  private static BufferedImage scale(BufferedImage src, int maxDim) {
+    int w = src.getWidth();
+    int h = src.getHeight();
+    double factor = Math.min(1.0, (double) maxDim / Math.max(w, h));
+    int scaledWidth = Math.max(1, (int) Math.round(w * factor));
+    int scaledHeight = Math.max(1, (int) Math.round(h * factor));
+    BufferedImage scaled = new BufferedImage(scaledWidth, scaledHeight, BufferedImage.TYPE_INT_ARGB);
+    Graphics2D g = scaled.createGraphics();
+    try {
+      g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+      g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+      g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g.drawImage(src, 0, 0, scaledWidth, scaledHeight, null);
+    } finally {
+      g.dispose();
+    }
+    return scaled;
   }
 
   /** Strips the {@code .PNG} extension and upper-cases the remainder, e.g. {@code "nebula1"} → {@code "NEBULA1"}. */

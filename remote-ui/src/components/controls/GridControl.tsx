@@ -116,6 +116,8 @@ export function GridControl({ value, options, disabled, onChange }: GridControlP
               <img
                 src={opt.preview}
                 alt={opt.label}
+                loading="lazy"
+                decoding="async"
                 className="w-full aspect-square rounded object-cover"
               />
             ) : (

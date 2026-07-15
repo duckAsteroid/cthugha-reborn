@@ -22,7 +22,7 @@ import io.github.duckasteroid.cthugha.params.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -53,6 +53,8 @@ public class RemoteServer {
     private Javalin app;
     private volatile Runnable onFirstAuth;
     private final AtomicBoolean firstAuthFired = new AtomicBoolean(false);
+    private final RandomImageSource imageSource = new RandomImageSource(Paths.get("images"));
+    private static final int THUMBNAIL_MAX_DIM = 240;
 
     public RemoteServer(Node paramRoot, AnimationSystem animation, TokenStore tokenStore,
                         RemoteEventBroadcaster broadcaster, RemoteConfig config,
@@ -95,20 +97,23 @@ public class RemoteServer {
                 ctx.status(404);
                 return;
             }
+            if (notModified(ctx, file)) return;
+            setCacheHeaders(ctx, file);
             ctx.contentType("image/png");
             ctx.result(Files.newInputStream(file));
         });
 
         app.get("/api/v1/images/preview/*", ctx -> {
             String name = ctx.path().substring("/api/v1/images/preview/".length());
-            RandomImageSource imageSource = new RandomImageSource(Paths.get("images"));
             Optional<Path> file = imageSource.findByDisplayName(name);
             if (file.isEmpty()) {
                 ctx.status(404);
                 return;
             }
+            if (notModified(ctx, file.get())) return;
+            setCacheHeaders(ctx, file.get());
             ctx.contentType("image/png");
-            ImageIO.write(imageSource.loadImage(file.get()), "png", ctx.outputStream());
+            ctx.result(imageSource.loadThumbnail(file.get(), THUMBNAIL_MAX_DIM));
         });
 
         app.get("/api/v1/params", ctx ->
@@ -293,6 +298,33 @@ public class RemoteServer {
             Runnable r = onFirstAuth;
             if (r != null) r.run();
         }
+    }
+
+    /**
+     * Sets Cache-Control/ETag headers so browsers can skip re-fetching preview images that
+     * haven't changed on disk (the remote UI's image/map grids otherwise re-request every
+     * thumbnail on each visit).
+     */
+    private void setCacheHeaders(Context ctx, Path file) throws IOException {
+        ctx.header("Cache-Control", "public, max-age=604800");
+        ctx.header("ETag", etagFor(file));
+    }
+
+    /** Returns true (and writes a 304 response) if the client's cached copy is still fresh. */
+    private boolean notModified(Context ctx, Path file) throws IOException {
+        String etag = etagFor(file);
+        String ifNoneMatch = ctx.header("If-None-Match");
+        if (etag.equals(ifNoneMatch)) {
+            ctx.header("Cache-Control", "public, max-age=604800");
+            ctx.header("ETag", etag);
+            ctx.status(304);
+            return true;
+        }
+        return false;
+    }
+
+    private String etagFor(Path file) throws IOException {
+        return "\"" + Files.getLastModifiedTime(file).toMillis() + "-" + Files.size(file) + "\"";
     }
 
     private String extractNodePath(Context ctx) {
