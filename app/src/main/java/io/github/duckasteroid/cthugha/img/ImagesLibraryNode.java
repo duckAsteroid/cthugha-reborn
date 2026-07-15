@@ -21,11 +21,13 @@ public class ImagesLibraryNode extends ParamNode {
 
         List<Path> files = flashPhase.imageFiles().stream().sorted().collect(Collectors.toList());
         List<String> names = files.stream().map(RandomImageSource::displayName).collect(Collectors.toList());
+        List<String> groups = files.stream().map(flashPhase::groupOf).collect(Collectors.toList());
         Random rng = new Random();
 
         EnumParameter<String> selector = new EnumParameter<>("Image", names);
         selector.withUiHint(UiHint.CONTROL_TYPE, UiHint.GRID);
         selector.withPreviewUrls(i -> "/api/v1/images/preview/" + names.get(i));
+        selector.withGroups(groups::get);
         selector.withNoPersist();
         selector.withDescription("Picks which image is flashed. Selecting one bakes it into the display immediately.");
         selector.addChangeListener(() -> flashPhase.requestFlash(files.get(selector.getValue().intValue())));

@@ -19,9 +19,21 @@ public class RandomImageSource {
   }
 
   public List<Path> imageFiles() throws IOException {
-    return Files.list(imageDir)
-      .filter(f -> f.toString().toUpperCase().endsWith(".PNG"))
-      .collect(Collectors.toList());
+    try (var stream = Files.walk(imageDir)) {
+      return stream
+        .filter(Files::isRegularFile)
+        .filter(f -> f.toString().toUpperCase().endsWith(".PNG"))
+        .collect(Collectors.toList());
+    }
+  }
+
+  /**
+   * The image's theme folder, i.e. the name of its parent directory relative to the image
+   * root, or {@code ""} if the image sits directly in the root with no theme folder.
+   */
+  public String groupOf(Path image) {
+    Path parent = imageDir.relativize(image).getParent();
+    return parent == null ? "" : parent.toString();
   }
 
   public BufferedImage loadImage(Path image) throws IOException {

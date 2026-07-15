@@ -3,6 +3,7 @@ export type NodeType = 'CONTAINER' | 'DOUBLE' | 'INTEGER' | 'LONG' | 'BOOLEAN' |
 export interface EnumOption {
   label: string;
   preview?: string;
+  group?: string;
 }
 
 export interface ContainerNode {

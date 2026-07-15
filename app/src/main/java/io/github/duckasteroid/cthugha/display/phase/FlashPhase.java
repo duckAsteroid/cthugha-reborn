@@ -81,6 +81,11 @@ public class FlashPhase implements RenderPhase {
         return imageSource.imageFiles();
     }
 
+    /** The theme folder an image belongs to, e.g. "cthugha-old-skool". */
+    public String groupOf(Path image) {
+        return imageSource.groupOf(image);
+    }
+
     /** Schedules a one-shot bake of the given image on the GL thread. */
     public void requestFlash(Path image) {
         renderActions.enqueue("flashImage", rc -> triggerImage(image));

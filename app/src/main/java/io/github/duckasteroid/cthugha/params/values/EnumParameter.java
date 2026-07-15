@@ -24,6 +24,7 @@ public class EnumParameter<T> extends ObjectParameter<T> {
 
   private final List<T> values;
   private Function<Integer, String> previewUrlProvider = null;
+  private Function<Integer, String> groupProvider = null;
 
   /**
    * @param description display name
@@ -64,6 +65,17 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   /** Returns the preview URL for option {@code index}, or {@code null} if none was set. */
   public String getPreviewUrl(int index) {
     return previewUrlProvider != null ? previewUrlProvider.apply(index) : null;
+  }
+
+  /** Attaches a group/tag (e.g. a theme folder name) to each option, for client-side filtering. */
+  public EnumParameter<T> withGroups(Function<Integer, String> provider) {
+    this.groupProvider = provider;
+    return this;
+  }
+
+  /** Returns the group/tag for option {@code index}, or {@code null} if none was set. */
+  public String getGroup(int index) {
+    return groupProvider != null ? groupProvider.apply(index) : null;
   }
 
   /** Returns the string labels for all options, in order. */

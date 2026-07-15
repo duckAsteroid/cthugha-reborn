@@ -68,6 +68,8 @@ public class ParamSerializer {
                     opt.put("label", labels.get(i));
                     String preview = ep.getPreviewUrl(i);
                     if (preview != null) opt.put("preview", preview);
+                    String group = ep.getGroup(i);
+                    if (group != null && !group.isBlank()) opt.put("group", group);
                     options.add(opt);
                 }
                 obj.set("options", options);
