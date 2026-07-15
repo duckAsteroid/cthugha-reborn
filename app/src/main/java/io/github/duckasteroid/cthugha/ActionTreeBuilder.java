@@ -203,7 +203,6 @@ public class ActionTreeBuilder {
         }));
         generalGroup.addChild(action("Toggle Fullscreen", "maximize-2", ctx ->
                 renderActions.enqueue("toggleFullscreen", rc -> callbacks.toggleFullscreen())));
-        generalGroup.addChild(action("Toggle Debug", "bug", ctx -> cthugha.toggleDebug()));
         generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
 
         // Each phase registers its own actions (Flash White, Toggle Quote Mode, Cycle Audio,
@@ -224,6 +223,7 @@ public class ActionTreeBuilder {
         cthugha.addChild(imagesGroup);
         cthugha.addChild(quotesGroup);
         cthugha.addChild(configsGroup);
+        cthugha.addChild(cthugha.triggers);
         cthugha.addChild(generalGroup);
     }
 

@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha;
 
 
+import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
 import io.github.duckasteroid.cthugha.animation.AnimationSystem;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.AudioSourceNode;
@@ -25,6 +26,7 @@ import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigStore;
 import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
 import io.github.duckasteroid.cthugha.tab.TabBuffer;
 import io.github.duckasteroid.cthugha.tab.TabStore;
+import io.github.duckasteroid.cthugha.trigger.TriggerSystem;
 import java.awt.Dimension;
 import java.io.Closeable;
 import java.io.IOException;
@@ -53,6 +55,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public SpectrumModel spectrum = new SpectrumModel();
 	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
 	public AnimationSystem animation = new AnimationSystem();
+	public TriggerSystem triggers = new TriggerSystem();
 	public AudioSourceNode audioSource = new AudioSourceNode();
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
 	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
@@ -63,6 +66,11 @@ public class JCthugha extends ParamNode implements Closeable {
 	public PaletteMap paletteMap;
 	public int bufferWidth;
 	public int bufferHeight;
+
+	/** Set by {@link io.github.duckasteroid.cthugha.display.phase.WavePhase} once its audio
+	 * pipeline is initialised; read by animation/trigger scripts via {@link
+	 * io.github.duckasteroid.cthugha.animation.ScriptHelpers#setContext}. */
+	public volatile BeatDetector beatDetector;
 
 	public MapFileReader reader;
 
@@ -103,6 +111,7 @@ public class JCthugha extends ParamNode implements Closeable {
 		try {
 			frameRate.ping();
 			animation.tick();
+			triggers.tick();
 		} catch (Throwable t) {
 			LOG.error("Processing main loop", t);
 		}
@@ -180,10 +189,6 @@ public class JCthugha extends ParamNode implements Closeable {
 		} catch (IOException ioe) {
 			LOG.error("Error loading palette", ioe);
 		}
-	}
-
-	public void toggleDebug() {
-		notify("debug toggled (no-op in OpenGL mode)");
 	}
 
 	public List<RenderPhase> createPhases() {

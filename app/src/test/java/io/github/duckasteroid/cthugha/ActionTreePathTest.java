@@ -101,7 +101,6 @@ class ActionTreePathTest {
             "Images/Random",
             "Images/Flash White",
             "Quotes/Random",
-            "General/Toggle Debug",
             "General/Toggle Notifications",
             "Quotes/Toggle Quote Mode",
             "General/Cycle Audio",
