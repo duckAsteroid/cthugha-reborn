@@ -68,6 +68,29 @@ export async function executeAction(path: string): Promise<void> {
   });
 }
 
+export async function createAnimation(path: string, script: string): Promise<LeafNode> {
+  return apiFetch<LeafNode>(`/api/v1/params/${path}/animation`, {
+    method: 'POST',
+    body: JSON.stringify({ script }),
+  });
+}
+
+export async function updateAnimation(
+  path: string,
+  patch: { script?: string; enabled?: boolean },
+): Promise<LeafNode> {
+  return apiFetch<LeafNode>(`/api/v1/params/${path}/animation`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteAnimation(path: string): Promise<LeafNode> {
+  return apiFetch<LeafNode>(`/api/v1/params/${path}/animation`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getInfo(): Promise<ServerInfo> {
   // /api/v1/info does not require auth
   const response = await fetch(`${BASE_URL}/api/v1/info`);

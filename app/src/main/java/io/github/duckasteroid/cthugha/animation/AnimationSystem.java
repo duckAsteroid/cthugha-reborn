@@ -6,21 +6,24 @@ import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Manages a collection of {@link AnimationBinding}s that drive param-model values from
  * user-supplied time expressions.
  *
- * <p>Wire bindings with {@link #addBinding} before calling {@link #init(Clock)}, then call
+ * <p>Bindings can be registered up front via {@link #addBinding} before {@link #init(Clock)} is
+ * called, or created later at runtime (e.g. from a remote HTTP request) — in that case the
+ * binding is compiled and ticking immediately since the clock is already known. Call
  * {@link #tick()} once per frame to push updated values into all active targets.</p>
  */
 public class AnimationSystem extends ParamNode {
 
     public final BooleanParameter enabled = new BooleanParameter("enabled", true);
 
-    private final List<AnimationBinding> bindings = new ArrayList<>();
+    private final CopyOnWriteArrayList<AnimationBinding> bindings = new CopyOnWriteArrayList<>();
+    private volatile Clock clock;
 
     public AnimationSystem() {
         super("Animation");
@@ -32,7 +35,10 @@ public class AnimationSystem extends ParamNode {
 
     /**
      * Registers a script-driven binding. The binding appears as a child of this node in the
-     * param tree, exposing its own {@code enabled} and {@code script} params.
+     * param tree, exposing its own {@code enabled} and {@code script} params. If the render
+     * clock is already known (i.e. this is called after {@link #init(Clock)}, as happens when a
+     * binding is created at runtime rather than at startup), the binding is initialised and its
+     * script compiled immediately.
      *
      * @param name          display name for this binding in the param tree
      * @param target        the parameter to animate
@@ -43,11 +49,27 @@ public class AnimationSystem extends ParamNode {
         AnimationBinding binding = new AnimationBinding(name, target, defaultScript);
         bindings.add(binding);
         addChild(binding);
+        if (clock != null) {
+            binding.init(clock);
+        }
         return binding;
+    }
+
+    /** Removes a binding, releasing control of its target and detaching it from the param tree. */
+    public void removeBinding(AnimationBinding binding) {
+        bindings.remove(binding);
+        removeChild(binding);
+        binding.release();
+    }
+
+    /** Returns the binding currently driving {@code target}, if any. */
+    public Optional<AnimationBinding> findBindingFor(AbstractValue target) {
+        return bindings.stream().filter(b -> b.getTarget() == target).findFirst();
     }
 
     /** Initialises all bindings with the render-core clock. Call once from {@code init()}. */
     public void init(Clock clock) {
+        this.clock = clock;
         bindings.forEach(b -> b.init(clock));
     }
 

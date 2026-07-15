@@ -9,6 +9,8 @@ import io.javalin.http.HttpResponseException;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.http.sse.SseClient;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import io.github.duckasteroid.cthugha.animation.AnimationBinding;
+import io.github.duckasteroid.cthugha.animation.AnimationSystem;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
@@ -40,6 +42,7 @@ public class RemoteServer {
     private static final String API_PARAMS_PREFIX = "/api/v1/params/";
 
     private final Node paramRoot;
+    private final AnimationSystem animation;
     private final TokenStore tokenStore;
     private final RemoteEventBroadcaster broadcaster;
     private final RemoteConfig config;
@@ -51,10 +54,11 @@ public class RemoteServer {
     private volatile Runnable onFirstAuth;
     private final AtomicBoolean firstAuthFired = new AtomicBoolean(false);
 
-    public RemoteServer(Node paramRoot, TokenStore tokenStore,
+    public RemoteServer(Node paramRoot, AnimationSystem animation, TokenStore tokenStore,
                         RemoteEventBroadcaster broadcaster, RemoteConfig config,
                         ActionContext actionContext) {
         this.paramRoot = paramRoot;
+        this.animation = animation;
         this.tokenStore = tokenStore;
         this.broadcaster = broadcaster;
         this.config = config;
@@ -121,7 +125,12 @@ public class RemoteServer {
         });
 
         app.patch("/api/v1/params/*", ctx -> {
-            String nodePath = extractNodePath(ctx);
+            String fullPath = extractNodePath(ctx);
+            if (fullPath.endsWith("/animation")) {
+                handlePatchAnimation(ctx, fullPath.substring(0, fullPath.length() - "/animation".length()));
+                return;
+            }
+            String nodePath = fullPath;
             Optional<Node> nodeOpt = findNode(nodePath);
             if (nodeOpt.isEmpty()) {
                 ctx.status(404).json(Map.of("error", "not_found"));
@@ -168,6 +177,11 @@ public class RemoteServer {
         app.post("/api/v1/params/*", ctx -> {
             String fullPath = extractNodePath(ctx);
 
+            if (fullPath.endsWith("/animation")) {
+                handleCreateAnimation(ctx, fullPath.substring(0, fullPath.length() - "/animation".length()));
+                return;
+            }
+
             if (fullPath.endsWith("/execute")) {
                 String nodePath = fullPath.substring(0, fullPath.length() - "/execute".length());
                 Optional<Node> nodeOpt = nodePath.isEmpty() ? Optional.of(paramRoot) : findNode(nodePath);
@@ -210,6 +224,15 @@ public class RemoteServer {
             } else {
                 ctx.json("{}");
             }
+        });
+
+        app.delete("/api/v1/params/*", ctx -> {
+            String fullPath = extractNodePath(ctx);
+            if (!fullPath.endsWith("/animation")) {
+                ctx.status(400).json(Map.of("error", "unknown_action"));
+                return;
+            }
+            handleDeleteAnimation(ctx, fullPath.substring(0, fullPath.length() - "/animation".length()));
         });
 
         app.sse("/api/v1/events", client -> {
@@ -283,5 +306,72 @@ public class RemoteServer {
     private Optional<Node> findNode(String nodePath) {
         if (nodePath.isEmpty()) return Optional.of(paramRoot);
         return paramRoot.getChild(nodePath.split("/"));
+    }
+
+    /** Resolves {@code nodePath} to an {@link AbstractValue}, writing an error response and returning empty on failure. */
+    private Optional<AbstractValue> resolveAnimatable(Context ctx, String nodePath) {
+        Optional<Node> nodeOpt = findNode(nodePath);
+        if (nodeOpt.isEmpty()) {
+            ctx.status(404).json(Map.of("error", "not_found"));
+            return Optional.empty();
+        }
+        Node node = nodeOpt.get();
+        if (!node.isRemoteAllowed()) {
+            ctx.status(403).json(Map.of("error", "not_allowed"));
+            return Optional.empty();
+        }
+        if (!(node instanceof AbstractValue value)) {
+            ctx.status(400).json(Map.of("error", "not_animatable"));
+            return Optional.empty();
+        }
+        return Optional.of(value);
+    }
+
+    private void handleCreateAnimation(Context ctx, String nodePath) throws Exception {
+        Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
+        if (targetOpt.isEmpty()) return;
+        AbstractValue target = targetOpt.get();
+        if (animation.findBindingFor(target).isPresent()) {
+            ctx.status(409).json(Map.of("error", "already_animated"));
+            return;
+        }
+        JsonNode body = mapper.readTree(ctx.body());
+        String script = body.has("script") ? body.get("script").asText() : "";
+        animation.addBinding(target.getFullPath().replace('/', '›'), target, script);
+        broadcaster.broadcastAll("treeChanged", "{}");
+        ctx.json(serializer.serialize(target).toString());
+    }
+
+    private void handlePatchAnimation(Context ctx, String nodePath) throws Exception {
+        Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
+        if (targetOpt.isEmpty()) return;
+        Optional<AnimationBinding> bindingOpt = animation.findBindingFor(targetOpt.get());
+        if (bindingOpt.isEmpty()) {
+            ctx.status(404).json(Map.of("error", "not_animated"));
+            return;
+        }
+        AnimationBinding binding = bindingOpt.get();
+        JsonNode body = mapper.readTree(ctx.body());
+        if (body.has("script")) {
+            binding.script.setValue(body.get("script").asText());
+        }
+        if (body.has("enabled")) {
+            binding.enabled.setValue(body.get("enabled").asBoolean() ? 1 : 0);
+        }
+        broadcaster.broadcastAll("treeChanged", "{}");
+        ctx.json(serializer.serialize(targetOpt.get()).toString());
+    }
+
+    private void handleDeleteAnimation(Context ctx, String nodePath) {
+        Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
+        if (targetOpt.isEmpty()) return;
+        Optional<AnimationBinding> bindingOpt = animation.findBindingFor(targetOpt.get());
+        if (bindingOpt.isEmpty()) {
+            ctx.status(404).json(Map.of("error", "not_animated"));
+            return;
+        }
+        animation.removeBinding(bindingOpt.get());
+        broadcaster.broadcastAll("treeChanged", "{}");
+        ctx.json(serializer.serialize(targetOpt.get()).toString());
     }
 }

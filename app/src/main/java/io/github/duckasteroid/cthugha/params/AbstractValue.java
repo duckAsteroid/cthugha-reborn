@@ -32,6 +32,7 @@ public abstract class AbstractValue extends ParamNode {
 
   private final AtomicBoolean controlled = new AtomicBoolean(false);
   private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
+  private volatile AnimationBindingView animationBinding;
 
   /**
    * @param description display name and description of this parameter
@@ -88,6 +89,20 @@ public abstract class AbstractValue extends ParamNode {
     if (this.controlled.compareAndSet(!controlled, controlled)) {
       fireChangeListeners();
     }
+  }
+
+  /**
+   * Returns the animation currently bound to this parameter, or {@code null} if none. Set by
+   * the animation system when it attaches or detaches a binding; consulted by the remote
+   * serializer to embed live script/enabled/error state on this leaf's JSON.
+   */
+  public AnimationBindingView getAnimationBinding() {
+    return animationBinding;
+  }
+
+  /** Called by the animation system when it binds or unbinds this parameter. */
+  public void setAnimationBinding(AnimationBindingView animationBinding) {
+    this.animationBinding = animationBinding;
   }
 
   /** Registers a listener to be called whenever this parameter's value or controlled state changes. */

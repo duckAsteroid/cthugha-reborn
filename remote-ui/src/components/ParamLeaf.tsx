@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, Plus } from 'lucide-react';
 import type { LeafNode } from '../types';
-import { patchParam } from '../api';
+import { patchParam, createAnimation } from '../api';
 import { SliderControl } from './controls/SliderControl';
 import { KnobControl } from './controls/KnobControl';
 import { ToggleControl } from './controls/ToggleControl';
@@ -11,6 +11,7 @@ import { GridControl } from './controls/GridControl';
 import { SearchListControl } from './controls/SearchListControl';
 import { NodeIcon } from './NodeIcon';
 import { InfoButton } from './InfoButton';
+import { AnimationEditor } from './AnimationEditor';
 
 interface ParamLeafProps {
   path: string;
@@ -29,6 +30,14 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
   const handleChange = async (newValue: number) => {
     try {
       await patchParam(path, newValue);
+    } catch {
+      // error is handled by api.ts (session-expired event)
+    }
+  };
+
+  const addAnimation = async () => {
+    try {
+      await createAnimation(path, 'sine(0.05)');
     } catch {
       // error is handled by api.ts (session-expired event)
     }
@@ -126,11 +135,21 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
         {node.description && (
           <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
         )}
+        {!node.animation && (
+          <button
+            onClick={addAnimation}
+            aria-label="Add animation"
+            className="ml-auto p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
       {showInfo && node.description && (
         <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
       )}
       {renderControl()}
+      {node.animation && <AnimationEditor path={path} animation={node.animation} />}
     </div>
   );
 }

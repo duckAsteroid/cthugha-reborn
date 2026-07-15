@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.AnimationBindingView;
 import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.StringValue;
@@ -49,6 +50,16 @@ public class ParamSerializer {
             obj.put("min", value.getMin().doubleValue());
             obj.put("max", value.getMax().doubleValue());
             obj.put("controlled", value.isControlled());
+            AnimationBindingView anim = value.getAnimationBinding();
+            if (anim != null) {
+                ObjectNode animNode = mapper.createObjectNode();
+                animNode.put("script", anim.getScript());
+                animNode.put("enabled", anim.isEnabled());
+                if (anim.getCompileError() != null) {
+                    animNode.put("compileError", anim.getCompileError());
+                }
+                obj.set("animation", animNode);
+            }
             if (value instanceof EnumParameter<?> ep) {
                 ArrayNode options = mapper.createArrayNode();
                 List<String> labels = ep.getOptions();

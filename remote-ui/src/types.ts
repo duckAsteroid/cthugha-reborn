@@ -13,6 +13,12 @@ export interface ContainerNode {
   description?: string;
 }
 
+export interface AnimationInfo {
+  script: string;
+  enabled: boolean;
+  compileError?: string;
+}
+
 export interface LeafNode {
   name: string;
   type: Exclude<NodeType, 'CONTAINER' | 'ACTION'>;
@@ -23,6 +29,7 @@ export interface LeafNode {
   uiHints?: Record<string, string>;
   options?: EnumOption[];
   description?: string;
+  animation?: AnimationInfo;
 }
 
 export interface ActionNode {
