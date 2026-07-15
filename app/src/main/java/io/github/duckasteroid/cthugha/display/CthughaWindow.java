@@ -292,14 +292,6 @@ public class CthughaWindow extends GLWindow {
         treeBuilder.build(phases);
         generalGroup = treeBuilder.getGeneralGroup();
 
-        // Test action: exercises BackgroundWorkQueue with a 2-second sleep
-        generalGroup.addChild(new AbstractAction("Test Work", ctx ->
-            workQueue.submit("test", "Testing…", wctx -> {
-                try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                wctx.enqueueRenderAction(rc -> cthugha.notify("Hello world"));
-            })
-        ));
-
         // Start remote server and add remote node to the param tree
         if (remoteConfig != null && remoteConfig.enabled) {
             tokenStore = new TokenStore();
