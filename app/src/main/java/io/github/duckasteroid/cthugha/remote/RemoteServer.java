@@ -262,7 +262,7 @@ public class RemoteServer {
 
         broadcaster.startFlushing(config.animationBroadcastIntervalMs);
         app.start(config.port);
-        LOG.info("Remote server started on port {}", config.port);
+        LOG.info("Remote server started on port {}", app.port());
     }
 
     public void stop() {
@@ -270,6 +270,11 @@ public class RemoteServer {
         if (app != null) {
             app.stop();
         }
+    }
+
+    /** The port actually bound by the server (resolves {@code config.port == 0} to the ephemeral port picked by the OS). */
+    public int port() {
+        return app.port();
     }
 
     /** Resets the first-auth latch so the next QR scan triggers the onFirstAuth callback again. */
