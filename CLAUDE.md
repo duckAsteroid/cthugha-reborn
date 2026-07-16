@@ -80,7 +80,11 @@ Five implementations live in `display/phase/`:
 
 ### Animation System
 
-`AnimationSystem` (`animation/`) extends `ParamNode` and manages `AnimationBinding` entries that map animated curves to `DoubleParameter` values in the tree. Animations advance each CPU tick via `animation.tick()`.
+`AnimationSystem` (`animation/`) extends `ParamNode` and manages `AnimationBinding` entries, each pairing a `ScriptParameter` with a target `AbstractValue` in the tree. A binding's script is a Janino-compiled expression (e.g. `"sine(0.05)"`) evaluated once per CPU tick against elapsed time `t`, clamped to `[0,1]`, and pushed into the target via `AbstractValue#setNormalisedValue`. `ScriptHelpers` is the shared base for compiled scripts, providing `t`, wave helpers (`sine`/`cosine`/`saw`/`tri`/`pulse`/`phase`), beat-strength helpers (`bass()`/`snare()`/`hihat()`/`beat(name)`, backed by render-core's `BeatDetector`), and random helpers (`random()`/`random(min,max)`). `AnimScript` (numeric, `compute(): double`) and `ConditionScript` (boolean, `test(): boolean`, used by the trigger system below) both extend it. `AnimationSystem.tick()` runs each CPU tick via `animation.tick()`. On compile failure a binding keeps running its last-good function; only the reported error changes — the SPA surfaces this without interrupting the animation.
+
+### Trigger System
+
+`TriggerSystem` (`trigger/`) extends `ParamNode` (mounted as the "Triggers" tab) and manages `ActionTrigger` entries: a boolean `ConditionParameter` script (e.g. `"bass() > 0.7"`, compiled via `ConditionScript`) paired with the full path of an existing `Action` elsewhere in the tree. Each CPU tick, `TriggerSystem.tick()` evaluates every trigger's condition; on a false→true transition (no more than once per `cooldown` seconds) it resolves the action's path and calls `execute()` on it, or sets the trigger's `status` field to an explanatory message if the path no longer resolves. New triggers are created via `New Condition`/`New Action`/`New Cooldown` form fields and an `Add Trigger` action (the same form-plus-create-action pattern as `ScreenConfigLibraryNode`), so trigger CRUD needs no dedicated REST endpoints — it rides the existing generic PATCH-leaf and POST-`/execute` routes. The `action` field (and the `New Action` form field) use `UiHint.ACTION_PICKER`, rendered by the SPA as a searchable list of every `Action` currently in the tree rather than a free-text path.
 
 ### Audio System
 

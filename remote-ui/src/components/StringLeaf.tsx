@@ -4,6 +4,7 @@ import type { StringNode } from '../types';
 import { patchStringParam } from '../api';
 import { InfoButton } from './InfoButton';
 import { SCRIPT_HELP } from '../scriptHelp';
+import { ActionPickerControl } from './controls/ActionPickerControl';
 
 interface StringLeafProps {
   path: string;
@@ -33,6 +34,23 @@ export function StringLeaf({ path, node }: StringLeafProps) {
     setLocalValue(committedValue);
     setCompileError(null);
   };
+
+  if (node.uiHints?.['control-type'] === 'ACTION_PICKER') {
+    return (
+      <div className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-neutral-900/50">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
+          {node.description && (
+            <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+          )}
+        </div>
+        {showInfo && node.description && (
+          <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
+        )}
+        <ActionPickerControl path={path} value={node.value} />
+      </div>
+    );
+  }
 
   if (node.uiHints?.['control-type'] === 'CODE_EDITOR') {
     return (

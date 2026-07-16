@@ -86,5 +86,12 @@ public final class UiHint {
      */
     public static final String XY_PAD = "XY_PAD";
 
+    /**
+     * Value for {@link #CONTROL_TYPE} on a {@code StringNode}: renders a searchable picker over
+     * every {@code Action} node currently in the tree, instead of a free-text field. Used to
+     * reference an existing action (e.g. by an {@code ActionTrigger}) without hand-typing a path.
+     */
+    public static final String ACTION_PICKER = "ACTION_PICKER";
+
     private UiHint() {}
 }

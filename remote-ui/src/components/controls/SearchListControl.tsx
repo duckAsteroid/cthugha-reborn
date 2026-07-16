@@ -36,7 +36,7 @@ export function SearchListControl({ value, options, disabled, onChange }: Search
           <button
             key={idx}
             onClick={() => onChange(idx)}
-            className={`text-left px-2 py-1.5 rounded-lg border text-sm truncate transition-colors ${
+            className={`shrink-0 text-left px-2 py-1.5 rounded-lg border text-sm truncate transition-colors ${
               idx === value
                 ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
                 : 'border-transparent bg-neutral-900/50 text-neutral-200 hover:bg-neutral-800'

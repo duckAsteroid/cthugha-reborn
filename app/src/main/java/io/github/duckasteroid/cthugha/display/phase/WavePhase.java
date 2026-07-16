@@ -52,6 +52,7 @@ public class WavePhase implements RenderPhase {
 
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
+        cthugha.beatDetector = audioPipeline.getBeatDetector();
 
         cthugha.audioSource.setOnSourceSelected(name -> {
             if (audioPipeline.selectSource(name)) {

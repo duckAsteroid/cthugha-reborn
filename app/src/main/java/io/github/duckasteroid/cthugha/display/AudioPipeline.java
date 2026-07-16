@@ -5,6 +5,7 @@ import com.asteroid.duck.opengl.util.audio.AudioDataSource;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
+import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 
@@ -16,12 +17,15 @@ public class AudioPipeline {
     private LineAcquirer lineAcquirer;
     private PboAudioSink pboSink;
     private FrequencyProcessor freqProc;
+    private BeatDetector beatDetector;
     private AudioReader audioReader;
     private Thread audioThread;
 
     public void init(RenderContext ctx) throws IOException {
         pboSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
         freqProc = new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
+        beatDetector = new BeatDetector(freqProc);
+        freqProc.addSink(beatDetector);
 
         lineAcquirer = new LineAcquirer();
         lineAcquirer.init(ctx, LineAcquirer.IDEAL);
@@ -51,6 +55,8 @@ public class AudioPipeline {
     public PboAudioSink getPboSink() { return pboSink; }
 
     public FrequencyProcessor getFreqProc() { return freqProc; }
+
+    public BeatDetector getBeatDetector() { return beatDetector; }
 
     public AudioDataSource cycleSource() {
         lineAcquirer.next();

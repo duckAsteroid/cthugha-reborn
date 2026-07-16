@@ -19,6 +19,7 @@ import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import io.github.duckasteroid.cthugha.ActionTreeBuilder;
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.animation.ScriptHelpers;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.phase.QrPhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
@@ -301,6 +302,8 @@ public class CthughaWindow extends GLWindow {
 
             cthugha.translateSource.setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
+            cthugha.triggers.setOnTreeChanged(
+                    () -> broadcaster.broadcastAll("treeChanged", "{}"));
 
             ContainerNode remoteNode = new ContainerNode("Remote");
             remoteNode.withUiHint(UiHint.ICON, "wifi");
@@ -404,7 +407,9 @@ public class CthughaWindow extends GLWindow {
             p.init(this);
         }
 
+        ScriptHelpers.setContext(cthugha.beatDetector, cthugha.rng);
         cthugha.animation.init(getClock());
+        cthugha.triggers.init(getClock(), cthugha, actionContext);
 
         if (startFullscreen) {
             toggleFullscreen();

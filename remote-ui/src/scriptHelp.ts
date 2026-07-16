@@ -18,6 +18,22 @@ export const SCRIPT_HELP: { section: string; items: { name: string; desc: string
     ],
   },
   {
+    section: 'Beat detection — return [0, 1]',
+    items: [
+      { name: 'bass()',        desc: 'kick drum / sub-bass beat strength' },
+      { name: 'snare()',       desc: 'snare / clap / attack beat strength' },
+      { name: 'hihat()',       desc: 'hi-hat / cymbal beat strength' },
+      { name: 'beat(name)',    desc: 'strength for any named band; 0 if unknown' },
+    ],
+  },
+  {
+    section: 'Random',
+    items: [
+      { name: 'random()',        desc: 'uniform random value in [0, 1)' },
+      { name: 'random(lo, hi)',  desc: 'uniform random value in [lo, hi)' },
+    ],
+  },
+  {
     section: 'Also in scope',
     items: [
       { name: 'Math.*', desc: 'sin, cos, abs, min, max, pow, sqrt…' },
