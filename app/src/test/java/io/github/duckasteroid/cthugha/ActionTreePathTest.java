@@ -5,7 +5,6 @@ import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
 import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
-import io.github.duckasteroid.cthugha.display.phase.WavePhase;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.map.PaletteActionContext;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
@@ -79,7 +78,7 @@ class ActionTreePathTest {
         // Phase objects register their own actions (Flash White, etc.)
         // No GL init() needed — registerActions() is pure param-tree wiring.
         List<RenderPhase> phases = List.of(
-                new WavePhase(app),
+                app.wavePhase,
                 app.flashPhase,
                 app.quotePhase,
                 new NotifPhase(app));
@@ -103,7 +102,7 @@ class ActionTreePathTest {
             "Quotes/Random",
             "General/Toggle Notifications",
             "Quotes/Toggle Quote Mode",
-            "General/Cycle Audio",
+            "Audio/Cycle Audio",
             // Blur
             "Render/Blur/Fade -",
             "Render/Blur/Fade +",

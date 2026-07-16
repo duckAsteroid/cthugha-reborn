@@ -206,13 +206,14 @@ public class ActionTreeBuilder {
         generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
 
         // Each phase registers its own actions (Flash White, Toggle Quote Mode, Cycle Audio,
-        // etc.); the Flash/Quote phases register into their own tabs instead of General.
+        // etc.); the Flash/Quote/Wave phases register into their own tabs instead of General.
         for (RenderPhase phase : phases) {
-            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase) continue;
+            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase || phase == cthugha.wavePhase) continue;
             phase.registerActions(generalGroup, renderActions);
         }
         cthugha.flashPhase.registerActions(imagesGroup, renderActions);
         cthugha.quotePhase.registerActions(quotesGroup, renderActions);
+        cthugha.wavePhase.registerActions(cthugha.audioSource, renderActions);
 
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);

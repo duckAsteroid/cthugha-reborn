@@ -62,6 +62,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public ScreenConfigStore screenConfigStore = new ScreenConfigStore(java.nio.file.Paths.get("configs"));
 	public FlashPhase flashPhase = new FlashPhase();
 	public final QuotePhase quotePhase = new QuotePhase(this);
+	public final WavePhase wavePhase = new WavePhase(this);
 
 	public PaletteMap paletteMap;
 	public int bufferWidth;
@@ -193,7 +194,7 @@ public class JCthugha extends ParamNode implements Closeable {
 
 	public List<RenderPhase> createPhases() {
 		List<RenderPhase> list = new ArrayList<>();
-		list.add(new WavePhase(this));
+		list.add(wavePhase);
 		list.add(flashPhase);
 		list.add(quotePhase);
 		list.add(new NotifPhase(this));
