@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as RadixTabs from '@radix-ui/react-tabs';
+import { X } from 'lucide-react';
 import type { ActionNode, ContainerNode, LeafNode, StringNode, ParamNode } from '../types';
 import { ParamContainer } from './ParamContainer';
 import { ParamLeaf } from './ParamLeaf';
@@ -10,7 +11,13 @@ import { ActionToolbar } from './ActionToolbar';
 import type { ToolbarEntry } from './ActionToolbar';
 import { useSSEState } from '../SSEContext';
 import type { ParamState } from '../SSEContext';
+import { useSettings } from '../SettingsContext';
 import { isRenderable, flattenSoleContainer } from '../nodeUtils';
+
+/** Actions pulled out of the General toolbar into the Settings panel instead. */
+const SETTINGS_ACTION_NAMES = new Set(['Toggle Fullscreen', 'Toggle Notifications']);
+/** Tabs pulled out of the main tab row into the Settings panel instead. */
+const SETTINGS_TAB_NAMES = new Set(['Audio']);
 
 interface TabsContainerProps {
   node: ContainerNode;
@@ -54,9 +61,11 @@ function renderChild(child: ParamNode, basePath: string, sseState: Map<string, P
 
 export function TabsContainer({ node, path }: TabsContainerProps) {
   const visibleChildren = node.children.filter(isRenderable);
-  const tabs = visibleChildren.filter(
+  const allTabs = visibleChildren.filter(
     c => c.type === 'CONTAINER' && c.uiHints?.['control-type'] !== 'EXPANDER',
   ) as ContainerNode[];
+  const tabs = allTabs.filter(t => !SETTINGS_TAB_NAMES.has(t.name));
+  const settingsTabs = allTabs.filter(t => SETTINGS_TAB_NAMES.has(t.name));
   const expanders = visibleChildren.filter(
     c => c.type === 'CONTAINER' && c.uiHints?.['control-type'] === 'EXPANDER',
   ) as ContainerNode[];
@@ -65,6 +74,7 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
 
   // Live state comes from the single app-wide SSE connection (see SSEContext).
   const sseState = useSSEState();
+  const { open: settingsOpen, closeSettings } = useSettings();
 
   // Expander containers (e.g. "General") hold a mix of top-level actions and sub-containers.
   // Actions are pulled out and rendered as an icon toolbar above the tabs; anything else
@@ -77,8 +87,17 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
     const remainingChildren = exp.children.filter(c => c.type !== 'ACTION');
     return { expPath, toolbarActions, remainingNode: { ...exp, children: remainingChildren } };
   });
-  const toolbarActions = expanderData.flatMap(e => e.toolbarActions);
+  const allToolbarActions = expanderData.flatMap(e => e.toolbarActions);
+  const toolbarActions = allToolbarActions.filter(a => !SETTINGS_ACTION_NAMES.has(a.node.name));
+  const settingsActions = allToolbarActions.filter(a => SETTINGS_ACTION_NAMES.has(a.node.name));
   const remainingExpanders = expanderData.filter(e => isRenderable(e.remainingNode));
+
+  const renderTabContent = (tab: ContainerNode) => {
+    const tabPath = path ? `${path}/${tab.name}` : tab.name;
+    const visibleTabChildren = tab.children.filter(isRenderable);
+    const { children: tabChildren, path: contentPath } = flattenSoleContainer(visibleTabChildren, tabPath);
+    return tabChildren.map(child => renderChild(child, contentPath, sseState, tab.children));
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -107,21 +126,53 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
           })}
         </RadixTabs.List>
 
-        {tabs.map(tab => {
-          const tabPath = path ? `${path}/${tab.name}` : tab.name;
-          const visibleTabChildren = tab.children.filter(isRenderable);
-          const { children: tabChildren, path: contentPath } = flattenSoleContainer(visibleTabChildren, tabPath);
-          return (
-            <RadixTabs.Content key={tab.name} value={tab.name} className="space-y-1 pt-1">
-              {tabChildren.map(child => renderChild(child, contentPath, sseState, tab.children))}
-            </RadixTabs.Content>
-          );
-        })}
+        {tabs.map(tab => (
+          <RadixTabs.Content key={tab.name} value={tab.name} className="space-y-1 pt-1">
+            {renderTabContent(tab)}
+          </RadixTabs.Content>
+        ))}
       </RadixTabs.Root>
 
       {remainingExpanders.map(({ expPath, remainingNode }) => (
         <ParamContainer key={remainingNode.name} node={remainingNode} path={expPath} />
       ))}
+
+      {settingsOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center"
+          onClick={closeSettings}
+        >
+          <div
+            className="w-full sm:max-w-md sm:mx-6 bg-neutral-900 border border-neutral-700 rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 sticky top-0 bg-neutral-900">
+              <h2 className="text-base font-semibold text-neutral-200">Settings</h2>
+              <button
+                onClick={closeSettings}
+                aria-label="Close settings"
+                className="p-1 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-3 space-y-3">
+              {settingsTabs.map(tab => (
+                <div key={tab.name} className="space-y-1">
+                  {renderTabContent(tab)}
+                </div>
+              ))}
+              {settingsActions.length > 0 && (
+                <div className="space-y-1 pt-2 border-t border-neutral-800">
+                  {settingsActions.map(({ path: actionPath, node: actionNode }) => (
+                    <ActionButton key={actionPath} path={actionPath} node={actionNode} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
