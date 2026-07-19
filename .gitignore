@@ -6,6 +6,7 @@ build/
 /remote-ui/node_modules/
 /remote-ui/dist/
 /app/src/dist/logs/
+/app/src/dist/*.log
 /app/src/dist/*.mp4
 /app/src/dist/screenshot-*.png
 /app/logs/*.log
