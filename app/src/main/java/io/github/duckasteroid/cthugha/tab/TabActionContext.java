@@ -22,6 +22,13 @@ public interface TabActionContext extends ActionContext {
     /** The render resolution (determines {@code .tab} filename on save/load). */
     Dimension resolution();
 
-    /** Replaces the active translation buffer with {@code buf} (queued for next frame). */
+    /** Replaces the active translation buffer with {@code buf} on the CPU side. */
     void loadTabBuffer(TabBuffer buf);
+
+    /**
+     * Queues a re-upload of the current translation buffer (see {@link #loadTabBuffer}) to the
+     * GPU on the render thread. Must be called after {@link #loadTabBuffer} for the change to
+     * become visible on screen.
+     */
+    void rebuildTranslateMap();
 }

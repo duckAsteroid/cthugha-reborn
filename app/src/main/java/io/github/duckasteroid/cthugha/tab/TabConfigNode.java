@@ -34,6 +34,7 @@ public class TabConfigNode extends ParamNode {
                     tctx.registry().endBatch();
                     tctx.registry().selectBySimpleName(generator.getClass().getSimpleName());
                     tctx.loadTabBuffer(buf);
+                    tctx.rebuildTranslateMap();
                     tctx.notify("Loaded: " + config.name);
                 } catch (IOException e) {
                     tctx.registry().endBatch();

@@ -238,7 +238,8 @@ public class CthughaWindow extends GLWindow {
         }
 
         cthugha.init(new Dimension(w, h), getRandom());
-        actionContext = new CthughaActionContext(cthugha, getRandom());
+        actionContext = new CthughaActionContext(cthugha, getRandom(), renderActions,
+                this::rebuildTranslateMap);
 
         // Create phase list from JCthugha factory
         phases = new ArrayList<>(cthugha.createPhases());
