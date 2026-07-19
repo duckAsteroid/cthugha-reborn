@@ -94,4 +94,18 @@ public class Config {
   public <T> T getConfigAs(String sect, String key, String defaultValue, Function<String, T> converter) {
     return converter.apply(getConfig(sect, key, defaultValue));
   }
+
+  /**
+   * Sets a value and persists the whole ini file back to disk immediately. No-ops (with a
+   * warning) if this config wasn't loaded from a file, e.g. the in-memory fallback used when
+   * no ini file is found at startup.
+   */
+  public void setConfig(String section, String key, String value) {
+    iniFile.put(section, key, value);
+    try {
+      iniFile.store();
+    } catch (IOException | IllegalStateException e) {
+      LOG.warn("Unable to persist config file", e);
+    }
+  }
 }

@@ -8,11 +8,17 @@ import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
+import io.github.duckasteroid.cthugha.config.Config;
 
 import java.io.IOException;
 import java.util.List;
 
 public class AudioPipeline {
+
+    public static final String CONFIG_SECTION = "audio";
+    public static final String PREFERRED_DEVICE_KEY = "preferred_device";
+
+    private static final Config CFG = Config.singleton();
 
     private LineAcquirer lineAcquirer;
     private PboAudioSink pboSink;
@@ -29,7 +35,9 @@ public class AudioPipeline {
 
         lineAcquirer = new LineAcquirer();
         lineAcquirer.init(ctx, LineAcquirer.IDEAL);
-        selectPreferredSource("pipewire");
+        if (!selectExact(CFG.getConfig(CONFIG_SECTION, PREFERRED_DEVICE_KEY, ""))) {
+            selectPreferredSource("pipewire");
+        }
 
         audioReader = new AudioReader(List.of(pboSink, freqProc));
         audioThread = Thread.ofVirtual().start(audioReader);
@@ -76,16 +84,21 @@ public class AudioPipeline {
      * @return {@code true} if a matching source was found and selected
      */
     public boolean selectSource(String name) {
+        if (!selectExact(name)) return false;
+        audioReader.setLine(lineAcquirer.getSelectedSource());
+        return true;
+    }
+
+    /** Selects the source with this exact name, cycling through every source at most once. */
+    private boolean selectExact(String name) {
+        if (name == null || name.isBlank()) return false;
         AudioDataSource first = lineAcquirer.getSelectedSource();
         if (first.getName().equals(name)) return true;
         AudioDataSource s;
         do {
             lineAcquirer.next();
             s = lineAcquirer.getSelectedSource();
-            if (s.getName().equals(name)) {
-                audioReader.setLine(s);
-                return true;
-            }
+            if (s.getName().equals(name)) return true;
         } while (s != first);
         return false;
     }

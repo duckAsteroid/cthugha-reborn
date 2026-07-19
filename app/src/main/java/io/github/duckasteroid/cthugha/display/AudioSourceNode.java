@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.display;
 
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
@@ -58,8 +59,15 @@ public class AudioSourceNode extends ParamNode {
         random.withUiHint(UiHint.ICON, "shuffle");
         random.withDescription("Switches to a random audio capture device from the list.");
 
+        AbstractAction saveDefault = new AbstractAction("Save as Default", ctx ->
+            Config.singleton().setConfig(AudioPipeline.CONFIG_SECTION, AudioPipeline.PREFERRED_DEVICE_KEY,
+                selector.getEnumeration()));
+        saveDefault.withUiHint(UiHint.ICON, "save");
+        saveDefault.withDescription("Remembers the current device as the one Cthugha selects on its next startup.");
+
         addChild(selector);
         addChild(random);
+        addChild(saveDefault);
     }
 
     /** Registers the callback invoked when the user picks a different source by name. */
