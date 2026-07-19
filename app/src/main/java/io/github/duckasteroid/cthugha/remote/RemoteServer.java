@@ -357,7 +357,7 @@ public class RemoteServer {
             ctx.status(403).json(Map.of("error", "not_allowed"));
             return Optional.empty();
         }
-        if (!(node instanceof AbstractValue value)) {
+        if (!(node instanceof AbstractValue value) || !value.isAnimatable()) {
             ctx.status(400).json(Map.of("error", "not_animatable"));
             return Optional.empty();
         }

@@ -30,6 +30,7 @@ public class ImagesLibraryNode extends ParamNode {
         selector.withGroups(groups::get);
         selector.withNoPersist();
         selector.withDescription("Picks which image is flashed. Selecting one bakes it into the display immediately.");
+        selector.withNoAnimate();
         selector.addChangeListener(() -> flashPhase.requestFlash(files.get(selector.getValue().intValue())));
 
         AbstractAction random = new AbstractAction("Random", ctx -> selector.setValue(rng.nextInt(files.size())));

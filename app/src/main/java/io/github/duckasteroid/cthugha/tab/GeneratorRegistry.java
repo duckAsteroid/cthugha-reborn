@@ -93,6 +93,7 @@ public class GeneratorRegistry extends ParamNode {
         generatorSelector.withDescription("Selects which translation-table generator (Spiral, "
             + "Hurricane, Smoke, etc.) computes the pixel displacement map. Switching swaps in "
             + "that generator's own parameters and regenerates the map.");
+        generatorSelector.withNoAnimate();
 
         selected = generators.get(0);
 

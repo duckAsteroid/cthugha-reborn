@@ -33,6 +33,7 @@ public abstract class AbstractValue extends ParamNode {
   private final AtomicBoolean controlled = new AtomicBoolean(false);
   private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
   private volatile AnimationBindingView animationBinding;
+  private boolean animatable = true;
 
   /**
    * @param description display name and description of this parameter
@@ -103,6 +104,28 @@ public abstract class AbstractValue extends ParamNode {
   /** Called by the animation system when it binds or unbinds this parameter. */
   public void setAnimationBinding(AnimationBindingView animationBinding) {
     this.animationBinding = animationBinding;
+  }
+
+  /**
+   * Excludes this parameter from the animation system and returns {@code this} for fluent
+   * construction. Set on parameters where a continuous driven script makes no sense — typically
+   * "picker" enums whose change listener fires an immediate, disruptive side effect (loading a
+   * file, switching the live audio device, regenerating an expensive buffer) rather than just
+   * updating a rendered value.
+   */
+  public AbstractValue withNoAnimate() {
+    this.animatable = false;
+    return this;
+  }
+
+  /**
+   * Returns {@code true} if this parameter may be bound to an {@link
+   * io.github.duckasteroid.cthugha.animation.AnimationSystem} script. Defaults to {@code true};
+   * the remote server rejects animation-create/update requests targeting a non-animatable
+   * parameter with 400, and the remote UI hides the "add animation" control for it.
+   */
+  public boolean isAnimatable() {
+    return animatable;
   }
 
   /** Registers a listener to be called whenever this parameter's value or controlled state changes. */

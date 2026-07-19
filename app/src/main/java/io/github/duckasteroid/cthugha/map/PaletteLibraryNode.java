@@ -30,6 +30,7 @@ public class PaletteLibraryNode extends ParamNode {
         selector.withPreviewUrls(i -> "/api/v1/maps/preview/" + names.get(i));
         selector.withDescription("Selects which palette (.MAP file) is currently active. "
             + "Changing it immediately recolors the display via the palette LUT.");
+        selector.withNoAnimate();
 
         // Sync the initial selection to whatever palette is already active
         PaletteMap current = ctx.currentPalette();

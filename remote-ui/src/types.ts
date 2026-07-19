@@ -31,6 +31,8 @@ export interface LeafNode {
   options?: EnumOption[];
   description?: string;
   animation?: AnimationInfo;
+  /** false when the server excludes this param from animation (e.g. a disruptive "picker" enum). Absent means true. */
+  animatable?: boolean;
 }
 
 export interface ActionNode {

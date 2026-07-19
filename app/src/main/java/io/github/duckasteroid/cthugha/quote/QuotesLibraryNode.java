@@ -24,6 +24,7 @@ public class QuotesLibraryNode extends ParamNode {
         selector.withUiHint(UiHint.CONTROL_TYPE, UiHint.LIST);
         selector.withNoPersist();
         selector.withDescription("Picks which quote is currently shown. Selecting one displays it immediately.");
+        selector.withNoAnimate();
         selector.addChangeListener(() -> cthugha.showQuote(quotes.get(selector.getValue().intValue())));
 
         AbstractAction random = new AbstractAction("Random", ctx -> selector.setValue(rng.nextInt(quotes.size())));

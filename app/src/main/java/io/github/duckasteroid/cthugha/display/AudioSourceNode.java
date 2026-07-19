@@ -46,6 +46,7 @@ public class AudioSourceNode extends ParamNode {
         selector = new EnumParameter<>("Source", names);
         selector.withDescription("Which Java Sound capture device is currently active. "
             + "Changing it switches live capture to that device.");
+        selector.withNoAnimate();
         // Environment-specific (depends on what hardware is plugged into this machine), not
         // part of the visual configuration, so it's excluded from screen-config snapshots.
         selector.withNoPersist();

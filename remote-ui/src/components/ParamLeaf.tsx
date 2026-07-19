@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Lock, Plus } from 'lucide-react';
+import { Fragment, useState } from 'react';
+import { HelpCircle, Lock, Plus } from 'lucide-react';
 import type { LeafNode } from '../types';
 import { patchParam, createAnimation } from '../api';
+import { SCRIPT_HELP } from '../scriptHelp';
 import { SliderControl } from './controls/SliderControl';
 import { KnobControl } from './controls/KnobControl';
 import { ToggleControl } from './controls/ToggleControl';
@@ -27,6 +28,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
   const iconName = node.uiHints?.['icon'];
   const [showInfo, setShowInfo] = useState(false);
   const [draftScript, setDraftScript] = useState<string | null>(null);
+  const [showDraftHelp, setShowDraftHelp] = useState(false);
 
   const handleChange = async (newValue: number) => {
     try {
@@ -141,7 +143,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
         {node.description && (
           <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
         )}
-        {!node.animation && draftScript === null && (
+        {node.animatable !== false && !node.animation && draftScript === null && (
           <button
             onClick={startAnimation}
             aria-label="Add animation"
@@ -158,6 +160,17 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
       {node.animation && <AnimationEditor path={path} animation={node.animation} />}
       {!node.animation && draftScript !== null && (
         <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-indigo-500/40">
+          <div className="flex items-center justify-end">
+            <button
+              onClick={() => setShowDraftHelp((v) => !v)}
+              aria-label="Script reference"
+              className={`p-0.5 rounded transition-colors ${
+                showDraftHelp ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <textarea
             value={draftScript}
             onChange={(e) => setDraftScript(e.target.value)}
@@ -167,6 +180,25 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
             autoFocus
             className="w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y border border-neutral-600"
           />
+          {showDraftHelp && (
+            <div className="rounded border border-neutral-700 bg-neutral-800/80 px-3 py-2.5 text-xs space-y-2.5">
+              {SCRIPT_HELP.map(({ section, items }) => (
+                <div key={section}>
+                  <div className="text-neutral-500 uppercase tracking-wide text-[10px] font-semibold mb-1">
+                    {section}
+                  </div>
+                  <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-0.5">
+                    {items.map(({ name, desc }) => (
+                      <Fragment key={name}>
+                        <code className="text-indigo-300 font-mono">{name}</code>
+                        <span className="text-neutral-400">{desc}</span>
+                      </Fragment>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <button
               onClick={cancelAnimation}

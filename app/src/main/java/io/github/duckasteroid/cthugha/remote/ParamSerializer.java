@@ -50,6 +50,9 @@ public class ParamSerializer {
             obj.put("min", value.getMin().doubleValue());
             obj.put("max", value.getMax().doubleValue());
             obj.put("controlled", value.isControlled());
+            if (!value.isAnimatable()) {
+                obj.put("animatable", false);
+            }
             AnimationBindingView anim = value.getAnimationBinding();
             if (anim != null) {
                 ObjectNode animNode = mapper.createObjectNode();
