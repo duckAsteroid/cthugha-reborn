@@ -31,6 +31,13 @@ public class AnimationSystem extends ParamNode {
         withUiHint(UiHint.ICON, "zap");
         enabled.withDescription("Master switch for all animation bindings. When off, every "
             + "binding stops updating and releases control of its target parameter.");
+        // Every binding also publishes itself on its target leaf (see AnimationBinding), which
+        // the remote UI renders inline with a proper editor. Listing bindings here too would
+        // just duplicate that with a worse, generic editor — so this node (and its bindings)
+        // stays out of the remote tree. It remains a normal tree member otherwise: still walked
+        // by ScreenConfigParams capture/apply, so binding on/off + script state still round-trips
+        // through saved screen configs.
+        withNoRemote();
     }
 
     /**

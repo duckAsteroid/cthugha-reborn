@@ -1,10 +1,13 @@
 package io.github.duckasteroid.cthugha.animation;
 
 import com.asteroid.duck.opengl.util.timer.Clock;
+import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.AnimationBindingView;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
+
+import java.util.Optional;
 
 /**
  * Drives a single {@link AbstractValue} parameter using a user-supplied {@link ScriptParameter}.
@@ -57,8 +60,37 @@ public class AnimationBinding extends ParamNode implements AnimationBindingView 
             return;
         }
         target.setControlled(true);
+        if (!isTargetActive()) {
+            // Target lives under a disabled section (e.g. a wave whose own "enabled" toggle is
+            // off) — nothing downstream can see the value change, so skip the script evaluation
+            // and the value push (which would otherwise fire change listeners and, via the
+            // remote server, emit a paramChanged SSE event every tick for no visible effect).
+            return;
+        }
         double t = clock.elapsed();
         target.setNormalisedValue(Math.max(0.0, Math.min(1.0, fn.apply(t))));
+    }
+
+    /**
+     * Returns {@code false} if some ancestor of {@link #target} (other than the target itself)
+     * has a sibling child named "enabled" whose value is currently 0/false — the established
+     * convention for a section that is switched off (wave models, {@code PerspectiveParams},
+     * etc). An animation directly targeting such an "enabled" flag is unaffected by its own
+     * current value, so binding on/off toggles always keep ticking.
+     */
+    private boolean isTargetActive() {
+        Node current = target.getParent();
+        while (current != null) {
+            Optional<Node> enabledChild = current.getChild("enabled");
+            if (enabledChild.isPresent()) {
+                Node ec = enabledChild.get();
+                if (ec != target && ec instanceof AbstractValue av && av.getValue().doubleValue() == 0.0) {
+                    return false;
+                }
+            }
+            current = current.getParent();
+        }
+        return true;
     }
 
     /** Detaches this binding from its target, releasing control. Call once before discarding. */
