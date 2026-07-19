@@ -84,14 +84,14 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
     <div className="flex flex-col gap-2">
       <ActionToolbar actions={toolbarActions} />
       <RadixTabs.Root value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-1">
-        <RadixTabs.List className="flex gap-1 border-b border-neutral-700 pb-1">
+        <RadixTabs.List className="flex flex-nowrap gap-1 overflow-x-auto border-b border-neutral-700 pb-1">
           {tabs.map(tab => {
             const icon = tab.uiHints?.['icon'];
             return (
               <RadixTabs.Trigger
                 key={tab.name}
                 value={tab.name}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-neutral-400 rounded-t
+                className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-neutral-400 rounded-t
                            hover:text-neutral-200 hover:bg-neutral-800 transition-colors
                            data-[state=active]:text-indigo-300 data-[state=active]:bg-neutral-800
                            data-[state=active]:border-b-2 data-[state=active]:border-indigo-400"
