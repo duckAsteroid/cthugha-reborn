@@ -86,11 +86,8 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
       <RadixTabs.Root value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-1">
         <RadixTabs.List
           className="flex flex-nowrap gap-1 overflow-x-auto border-b border-neutral-700 pb-2
-                     [scrollbar-width:thin] [scrollbar-color:#525252_transparent]
-                     [&::-webkit-scrollbar]:h-1.5
-                     [&::-webkit-scrollbar-track]:bg-transparent
-                     [&::-webkit-scrollbar-thumb]:bg-neutral-600
-                     [&::-webkit-scrollbar-thumb]:rounded-full"
+                     [scrollbar-width:none] [-ms-overflow-style:none]
+                     [&::-webkit-scrollbar]:hidden"
         >
           {tabs.map(tab => {
             const icon = tab.uiHints?.['icon'];
