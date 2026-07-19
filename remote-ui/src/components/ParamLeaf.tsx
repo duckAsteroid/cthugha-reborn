@@ -26,6 +26,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
   const controlled = liveControlled ?? node.controlled;
   const iconName = node.uiHints?.['icon'];
   const [showInfo, setShowInfo] = useState(false);
+  const [draftScript, setDraftScript] = useState<string | null>(null);
 
   const handleChange = async (newValue: number) => {
     try {
@@ -35,13 +36,18 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
     }
   };
 
-  const addAnimation = async () => {
+  const startAnimation = () => setDraftScript('sine(0.05)');
+
+  const confirmAnimation = async () => {
     try {
-      await createAnimation(path, 'sine(0.05)');
+      await createAnimation(path, draftScript ?? 'sine(0.05)');
+      setDraftScript(null);
     } catch {
       // error is handled by api.ts (session-expired event)
     }
   };
+
+  const cancelAnimation = () => setDraftScript(null);
 
   const renderControl = () => {
     if (node.type === 'BOOLEAN') {
@@ -135,9 +141,9 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
         {node.description && (
           <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
         )}
-        {!node.animation && (
+        {!node.animation && draftScript === null && (
           <button
-            onClick={addAnimation}
+            onClick={startAnimation}
             aria-label="Add animation"
             className="ml-auto p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
           >
@@ -150,6 +156,34 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
       )}
       {renderControl()}
       {node.animation && <AnimationEditor path={path} animation={node.animation} />}
+      {!node.animation && draftScript !== null && (
+        <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-indigo-500/40">
+          <textarea
+            value={draftScript}
+            onChange={(e) => setDraftScript(e.target.value)}
+            rows={2}
+            spellCheck={false}
+            placeholder="e.g. sine(0.05)"
+            autoFocus
+            className="w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y border border-neutral-600"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={cancelAnimation}
+              className="px-3 py-1 text-xs rounded border border-neutral-600 text-neutral-300 hover:bg-neutral-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmAnimation}
+              disabled={draftScript.trim() === ''}
+              className="px-3 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
