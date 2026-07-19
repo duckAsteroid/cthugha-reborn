@@ -14,7 +14,7 @@ public class RadialSpectrumModel extends ParamNode {
     public RadialSpectrumModel() {
         super("RadialSpectrum");
         initFields(getClass());
-        withUiHint(UiHint.ICON, "pie-chart");
+        withUiHint(UiHint.ICON, "chart-pie");
         withResetAction();
 
         enabled.withDescription("Draws the frequency spectrum as bars radiating around a circle into the render buffer.");

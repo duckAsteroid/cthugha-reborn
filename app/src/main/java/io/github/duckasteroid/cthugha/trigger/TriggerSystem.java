@@ -77,7 +77,7 @@ public class TriggerSystem extends ParamNode {
             newValue.setValue("");
             newCooldown.setValue(ActionTrigger.DEFAULT_COOLDOWN_SECONDS);
         });
-        addTriggerAction.withUiHint(UiHint.ICON, "plus-circle");
+        addTriggerAction.withUiHint(UiHint.ICON, "circle-plus");
 
         addChild(enabled);
         addChild(newCondition);

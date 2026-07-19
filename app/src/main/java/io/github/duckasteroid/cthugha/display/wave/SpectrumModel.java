@@ -12,7 +12,7 @@ public class SpectrumModel extends ParamNode {
     public SpectrumModel() {
         super("Spectrum");
         initFields(getClass());
-        withUiHint(UiHint.ICON, "bar-chart-2");
+        withUiHint(UiHint.ICON, "chart-column");
         withResetAction();
 
         enabled.withDescription("Draws the frequency spectrum as a row of bars into the render buffer.");

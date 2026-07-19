@@ -52,7 +52,7 @@ export function ParamContainer({ node, path, defaultOpen = false }: ParamContain
         {iconName && (
           <NodeIcon name={iconName} className="w-4 h-4 text-neutral-400 shrink-0" />
         )}
-        <span className="text-sm font-semibold text-neutral-200 uppercase tracking-wide">
+        <span className="text-sm font-semibold text-neutral-200 tracking-wide">
           {node.name}
         </span>
       </Collapsible.Trigger>

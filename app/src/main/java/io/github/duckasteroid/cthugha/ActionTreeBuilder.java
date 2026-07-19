@@ -100,7 +100,7 @@ public class ActionTreeBuilder {
             cthugha.newTranslation(ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> callbacks.rebuildTranslateMap());
         }));
-        cthugha.translateSource.addChild(action("New Source", "plus-circle", ctx ->
+        cthugha.translateSource.addChild(action("New Source", "circle-plus", ctx ->
                 cthugha.translateSource.selectRandom(ctx.rng())));
         // Next/Previous are hidden from remote UI but remain in the tree for INI key bindings.
         AbstractAction nextGen = action("Next", "skip-forward", ctx ->
@@ -120,7 +120,7 @@ public class ActionTreeBuilder {
                     callbacks::markPaletteDirty));
         } catch (IOException e) {
             LOG.error("Failed to build palette library node", e);
-            renderGroup.addChild(action("New Palette", "plus-circle", ctx -> {
+            renderGroup.addChild(action("New Palette", "circle-plus", ctx -> {
                 cthugha.newPalette();
                 callbacks.markPaletteDirty();
             }));
@@ -157,7 +157,7 @@ public class ActionTreeBuilder {
         generalGroup = new ContainerNode("General");
         generalGroup.withUiHint(UiHint.ICON, "settings");
         generalGroup.withUiHint(UiHint.CONTROL_TYPE, UiHint.EXPANDER);
-        generalGroup.addChild(action("Quit", "x-circle", ctx -> {
+        generalGroup.addChild(action("Quit", "circle-x", ctx -> {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing", e); }
             callbacks.exitApplication();
         }).withNoRemote());
