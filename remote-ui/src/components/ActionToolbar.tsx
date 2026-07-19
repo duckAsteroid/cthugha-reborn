@@ -31,7 +31,7 @@ function ToolbarButton({ path, node }: ToolbarEntry) {
       disabled={busy}
       aria-label={node.name}
       title={node.name}
-      className="flex flex-col items-center justify-center gap-0.5 w-14 py-1.5 rounded-md
+      className="flex flex-col items-center justify-center gap-0.5 w-16 py-1.5 rounded-md
                  text-neutral-300 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed
                  transition-colors"
     >
@@ -42,7 +42,7 @@ function ToolbarButton({ path, node }: ToolbarEntry) {
       ) : (
         <span className="w-4 h-4" />
       )}
-      <span className="text-[10px] leading-none text-neutral-400 truncate max-w-full px-0.5">
+      <span className="text-[10px] leading-tight text-neutral-400 text-center px-0.5">
         {node.name}
       </span>
     </button>
