@@ -140,18 +140,20 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
         {controlled && (
           <Lock className="w-3 h-3 text-neutral-500 shrink-0" aria-label="Controlled by animator" />
         )}
-        {node.description && (
-          <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
-        )}
-        {node.animatable !== false && !node.animation && draftScript === null && (
-          <button
-            onClick={startAnimation}
-            aria-label="Add animation"
-            className="ml-auto p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          {node.description && (
+            <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+          )}
+          {node.animatable !== false && !node.animation && draftScript === null && (
+            <button
+              onClick={startAnimation}
+              aria-label="Add animation"
+              className="p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       {showInfo && node.description && (
         <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>

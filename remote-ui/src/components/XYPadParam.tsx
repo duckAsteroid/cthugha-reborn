@@ -53,7 +53,7 @@ export function XYPadParam({ node, path }: XYPadParamProps) {
           <Lock className="w-3 h-3 text-neutral-500 shrink-0" aria-label="Controlled by animator" />
         )}
         {node.description && (
-          <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+          <InfoButton className="ml-auto" open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
         )}
       </div>
       {showInfo && node.description && (

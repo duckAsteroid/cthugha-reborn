@@ -43,7 +43,7 @@ export function ActionButton({ path, node }: ActionButtonProps) {
           {node.name}
         </button>
         {node.description && (
-          <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+          <InfoButton className="ml-auto" open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
         )}
       </div>
       {showInfo && node.description && (

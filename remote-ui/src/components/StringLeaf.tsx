@@ -45,7 +45,7 @@ export function StringLeaf({ path, node, pairedValuePath, pairedValueNode }: Str
         <div className="flex items-center gap-1.5">
           <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
           {node.description && (
-            <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+            <InfoButton className="ml-auto" open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
           )}
         </div>
         {showInfo && node.description && (
@@ -164,7 +164,7 @@ export function StringLeaf({ path, node, pairedValuePath, pairedValueNode }: Str
       <div className="flex items-center gap-1.5">
         <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
         {node.description && (
-          <InfoButton open={showInfo} onToggle={() => setShowInfo(v => !v)} />
+          <InfoButton className="ml-auto" open={showInfo} onToggle={() => setShowInfo(v => !v)} />
         )}
       </div>
       {showInfo && node.description && (
