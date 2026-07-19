@@ -24,7 +24,9 @@ export function EnumControl({ value, options, disabled, onChange }: EnumControlP
           className="inline-flex items-center justify-between gap-2 px-3 py-1.5 bg-neutral-800 border border-neutral-600 rounded text-neutral-200 text-sm min-w-24 hover:border-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 data-[disabled]:opacity-40"
           aria-label="Select option"
         >
-          <Select.Value />
+          <span className="truncate min-w-0 flex-1 text-left">
+            <Select.Value />
+          </span>
           <Select.Icon>
             <ChevronDown className="w-4 h-4 text-neutral-400" />
           </Select.Icon>
