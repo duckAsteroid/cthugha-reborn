@@ -103,11 +103,6 @@ class ActionTreePathTest {
             "General/Toggle Notifications",
             "Quotes/Toggle Quote Mode",
             "Audio/Cycle Audio",
-            // Blur
-            "Render/Blur/Fade -",
-            "Render/Blur/Fade +",
-            "Render/Blur/Kernel -",
-            "Render/Blur/Kernel +",
             // Translation
             "Tab/Translate Source/Randomise",
             "Tab/Translate Source/New Source",
