@@ -17,7 +17,7 @@ interface TabsContainerProps {
   path: string;
 }
 
-function renderChild(child: ParamNode, basePath: string, sseState: Map<string, ParamState>) {
+function renderChild(child: ParamNode, basePath: string, sseState: Map<string, ParamState>, siblings: ParamNode[]) {
   const childPath = basePath ? `${basePath}/${child.name}` : child.name;
   if (child.type === 'CONTAINER') {
     return <ParamContainer key={child.name} node={child as ContainerNode} path={childPath} />;
@@ -26,7 +26,19 @@ function renderChild(child: ParamNode, basePath: string, sseState: Map<string, P
     return <ActionButton key={child.name} path={childPath} node={child as ActionNode} />;
   }
   if (child.type === 'STRING') {
-    return <StringLeaf key={child.name} path={childPath} node={child as StringNode} />;
+    const pairedFieldName = child.uiHints?.['paired-value-field'];
+    const pairedValueNode = pairedFieldName
+      ? (siblings.find((c) => c.name === pairedFieldName && c.type === 'STRING') as StringNode | undefined)
+      : undefined;
+    return (
+      <StringLeaf
+        key={child.name}
+        path={childPath}
+        node={child as StringNode}
+        pairedValuePath={pairedValueNode ? `${basePath}/${pairedValueNode.name}` : undefined}
+        pairedValueNode={pairedValueNode}
+      />
+    );
   }
   const liveState = sseState.get(childPath);
   return (
@@ -97,7 +109,7 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
           const { children: tabChildren, path: contentPath } = flattenSoleContainer(visibleTabChildren, tabPath);
           return (
             <RadixTabs.Content key={tab.name} value={tab.name} className="space-y-1 pt-1">
-              {tabChildren.map(child => renderChild(child, contentPath, sseState))}
+              {tabChildren.map(child => renderChild(child, contentPath, sseState, tab.children))}
             </RadixTabs.Content>
           );
         })}

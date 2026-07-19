@@ -82,11 +82,19 @@ export function ParamContainer({ node, path, defaultOpen = false }: ParamContain
           }
 
           if (child.type === 'STRING') {
+            const pairedFieldName = child.uiHints?.['paired-value-field'];
+            const pairedValueNode = pairedFieldName
+              ? (node.children.find((c) => c.name === pairedFieldName && c.type === 'STRING') as
+                  | StringNode
+                  | undefined)
+              : undefined;
             return (
               <StringLeaf
                 key={child.name}
                 path={childPath}
                 node={child as StringNode}
+                pairedValuePath={pairedValueNode ? `${path}/${pairedValueNode.name}` : undefined}
+                pairedValueNode={pairedValueNode}
               />
             );
           }

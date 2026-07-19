@@ -88,10 +88,22 @@ public final class UiHint {
 
     /**
      * Value for {@link #CONTROL_TYPE} on a {@code StringNode}: renders a searchable picker over
-     * every {@code Action} node currently in the tree, instead of a free-text field. Used to
-     * reference an existing action (e.g. by an {@code ActionTrigger}) without hand-typing a path.
+     * every {@code Action} and settable value leaf currently in the tree, instead of a free-text
+     * field. Used to reference an existing node by path (e.g. by an {@code ActionTrigger})
+     * without hand-typing it. When the picked target is a settable leaf (not an {@code Action}),
+     * the remote UI also renders a typed/ranged control for the paired value field named by
+     * {@link #PAIRED_VALUE_FIELD}, matching the target's own type/min/max/options; when it's an
+     * {@code Action}, that control is hidden since there's nothing to set.
      */
-    public static final String ACTION_PICKER = "ACTION_PICKER";
+    public static final String TARGET_PICKER = "TARGET_PICKER";
+
+    /**
+     * Key: on a {@link #TARGET_PICKER} node, the name of the sibling leaf (within the same
+     * container) that holds the value to set when the picked target is not an {@code Action}.
+     * The sibling itself is normally hidden ({@link #HIDDEN}) since the target picker renders it
+     * inline with a control shaped to the target's type.
+     */
+    public static final String PAIRED_VALUE_FIELD = "paired-value-field";
 
     private UiHint() {}
 }

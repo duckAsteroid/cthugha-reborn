@@ -19,7 +19,7 @@ import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.CompilableValue;
 import io.github.duckasteroid.cthugha.params.Node;
-import io.github.duckasteroid.cthugha.params.StringValue;
+import io.github.duckasteroid.cthugha.params.ParamValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,29 +163,27 @@ public class RemoteServer {
                 ctx.status(400).json(Map.of("error", "missing_value"));
                 return;
             }
-            if (node instanceof StringValue sv) {
-                sv.setValue(body.get("value").asText());
-                ObjectNode response = serializer.serialize(node);
-                if (sv instanceof CompilableValue cv && cv.getLastCompileError() != null) {
-                    response.put("compileError", cv.getLastCompileError());
+            ParamValues.ApplyResult result = ParamValues.applyText(node, body.get("value").asText());
+            switch (result) {
+                case NOT_A_LEAF -> {
+                    ctx.status(400).json(Map.of("error", "not_a_leaf"));
+                    return;
                 }
-                ctx.json(response.toString());
-                return;
+                case PARSE_ERROR -> {
+                    ctx.status(400).json(Map.of("error", "invalid_value"));
+                    return;
+                }
+                case OUT_OF_RANGE -> {
+                    ctx.status(400).json(Map.of("error", "value_out_of_range"));
+                    return;
+                }
+                case OK -> { /* fall through to response below */ }
             }
-            if (!(node instanceof AbstractValue param)) {
-                ctx.status(400).json(Map.of("error", "not_a_leaf"));
-                return;
-            }
-            double value = body.get("value").asDouble();
-            double min = param.getMin().doubleValue();
-            double max = param.getMax().doubleValue();
-            if (value < min || value > max) {
-                ctx.status(400).json(Map.of("error", "value_out_of_range"));
-                return;
-            }
-            param.setValue(value);
             ObjectNode response = serializer.serialize(node);
-            if (param.isControlled()) {
+            if (node instanceof CompilableValue cv && cv.getLastCompileError() != null) {
+                response.put("compileError", cv.getLastCompileError());
+            }
+            if (node instanceof AbstractValue param && param.isControlled()) {
                 response.put("warning", "controlled_by_animator");
             }
             ctx.json(response.toString());

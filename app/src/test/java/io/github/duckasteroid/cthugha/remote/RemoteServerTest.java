@@ -344,12 +344,13 @@ class RemoteServerTest {
 
     // --- PATCH (string values) ---
     //
-    // This is a separate branch in RemoteServer's PATCH handler (StringValue, not AbstractValue)
-    // used by StringLeaf.tsx for plain text fields and by ActionPickerControl.tsx to write a
-    // chosen action's path. ScriptParameter (a CompilableValue) also flows through here whenever
-    // a script-typed leaf is edited directly rather than through the dedicated /animation routes
-    // — e.g. the trigger system's condition script, which CLAUDE.md notes rides this same generic
-    // PATCH-leaf endpoint instead of a dedicated one.
+    // This is the StringValue branch of ParamValues.applyText (as opposed to the AbstractValue
+    // branch), reached via RemoteServer's PATCH handler. Used by StringLeaf.tsx for plain text
+    // fields and by TargetPickerControl.tsx to write a chosen action/parameter path. ScriptParameter
+    // (a CompilableValue) also flows through here whenever a script-typed leaf is edited directly
+    // rather than through the dedicated /animation routes — e.g. the trigger system's condition
+    // script, which CLAUDE.md notes rides this same generic PATCH-leaf endpoint instead of a
+    // dedicated one.
 
     @Test
     void patchStringSetsPlainValue() throws Exception {

@@ -4,14 +4,18 @@ import type { StringNode } from '../types';
 import { patchStringParam } from '../api';
 import { InfoButton } from './InfoButton';
 import { SCRIPT_HELP } from '../scriptHelp';
-import { ActionPickerControl } from './controls/ActionPickerControl';
+import { TargetPickerControl } from './controls/TargetPickerControl';
 
 interface StringLeafProps {
   path: string;
   node: StringNode;
+  /** Path of the sibling leaf named by this node's `paired-value-field` UI hint, if any (TARGET_PICKER only). */
+  pairedValuePath?: string;
+  /** The sibling node itself, so its current raw text can seed the value editor. */
+  pairedValueNode?: StringNode;
 }
 
-export function StringLeaf({ path, node }: StringLeafProps) {
+export function StringLeaf({ path, node, pairedValuePath, pairedValueNode }: StringLeafProps) {
   const [localValue, setLocalValue] = useState(node.value);
   const [committedValue, setCommittedValue] = useState(node.value);
   const [compileError, setCompileError] = useState<string | null>(null);
@@ -35,7 +39,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
     setCompileError(null);
   };
 
-  if (node.uiHints?.['control-type'] === 'ACTION_PICKER') {
+  if (node.uiHints?.['control-type'] === 'TARGET_PICKER' && pairedValuePath) {
     return (
       <div className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-neutral-900/50">
         <div className="flex items-center gap-1.5">
@@ -47,7 +51,12 @@ export function StringLeaf({ path, node }: StringLeafProps) {
         {showInfo && node.description && (
           <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
         )}
-        <ActionPickerControl path={path} value={node.value} />
+        <TargetPickerControl
+          targetPath={path}
+          targetValue={node.value}
+          valuePath={pairedValuePath}
+          rawValue={pairedValueNode?.value ?? ''}
+        />
       </div>
     );
   }

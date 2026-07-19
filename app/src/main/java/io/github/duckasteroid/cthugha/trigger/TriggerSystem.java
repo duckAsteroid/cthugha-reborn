@@ -28,7 +28,8 @@ public class TriggerSystem extends ParamNode {
     public final BooleanParameter enabled = new BooleanParameter("enabled", true);
 
     private final StringParameter newCondition = new StringParameter("New Condition", "");
-    private final StringParameter newAction = new StringParameter("New Action", "");
+    private final StringParameter newTarget = new StringParameter("New Target", "");
+    private final StringParameter newValue = new StringParameter("New Value", "");
     private final DoubleParameter newCooldown =
             new DoubleParameter("New Cooldown", 0.0, 10.0, ActionTrigger.DEFAULT_COOLDOWN_SECONDS);
     private final AbstractAction addTriggerAction;
@@ -54,28 +55,34 @@ public class TriggerSystem extends ParamNode {
         newCondition.withDescription("Boolean expression for the new trigger, e.g. \"bass() > 0.7\".");
         newCondition.withNoPersist();
 
-        newAction.withUiHint(UiHint.CONTROL_TYPE, UiHint.ACTION_PICKER);
-        newAction.withDescription("Action the new trigger will execute.");
-        newAction.withNoPersist();
+        newTarget.withUiHint(UiHint.CONTROL_TYPE, UiHint.TARGET_PICKER);
+        newTarget.withUiHint(UiHint.PAIRED_VALUE_FIELD, "New Value");
+        newTarget.withDescription("Action to execute, or parameter to set, when the new trigger fires.");
+        newTarget.withNoPersist();
+
+        newValue.withUiHint(UiHint.HIDDEN, "true");
+        newValue.withNoPersist();
 
         newCooldown.withDescription("Minimum seconds between fires for the new trigger.");
         newCooldown.withNoPersist();
 
         addTriggerAction = new AbstractAction("Add Trigger", ctx -> {
-            if (newAction.getValue().isBlank()) {
-                ctx.notify("Pick an action first");
+            if (newTarget.getValue().isBlank()) {
+                ctx.notify("Pick a target first");
                 return;
             }
-            addTrigger(newCondition.getValue(), newAction.getValue(), newCooldown.value);
+            addTrigger(newCondition.getValue(), newTarget.getValue(), newCooldown.value, newValue.getValue());
             newCondition.setValue("");
-            newAction.setValue("");
+            newTarget.setValue("");
+            newValue.setValue("");
             newCooldown.setValue(ActionTrigger.DEFAULT_COOLDOWN_SECONDS);
         });
         addTriggerAction.withUiHint(UiHint.ICON, "plus-circle");
 
         addChild(enabled);
         addChild(newCondition);
-        addChild(newAction);
+        addChild(newTarget);
+        addChild(newValue);
         addChild(newCooldown);
         addChild(addTriggerAction);
     }
@@ -84,9 +91,9 @@ public class TriggerSystem extends ParamNode {
      * Creates a new trigger, naming it uniquely for this process's lifetime. If {@link #init}
      * has already run, the trigger is compiled and starts ticking immediately.
      */
-    public ActionTrigger addTrigger(String condition, String actionPath, double cooldownSeconds) {
+    public ActionTrigger addTrigger(String condition, String targetPath, double cooldownSeconds, String value) {
         String name = "Trigger " + counter.incrementAndGet();
-        ActionTrigger trigger = new ActionTrigger(name, condition, actionPath, cooldownSeconds,
+        ActionTrigger trigger = new ActionTrigger(name, condition, targetPath, cooldownSeconds, value,
                 () -> removeTriggerNamed(name));
         triggers.add(trigger);
         addChild(trigger);
