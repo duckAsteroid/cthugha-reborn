@@ -52,6 +52,7 @@ class RemoteServerTest {
 
     private static final String TOKEN = "test-token";
     private static final String FIXTURE_MAP_NAME = "RemoteServerTestFixtureMap";
+    private static final String FIXTURE_MAP_NO_PREVIEW_NAME = "RemoteServerTestFixtureMapNoPreview";
     private static final String FIXTURE_IMAGE_NAME = "RemoteServerTestFixtureImage";
 
     private ContainerNode root;
@@ -67,6 +68,8 @@ class RemoteServerTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private Path testMapFile;
+    private Path testMapFileNoPreviewSource;
+    private Path testMapFileNoPreviewGeneratedPng;
     private Path testImageFile;
     private boolean createdMapsDir;
     private boolean createdImagesDir;
@@ -114,6 +117,10 @@ class RemoteServerTest {
         testImageFile = Paths.get("images", FIXTURE_IMAGE_NAME + ".PNG");
         writeTestPng(testMapFile, 4, 4);
         writeTestPng(testImageFile, 8, 8);
+
+        testMapFileNoPreviewSource = Paths.get("maps", FIXTURE_MAP_NO_PREVIEW_NAME + ".MAP");
+        testMapFileNoPreviewGeneratedPng = Paths.get("maps", FIXTURE_MAP_NO_PREVIEW_NAME + ".MAP.png");
+        writeTestMapFile(testMapFileNoPreviewSource);
     }
 
     @AfterEach
@@ -121,6 +128,8 @@ class RemoteServerTest {
         server.stop();
         Files.deleteIfExists(testMapFile);
         Files.deleteIfExists(testImageFile);
+        Files.deleteIfExists(testMapFileNoPreviewSource);
+        Files.deleteIfExists(testMapFileNoPreviewGeneratedPng);
         if (createdMapsDir) Files.deleteIfExists(testMapFile.getParent());
         if (createdImagesDir) Files.deleteIfExists(testImageFile.getParent());
     }
@@ -136,6 +145,16 @@ class RemoteServerTest {
             g.dispose();
         }
         ImageIO.write(img, "png", file.toFile());
+    }
+
+    /** Writes a minimal but valid 256-line {@code .MAP} file (one "r g b" triple per line). */
+    private static void writeTestMapFile(Path file) throws Exception {
+        Files.createDirectories(file.getParent());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 256; i++) {
+            sb.append(i).append(' ').append(i).append(' ').append(i).append('\n');
+        }
+        Files.writeString(file, sb.toString());
     }
 
     private HttpResponse<String> send(String method, String path, String body) throws Exception {
@@ -585,6 +604,22 @@ class RemoteServerTest {
         assertEquals("image/png", resp.headers().firstValue("Content-Type").orElse(""));
         assertTrue(resp.headers().firstValue("Cache-Control").isPresent());
         assertArrayEquals(Files.readAllBytes(testMapFile), resp.body());
+    }
+
+    @Test
+    void mapPreviewGeneratesAndSavesMissingPngFromMapFile() throws Exception {
+        assertFalse(Files.exists(testMapFileNoPreviewGeneratedPng), "precondition: no preview yet");
+
+        HttpResponse<byte[]> resp = http.send(
+                HttpRequest.newBuilder(URI.create(base + "/api/v1/maps/preview/" + FIXTURE_MAP_NO_PREVIEW_NAME)).GET().build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+
+        assertEquals(200, resp.statusCode());
+        assertEquals("image/png", resp.headers().firstValue("Content-Type").orElse(""));
+        assertTrue(Files.exists(testMapFileNoPreviewGeneratedPng), "preview should be generated and saved to disk");
+        BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(resp.body()));
+        assertEquals(256, decoded.getWidth());
+        assertArrayEquals(Files.readAllBytes(testMapFileNoPreviewGeneratedPng), resp.body());
     }
 
     @Test

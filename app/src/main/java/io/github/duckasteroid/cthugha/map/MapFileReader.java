@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.map;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,11 +17,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Reads the colour palette data from a MAP file
  */
 public class MapFileReader {
+  private static final Logger LOG = LoggerFactory.getLogger(MapFileReader.class);
+
+  /** Height (px) of a generated palette preview PNG; width is always 256 (one column per entry). */
+  public static final int PREVIEW_HEIGHT = 32;
+
   private final Path paletteDir;
   private final Random random = new Random();
   private final Map<Path, PaletteMap> cache = new HashMap<>();
@@ -56,6 +64,62 @@ public class MapFileReader {
     return cache.get(path);
   }
 
+  /**
+   * Renders and writes a preview PNG for {@code mapFile} to {@code <mapFile>.png} in the same
+   * directory, overwriting any existing file. Returns the path written.
+   */
+  public Path writePreview(Path mapFile) throws IOException {
+    Path pngFile = mapFile.resolveSibling(mapFile.getFileName() + ".png");
+    PaletteMap map = load(mapFile);
+    ImageIO.write(map.getPaletteImage(PREVIEW_HEIGHT), "PNG", pngFile.toFile());
+    return pngFile;
+  }
+
+  /**
+   * Checks whether {@code <mapFile>.png} exists and its pixels exactly match what
+   * {@link #writePreview(Path)} would currently render for {@code mapFile} — i.e. that the
+   * preview isn't missing or stale relative to the (possibly since-edited) source data.
+   */
+  public boolean previewMatches(Path mapFile) throws IOException {
+    Path pngFile = mapFile.resolveSibling(mapFile.getFileName() + ".png");
+    if (!Files.exists(pngFile)) {
+      return false;
+    }
+    BufferedImage expected = load(mapFile).getPaletteImage(PREVIEW_HEIGHT);
+    BufferedImage actual = ImageIO.read(pngFile.toFile());
+    if (actual == null || actual.getWidth() != expected.getWidth() || actual.getHeight() != expected.getHeight()) {
+      return false;
+    }
+    for (int y = 0; y < expected.getHeight(); y++) {
+      for (int x = 0; x < expected.getWidth(); x++) {
+        if (actual.getRGB(x, y) != expected.getRGB(x, y)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Regenerates any preview PNG that is missing or stale relative to its {@code .MAP} source,
+   * leaving already-accurate previews (and their mtimes, which back the remote UI's HTTP cache
+   * headers) untouched. Preview PNGs aren't committed to git — this is what makes them exist,
+   * called once at startup so the whole library is ready before the remote UI is served. A
+   * single unreadable/malformed {@code .MAP} file is logged and skipped rather than aborting
+   * the rest of the library.
+   */
+  public void refreshPreviews() throws IOException {
+    for (Path f : paletteFiles()) {
+      try {
+        if (!previewMatches(f)) {
+          writePreview(f);
+        }
+      } catch (IOException | RuntimeException e) {
+        LOG.warn("Failed to refresh preview for {}", f, e);
+      }
+    }
+  }
+
   private int[] loadData(Reader reader) throws IOException {
     int[] result = new int[256];
     try (BufferedReader br = new BufferedReader(reader)) {
@@ -74,15 +138,30 @@ public class MapFileReader {
     return result;
   }
 
+  /**
+   * Usage: {@code MapFileReader [--check] [dir]} (dir defaults to {@code maps}).
+   * Without {@code --check}, (re)generates every preview PNG. With it, only reports which
+   * previews are missing or stale (pixel-mismatched) against their {@code .MAP} source, writes
+   * nothing, and exits non-zero if any are found — suitable for a CI drift check.
+   */
   public static void main(String[] args) throws IOException {
-    String path = args.length == 0 ? "maps" : args[0];
+    boolean check = args.length > 0 && args[0].equals("--check");
+    String path = args.length > (check ? 1 : 0) ? args[check ? 1 : 0] : "maps";
     Path dir = Paths.get(path);
     System.out.println("Processing "+dir.toAbsolutePath());
     MapFileReader reader = new MapFileReader(dir);
+    boolean anyStale = false;
     for (Path f : reader.paletteFiles()) {
-      PaletteMap map = reader.load(f);
-      ImageIO.write(map.getPaletteImage(32), "PNG", dir.resolve(f.getFileName() +".png").toFile());
+      if (check) {
+        boolean ok = reader.previewMatches(f);
+        System.out.println((ok ? "OK    " : "STALE ") + f.getFileName());
+        anyStale |= !ok;
+      } else {
+        reader.writePreview(f);
+      }
     }
-
+    if (check && anyStale) {
+      System.exit(1);
+    }
   }
 }

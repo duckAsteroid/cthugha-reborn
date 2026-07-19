@@ -12,6 +12,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import io.github.duckasteroid.cthugha.animation.AnimationBinding;
 import io.github.duckasteroid.cthugha.animation.AnimationSystem;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
+import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.action.Action;
@@ -54,6 +55,7 @@ public class RemoteServer {
     private volatile Runnable onFirstAuth;
     private final AtomicBoolean firstAuthFired = new AtomicBoolean(false);
     private final RandomImageSource imageSource = new RandomImageSource(Paths.get("images"));
+    private final MapFileReader mapReader = new MapFileReader(Paths.get("maps"));
     private static final int THUMBNAIL_MAX_DIM = 240;
 
     public RemoteServer(Node paramRoot, AnimationSystem animation, TokenStore tokenStore,
@@ -94,8 +96,18 @@ public class RemoteServer {
             String name = ctx.path().substring("/api/v1/maps/preview/".length());
             Path file = Paths.get("maps", name + ".MAP.png");
             if (!Files.exists(file)) {
-                ctx.status(404);
-                return;
+                Path mapFile = Paths.get("maps", name + ".MAP");
+                if (!Files.exists(mapFile)) {
+                    ctx.status(404);
+                    return;
+                }
+                try {
+                    mapReader.writePreview(mapFile);
+                } catch (IOException e) {
+                    LOG.warn("Failed to generate preview for {}", mapFile, e);
+                    ctx.status(404);
+                    return;
+                }
             }
             if (notModified(ctx, file)) return;
             setCacheHeaders(ctx, file);

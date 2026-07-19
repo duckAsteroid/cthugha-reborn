@@ -15,3 +15,4 @@ build/
 /app/src/dist/configs/
 /app/src/dist/tabs/Spiral/
 /app/src/dist/tabs/**/*.tab
+/app/src/dist/maps/*.MAP.png
