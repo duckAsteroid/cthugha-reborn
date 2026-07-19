@@ -8,7 +8,7 @@ import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
 import { TabsContainer } from './TabsContainer';
 import { XYPadParam } from './XYPadParam';
-import { useSSE } from '../useSSE';
+import { useSSEState } from '../SSEContext';
 import { isRenderable } from '../nodeUtils';
 
 interface ParamContainerProps {
@@ -25,11 +25,9 @@ export function ParamContainer({ node, path, defaultOpen = false }: ParamContain
 
   const isTabs = node.uiHints?.['control-type'] === 'TABS';
   const isXYPad = node.uiHints?.['control-type'] === 'XY_PAD';
-  // Subscribe to the container's own subtree when open so all descendant changes are caught.
-  // Leaf paths are still used for sseState lookups; the subtree subscription just broadens
-  // which changes the server forwards to this connection.
-  const subscriptionPaths = (!isTabs && !isXYPad && open && path) ? [path] : [];
-  const sseState = useSSE(subscriptionPaths);
+  // Live state comes from the single app-wide SSE connection (see SSEContext) — no
+  // per-container subscription needed.
+  const sseState = useSSEState();
 
   if (isTabs) {
     return <TabsContainer node={node} path={path} />;

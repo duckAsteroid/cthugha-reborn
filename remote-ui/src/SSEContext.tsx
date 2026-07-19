@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { getToken } from './token';
 import type { SSEParamChangedEvent } from './types';
 
@@ -7,37 +7,37 @@ export interface ParamState {
   controlled: boolean;
 }
 
+const SSEContext = createContext<Map<string, ParamState>>(new Map());
+
 // NOTE: EventSource does not support custom headers in the browser.
 // The server must accept ?token=<value> as a query parameter for SSE auth,
 // in addition to the standard Authorization: Bearer header for regular requests.
-function buildSSEUrl(paths: string[]): string {
+function buildSSEUrl(): string {
   const token = getToken();
   const params = new URLSearchParams();
   if (token) {
     params.set('token', token);
   }
-  for (const p of paths) {
-    params.append('path', p);
-  }
+  // No `path` filter: subscribes to the whole tree over this one connection, so every
+  // consumer can read live state from context instead of opening its own EventSource.
   return `/api/v1/events?${params.toString()}`;
 }
 
-export function useSSE(paths: string[]): Map<string, ParamState> {
+/**
+ * Opens a single, app-wide SSE connection for the lifetime of the authenticated session and
+ * exposes the live param-state map via context. Mount once, near the root, after a token is
+ * known to exist — every {@link useSSEState} caller shares this one connection.
+ *
+ * Browsers cap concurrent HTTP/1.1 connections per origin (typically 6); one connection per
+ * expanded tree section used to exhaust that limit after a few clicks, silently queuing further
+ * requests (including action POSTs) forever. A single shared connection avoids that entirely.
+ */
+export function SSEProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Map<string, ParamState>>(new Map());
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
-
-    if (paths.length === 0) {
-      return;
-    }
-
-    const url = buildSSEUrl(paths);
-    const es = new EventSource(url);
+    const es = new EventSource(buildSSEUrl());
     esRef.current = es;
 
     es.addEventListener('paramChanged', (event: MessageEvent) => {
@@ -89,7 +89,12 @@ export function useSSE(paths: string[]): Map<string, ParamState> {
       es.close();
       esRef.current = null;
     };
-  }, [paths.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  return state;
+  return <SSEContext.Provider value={state}>{children}</SSEContext.Provider>;
+}
+
+/** Returns the shared live param-state map maintained by the app-wide {@link SSEProvider}. */
+export function useSSEState(): Map<string, ParamState> {
+  return useContext(SSEContext);
 }

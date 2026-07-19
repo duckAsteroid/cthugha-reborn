@@ -8,8 +8,8 @@ import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
 import { ActionToolbar } from './ActionToolbar';
 import type { ToolbarEntry } from './ActionToolbar';
-import { useSSE } from '../useSSE';
-import type { ParamState } from '../useSSE';
+import { useSSEState } from '../SSEContext';
+import type { ParamState } from '../SSEContext';
 import { isRenderable, flattenSoleContainer } from '../nodeUtils';
 
 interface TabsContainerProps {
@@ -51,10 +51,8 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
 
   const [activeTab, setActiveTab] = useState(tabs[0]?.name ?? '');
 
-  const activeTabPath = activeTab ? (path ? `${path}/${activeTab}` : activeTab) : '';
-
-  // Subscribe to the active tab's full subtree so all descendant changes are caught.
-  const sseState = useSSE(activeTabPath ? [activeTabPath] : []);
+  // Live state comes from the single app-wide SSE connection (see SSEContext).
+  const sseState = useSSEState();
 
   // Expander containers (e.g. "General") hold a mix of top-level actions and sub-containers.
   // Actions are pulled out and rendered as an icon toolbar above the tabs; anything else

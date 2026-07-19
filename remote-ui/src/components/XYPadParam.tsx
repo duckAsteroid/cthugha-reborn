@@ -5,7 +5,7 @@ import { patchParam } from '../api';
 import { XYPadControl } from './controls/XYPadControl';
 import { NodeIcon } from './NodeIcon';
 import { InfoButton } from './InfoButton';
-import { useSSE } from '../useSSE';
+import { useSSEState } from '../SSEContext';
 
 interface XYPadParamProps {
   node: ContainerNode;
@@ -23,7 +23,7 @@ export function XYPadParam({ node, path }: XYPadParamProps) {
   const xNode = node.children.find((c) => c.name === 'X') as LeafNode | undefined;
   const yNode = node.children.find((c) => c.name === 'Y') as LeafNode | undefined;
 
-  const sseState = useSSE([path]);
+  const sseState = useSSEState();
 
   if (!xNode || !yNode) return null;
 
