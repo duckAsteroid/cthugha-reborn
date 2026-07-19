@@ -135,7 +135,11 @@ public class ActionTreeBuilder {
         blurNode.addChild(blurEnabled);
         blurNode.addChild(blurKernelSize);
         blurNode.addChild(blurFade);
-        blurNode.addChild(action("Kernel -", "minus", ctx -> {
+        // Kernel/Fade step actions are hidden from remote UI but remain in the tree for INI key
+        // bindings (COMMA/PERIOD/SHIFT+COMMA/SHIFT+PERIOD) — the sliders above cover the same
+        // values for remote users, but these also toggle blur on/off at the kernel-size boundary,
+        // which the sliders don't replicate.
+        AbstractAction kernelDown = action("Kernel -", "minus", ctx -> {
             if (blurEnabled.value && blurKernelSize.value <= BlurTextureRenderer.MIN_KERNEL_SIZE) {
                 blurEnabled.setValue(0);
                 cthugha.notify("blur: OFF");
@@ -143,8 +147,10 @@ public class ActionTreeBuilder {
                 blurKernelSize.setValue(blurKernelSize.value - 2);
                 cthugha.notify("blur kernel: " + blurKernelSize.value);
             }
-        }));
-        blurNode.addChild(action("Kernel +", "plus", ctx -> {
+        });
+        kernelDown.withUiHint(UiHint.HIDDEN, "true");
+        blurNode.addChild(kernelDown);
+        AbstractAction kernelUp = action("Kernel +", "plus", ctx -> {
             if (!blurEnabled.value) {
                 blurEnabled.setValue(1);
                 blurKernelSize.setValue(BlurTextureRenderer.MIN_KERNEL_SIZE);
@@ -153,15 +159,21 @@ public class ActionTreeBuilder {
                 blurKernelSize.setValue(blurKernelSize.value + 2);
                 cthugha.notify("blur kernel: " + blurKernelSize.value);
             }
-        }));
-        blurNode.addChild(action("Fade -", "minus-circle", ctx -> {
+        });
+        kernelUp.withUiHint(UiHint.HIDDEN, "true");
+        blurNode.addChild(kernelUp);
+        AbstractAction fadeDown = action("Fade -", "minus-circle", ctx -> {
             blurFade.setValue(Math.max(0.0, blurFade.value - 0.005));
             cthugha.notify(String.format("fade: %.3f", blurFade.value));
-        }));
-        blurNode.addChild(action("Fade +", "plus-circle", ctx -> {
+        });
+        fadeDown.withUiHint(UiHint.HIDDEN, "true");
+        blurNode.addChild(fadeDown);
+        AbstractAction fadeUp = action("Fade +", "plus-circle", ctx -> {
             blurFade.setValue(Math.min(1.0, blurFade.value + 0.005));
             cthugha.notify(String.format("fade: %.3f", blurFade.value));
-        }));
+        });
+        fadeUp.withUiHint(UiHint.HIDDEN, "true");
+        blurNode.addChild(fadeUp);
         renderGroup.addChild(blurNode);
 
         // ---- Configs tab: named whole-tree snapshots ("screen configs") ----
