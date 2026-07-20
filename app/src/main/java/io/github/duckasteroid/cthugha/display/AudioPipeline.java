@@ -11,17 +11,25 @@ import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import io.github.duckasteroid.cthugha.config.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 
 public class AudioPipeline {
 
+    private static final Logger LOG = LoggerFactory.getLogger(AudioPipeline.class);
+
     public static final String CONFIG_SECTION = "audio";
     public static final String PREFERRED_DEVICE_KEY = "preferred_device";
 
     /** Name of the always-available simulated fallback source added in {@link #init}. */
     public static final String SIMULATED_SOURCE_NAME = "Simulated: Middle C (panned)";
+
+    /** Guards against a tight crash/restart loop if the capture thread keeps dying immediately. */
+    private static final int MAX_RESTARTS_PER_WINDOW = 5;
+    private static final long RESTART_WINDOW_MS = 10_000;
 
     private static final Config CFG = Config.singleton();
 
@@ -32,6 +40,8 @@ public class AudioPipeline {
     private BeatDetector beatDetector;
     private AudioReader audioReader;
     private Thread audioThread;
+    private int restartCount = 0;
+    private long restartWindowStart = 0;
 
     public void init(RenderContext ctx) throws IOException {
         pboSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
@@ -50,8 +60,38 @@ public class AudioPipeline {
         }
 
         audioReader = new AudioReader(List.of(pboSink, freqProc));
-        audioThread = Thread.ofVirtual().start(audioReader);
+        startAudioThread();
         audioReader.setLine(audioSources.list().get(selectedIndex));
+    }
+
+    /**
+     * Starts the capture thread with a supervisor that restarts it on any uncaught exception.
+     * render-core's {@code AudioReader.run()} only catches {@code InterruptedException}, so a bug
+     * in a line implementation (e.g. a buffer over/underflow) can otherwise kill capture for the
+     * rest of the process, including the simulated fallback.
+     */
+    private void startAudioThread() {
+        audioThread = Thread.ofVirtual().uncaughtExceptionHandler(this::onAudioThreadDied).start(audioReader);
+    }
+
+    private void onAudioThreadDied(Thread thread, Throwable error) {
+        LOG.error("Audio capture thread died unexpectedly; restarting", error);
+
+        long now = System.currentTimeMillis();
+        if (now - restartWindowStart > RESTART_WINDOW_MS) {
+            restartWindowStart = now;
+            restartCount = 0;
+        }
+        if (++restartCount > MAX_RESTARTS_PER_WINDOW) {
+            LOG.error("Audio capture crashed {} times within {} ms; giving up on auto-restart",
+                    restartCount, RESTART_WINDOW_MS);
+            return;
+        }
+
+        AudioDataSource current = audioSources.list().get(selectedIndex);
+        audioReader = new AudioReader(List.of(pboSink, freqProc));
+        startAudioThread();
+        audioReader.setLine(current);
     }
 
     public void update() {
