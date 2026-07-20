@@ -88,12 +88,9 @@ Five implementations live in `display/phase/`:
 
 ### Audio System
 
-`AudioPipeline` (`display/AudioPipeline.java`) owns the `AudioSource` and feeds samples to the wave models. Three `AudioSource` implementations:
-- `SampledAudioSource` — real system microphone/line-in via `javax.sound`
-- `SimulatedFrequenciesAudioSource` — synthetic audio at configurable frequencies (useful for testing)
-- `RandomSimulatedAudio` — random noise
+`AudioPipeline` (`display/AudioPipeline.java`) owns capture and feeds samples to the wave models, built entirely on render-core's `util.audio` API (see the `com-asteroid-duck-opengl-render-core-0-0-1` skill's `audio.md` for the library-side reference). It holds an `AudioSources` list — real hardware lines discovered via `LineAcquirer.allLinesMatching()` plus an always-available `SimulatedSources.middleC()` fallback (`AudioPipeline.SIMULATED_SOURCE_NAME`) — and owns its own selected-index cycling logic, since `AudioSources`/`LineAcquirer` track no notion of "current" themselves. `AudioSourceNode` (`display/AudioSourceNode.java`) exposes this list as the remote-UI "Audio" tab; because the param tree is built before `AudioPipeline` exists, it independently re-discovers device names via the same static `LineAcquirer` scan and reconciles by exact name once the live pipeline is up.
 
-FFT is done in `audio/dsp/FastFourierTransform.java` (wrapping JTransforms) and consumed by `SpectrumModel` / `RadialSpectrumModel`.
+FFT is done via render-core's `FrequencyProcessor`/`FFTProcessor` (wrapping JTransforms) and consumed by `SpectrumAnalyser` / `RadialSpectrumAnalyser` (wired up in `WavePhase`), with `BeatDetector` sharing the same FFT pass for beat-strength queries.
 
 ### Wave Models
 

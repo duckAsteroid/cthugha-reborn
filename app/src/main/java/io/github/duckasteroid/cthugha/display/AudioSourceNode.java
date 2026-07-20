@@ -7,23 +7,24 @@ import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
- * Lists the audio capture devices Java Sound can see and lets the user pick one, as a
- * top-level "Audio" tab.
+ * Lists the audio capture devices Java Sound can see (plus the always-available simulated
+ * fallback) and lets the user pick one, as a top-level "Audio" tab.
  *
  * <p>The param tree is assembled by {@code ActionTreeBuilder} before any {@code RenderPhase}
- * (and therefore before {@link AudioPipeline}, which owns the live, GL-bound
- * {@code LineAcquirer} used for actual capture) has been initialised. So this node discovers
- * device names independently via {@link LineAcquirer}'s static mixer scan, and the caller
- * (see {@link #setOnSourceSelected}) reconciles a selection against the live pipeline by exact
- * device name once it exists. If the two scans disagree (e.g. a line that fails to open, or
- * the {@code simulate.audio=true} synthetic source, which isn't visible to a static scan and
- * so never appears here), the caller's reconciliation simply reports "not found" rather than
+ * (and therefore before {@link AudioPipeline}, which owns the live {@code AudioSources} used
+ * for actual capture) has been initialised. So this node discovers device names independently
+ * via {@link LineAcquirer}'s static mixer scan plus {@link AudioPipeline#SIMULATED_SOURCE_NAME},
+ * and the caller (see {@link #setOnSourceSelected}) reconciles a selection against the live
+ * pipeline by exact device name once it exists. Names use {@code MixerLine.displayName()} to
+ * match what {@link AudioPipeline} actually selects sources by; if the two scans disagree (e.g.
+ * a line that fails to open), the caller's reconciliation simply reports "not found" rather than
  * silently selecting the wrong device.</p>
  */
 public class AudioSourceNode extends ParamNode {
@@ -89,9 +90,13 @@ public class AudioSourceNode extends ParamNode {
         syncing = false;
     }
 
+    /** Mixers can expose several matching lines; dedupe on display name for a clean dropdown. */
     private static List<String> discoverNames() {
-        return LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-                .map(Object::toString)
-                .collect(Collectors.toList());
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        names.add(AudioPipeline.SIMULATED_SOURCE_NAME);
+        LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+                .map(LineAcquirer.MixerLine::displayName)
+                .forEach(names::add);
+        return new ArrayList<>(names);
     }
 }
