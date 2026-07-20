@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as RadixTabs from '@radix-ui/react-tabs';
 import { X } from 'lucide-react';
 import type { ActionNode, ContainerNode, LeafNode, StringNode, ParamNode } from '../types';
@@ -7,11 +7,11 @@ import { ParamLeaf } from './ParamLeaf';
 import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
-import { ActionToolbar } from './ActionToolbar';
 import type { ToolbarEntry } from './ActionToolbar';
 import { useSSEState } from '../SSEContext';
 import type { ParamState } from '../SSEContext';
 import { useSettings } from '../SettingsContext';
+import { useToolbar } from '../ToolbarContext';
 import { isRenderable, flattenSoleContainer } from '../nodeUtils';
 
 /** Actions pulled out of the General toolbar into the Settings panel instead. */
@@ -92,6 +92,15 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
   const settingsActions = allToolbarActions.filter(a => SETTINGS_ACTION_NAMES.has(a.node.name));
   const remainingExpanders = expanderData.filter(e => isRenderable(e.remainingNode));
 
+  // Published to the header (see App.tsx) via ToolbarContext — same bridging pattern as
+  // SettingsContext, since the header lives outside this component's subtree.
+  const { setActions: setHeaderToolbarActions } = useToolbar();
+  const toolbarActionsKey = toolbarActions.map(a => a.path).join('|');
+  useEffect(() => {
+    setHeaderToolbarActions(toolbarActions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolbarActionsKey]);
+
   const renderTabContent = (tab: ContainerNode) => {
     const tabPath = path ? `${path}/${tab.name}` : tab.name;
     const visibleTabChildren = tab.children.filter(isRenderable);
@@ -101,7 +110,6 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <ActionToolbar actions={toolbarActions} />
       <RadixTabs.Root value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-1">
         <RadixTabs.List
           className="flex flex-nowrap gap-1 overflow-x-auto border-b border-neutral-700 pb-2

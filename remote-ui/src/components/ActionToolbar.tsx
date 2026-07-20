@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { ActionNode } from '../types';
-import { executeAction } from '../api';
+import { useActionExecutor } from '../hooks/useActionExecutor';
 import { NodeIcon } from './NodeIcon';
 
 export interface ToolbarEntry {
@@ -9,42 +8,27 @@ export interface ToolbarEntry {
   node: ActionNode;
 }
 
+/** Compact icon-only button, styled to match the header's Settings gear button. */
 function ToolbarButton({ path, node }: ToolbarEntry) {
-  const [busy, setBusy] = useState(false);
+  const { busy, trigger } = useActionExecutor(path);
   const iconName = node.uiHints?.['icon'];
-
-  const handleClick = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await executeAction(path);
-    } catch {
-      // error is handled by api.ts (session-expired event)
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <button
-      onClick={handleClick}
+      onClick={trigger}
       disabled={busy}
       aria-label={node.name}
       title={node.name}
-      className="flex flex-col items-center justify-center gap-0.5 w-16 py-1.5 rounded-md
-                 text-neutral-300 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed
-                 transition-colors"
+      className="p-1.5 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800
+                 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
       {busy ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-5 h-5 animate-spin" />
       ) : iconName ? (
-        <NodeIcon name={iconName} className="w-4 h-4" />
+        <NodeIcon name={iconName} className="w-5 h-5" />
       ) : (
-        <span className="w-4 h-4" />
+        <span className="w-5 h-5" />
       )}
-      <span className="text-[10px] leading-tight text-neutral-400 text-center px-0.5">
-        {node.name}
-      </span>
     </button>
   );
 }
@@ -53,11 +37,12 @@ interface ActionToolbarProps {
   actions: ToolbarEntry[];
 }
 
+/** Renders the General-group action buttons (Screenshot, Record, Stop Recording) in the header. */
 export function ActionToolbar({ actions }: ActionToolbarProps) {
   if (actions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1 px-2 py-2 bg-[#1a1a1a] border-b border-neutral-800 rounded-t-lg">
+    <div className="flex items-center gap-1">
       {actions.map(({ path, node }) => (
         <ToolbarButton key={path} path={path} node={node} />
       ))}

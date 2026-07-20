@@ -55,6 +55,7 @@ public class ActionTreeBuilder {
     private final IntegerParameter blurKernelSize;
     private final DoubleParameter blurFade;
     private final Callbacks callbacks;
+    private final boolean screenCaptureToolbarEnabled;
 
     private ContainerNode generalGroup;
 
@@ -65,6 +66,17 @@ public class ActionTreeBuilder {
                              IntegerParameter blurKernelSize,
                              DoubleParameter blurFade,
                              Callbacks callbacks) {
+        this(cthugha, actionContext, renderActions, blurEnabled, blurKernelSize, blurFade, callbacks, true);
+    }
+
+    public ActionTreeBuilder(JCthugha cthugha,
+                             PaletteActionContext actionContext,
+                             RenderActionQueue renderActions,
+                             BooleanParameter blurEnabled,
+                             IntegerParameter blurKernelSize,
+                             DoubleParameter blurFade,
+                             Callbacks callbacks,
+                             boolean screenCaptureToolbarEnabled) {
         this.cthugha = cthugha;
         this.actionContext = actionContext;
         this.renderActions = renderActions;
@@ -72,6 +84,7 @@ public class ActionTreeBuilder {
         this.blurKernelSize = blurKernelSize;
         this.blurFade = blurFade;
         this.callbacks = callbacks;
+        this.screenCaptureToolbarEnabled = screenCaptureToolbarEnabled;
     }
 
     /**
@@ -161,18 +174,28 @@ public class ActionTreeBuilder {
             try { cthugha.close(); } catch (IOException e) { LOG.error("Error closing", e); }
             callbacks.exitApplication();
         }).withNoRemote());
-        generalGroup.addChild(action("Screenshot", "camera", ctx -> {
+        AbstractAction screenshotAction = action("Screenshot", "camera", ctx -> {
             renderActions.enqueue("screenshot", rc -> callbacks.screenshot());
             cthugha.notify("screenshot saved");
-        }));
-        generalGroup.addChild(action("Record 5s", "video", ctx -> {
+        });
+        AbstractAction startRecordingAction = action("Record 5s", "video", ctx -> {
             renderActions.enqueue("startRecording", rc -> callbacks.startRecording());
             cthugha.notify("recording 5s…");
-        }));
-        generalGroup.addChild(action("Stop Recording", "square", ctx -> {
+        });
+        AbstractAction stopRecordingAction = action("Stop Recording", "square", ctx -> {
             renderActions.enqueue("stopRecording", rc -> callbacks.stopRecording());
             cthugha.notify("recording stopped");
-        }));
+        });
+        // Local keyboard shortcuts (PRINT_SCREEN etc.) resolve these by tree path regardless of
+        // remote visibility, so disabling the toolbar only hides them from the remote UI.
+        if (!screenCaptureToolbarEnabled) {
+            screenshotAction.withNoRemote();
+            startRecordingAction.withNoRemote();
+            stopRecordingAction.withNoRemote();
+        }
+        generalGroup.addChild(screenshotAction);
+        generalGroup.addChild(startRecordingAction);
+        generalGroup.addChild(stopRecordingAction);
         generalGroup.addChild(action("Toggle Fullscreen", "maximize-2", ctx ->
                 renderActions.enqueue("toggleFullscreen", rc -> callbacks.toggleFullscreen())));
         generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));

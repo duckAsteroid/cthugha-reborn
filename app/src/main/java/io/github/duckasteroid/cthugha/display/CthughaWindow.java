@@ -290,7 +290,8 @@ public class CthughaWindow extends GLWindow {
                     @Override public void stopRecording() { CthughaWindow.this.stopRecording(); }
                     @Override public void toggleFullscreen() { CthughaWindow.this.toggleFullscreen(); }
                     @Override public void exitApplication() { exit(); }
-                });
+                },
+                remoteConfig == null || remoteConfig.screenCaptureToolbar);
         treeBuilder.build(phases);
         generalGroup = treeBuilder.getGeneralGroup();
 

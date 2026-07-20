@@ -19,6 +19,8 @@ public class RemoteConfig {
     public long animationBroadcastIntervalMs = 100;
     /** Fixed bearer token, e.g. for local dev so the same URL survives app restarts. Null = random per-rotation (default). */
     public String fixedToken = null;
+    /** Whether the Screenshot/Record/Stop Recording buttons appear in the remote UI header. */
+    public boolean screenCaptureToolbar = true;
 
     public static RemoteConfig parse(String[] args) {
         RemoteConfig config = new RemoteConfig();
@@ -30,7 +32,9 @@ public class RemoteConfig {
         String iniIface     = Config.singleton().getConfig("remote", "network_interface", "");
         String iniMinThreads = Config.singleton().getConfig("remote", "min_threads", "");
         String iniMaxThreads = Config.singleton().getConfig("remote", "max_threads", "");
+        String iniScreenCaptureToolbar = Config.singleton().getConfig("remote", "screen_capture_toolbar", "true");
         if (!iniEnabled.isBlank()) config.enabled = Boolean.parseBoolean(iniEnabled.trim());
+        if (!iniScreenCaptureToolbar.isBlank()) config.screenCaptureToolbar = Boolean.parseBoolean(iniScreenCaptureToolbar.trim());
         try { config.port = Integer.parseInt(iniPort.trim()); } catch (NumberFormatException ignored) {}
         try { config.qrTimeoutSeconds = Integer.parseInt(iniQr.trim()); } catch (NumberFormatException ignored) {}
         try { config.qrLogoPercent = Math.min(30, Math.max(0, Integer.parseInt(iniQrLogo.trim()))); } catch (NumberFormatException ignored) {}
