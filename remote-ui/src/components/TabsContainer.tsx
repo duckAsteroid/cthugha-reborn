@@ -14,8 +14,8 @@ import { useSettings } from '../SettingsContext';
 import { useToolbar } from '../ToolbarContext';
 import { isRenderable, flattenSoleContainer } from '../nodeUtils';
 
-/** Actions pulled out of the General toolbar into the Settings panel instead. */
-const SETTINGS_ACTION_NAMES = new Set(['Toggle Fullscreen', 'Toggle Notifications']);
+/** Boolean toggles pulled out of the General expander into the Settings panel instead. */
+const SETTINGS_CONTROL_NAMES = new Set(['Fullscreen', 'Notifications']);
 /** Tabs pulled out of the main tab row into the Settings panel instead. */
 const SETTINGS_TAB_NAMES = new Set(['Audio']);
 
@@ -76,20 +76,25 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
   const sseState = useSSEState();
   const { open: settingsOpen, closeSettings } = useSettings();
 
-  // Expander containers (e.g. "General") hold a mix of top-level actions and sub-containers.
-  // Actions are pulled out and rendered as an icon toolbar above the tabs; anything else
-  // (e.g. the "Remote" sub-container) stays as a collapsible section below the tabs.
+  // Expander containers (e.g. "General") hold a mix of top-level actions, boolean settings
+  // toggles, and sub-containers. Actions are pulled out and rendered as an icon toolbar above
+  // the tabs; settings toggles are pulled into the Settings panel; anything else (e.g. the
+  // "Remote" sub-container) stays as a collapsible section below the tabs.
   const expanderData = expanders.map(exp => {
     const expPath = path ? `${path}/${exp.name}` : exp.name;
     const toolbarActions: ToolbarEntry[] = exp.children
       .filter((c): c is ActionNode => c.type === 'ACTION' && c.uiHints?.['hidden'] !== 'true')
       .map(c => ({ path: `${expPath}/${c.name}`, node: c }));
-    const remainingChildren = exp.children.filter(c => c.type !== 'ACTION');
-    return { expPath, toolbarActions, remainingNode: { ...exp, children: remainingChildren } };
+    const settingsLeaves: { path: string; node: LeafNode }[] = exp.children
+      .filter((c): c is LeafNode =>
+        c.type !== 'ACTION' && c.type !== 'CONTAINER' && SETTINGS_CONTROL_NAMES.has(c.name) && isRenderable(c))
+      .map(c => ({ path: `${expPath}/${c.name}`, node: c }));
+    const settingsNames = new Set(settingsLeaves.map(s => s.node.name));
+    const remainingChildren = exp.children.filter(c => c.type !== 'ACTION' && !settingsNames.has(c.name));
+    return { expPath, toolbarActions, settingsLeaves, remainingNode: { ...exp, children: remainingChildren } };
   });
-  const allToolbarActions = expanderData.flatMap(e => e.toolbarActions);
-  const toolbarActions = allToolbarActions.filter(a => !SETTINGS_ACTION_NAMES.has(a.node.name));
-  const settingsActions = allToolbarActions.filter(a => SETTINGS_ACTION_NAMES.has(a.node.name));
+  const toolbarActions = expanderData.flatMap(e => e.toolbarActions);
+  const settingsLeaves = expanderData.flatMap(e => e.settingsLeaves);
   const remainingExpanders = expanderData.filter(e => isRenderable(e.remainingNode));
 
   // Published to the header (see App.tsx) via ToolbarContext — same bridging pattern as
@@ -170,10 +175,16 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
                   {renderTabContent(tab)}
                 </div>
               ))}
-              {settingsActions.length > 0 && (
+              {settingsLeaves.length > 0 && (
                 <div className="space-y-1 pt-2 border-t border-neutral-800">
-                  {settingsActions.map(({ path: actionPath, node: actionNode }) => (
-                    <ActionButton key={actionPath} path={actionPath} node={actionNode} />
+                  {settingsLeaves.map(({ path: leafPath, node: leafNode }) => (
+                    <ParamLeaf
+                      key={leafPath}
+                      path={leafPath}
+                      node={leafNode}
+                      liveValue={sseState.get(leafPath)?.value}
+                      liveControlled={sseState.get(leafPath)?.controlled}
+                    />
                   ))}
                 </div>
               )}

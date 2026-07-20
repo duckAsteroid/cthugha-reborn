@@ -1,7 +1,6 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
@@ -13,9 +12,6 @@ import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
-import io.github.duckasteroid.cthugha.params.ParamNode;
-import io.github.duckasteroid.cthugha.params.UiHint;
-import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -127,23 +123,11 @@ public class WavePhase implements RenderPhase {
     }
 
     @Override
-    public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {
-        AbstractAction cycleAudio = new AbstractAction("Cycle Audio",
-                ctx -> cthugha.notify("audio: " + cycleAudioSource()));
-        cycleAudio.withUiHint(UiHint.ICON, "mic");
-        generalGroup.addChild(cycleAudio);
-    }
-
-    @Override
     public void dispose() {
         if (oscWave         != null) oscWave.dispose();
         if (radWave         != null) radWave.dispose();
         if (specAnalyser    != null) specAnalyser.dispose();
         if (radSpecAnalyser != null) radSpecAnalyser.dispose();
         if (audioPipeline   != null) audioPipeline.dispose();
-    }
-
-    public String cycleAudioSource() {
-        return audioPipeline.cycleSource().getName();
     }
 }

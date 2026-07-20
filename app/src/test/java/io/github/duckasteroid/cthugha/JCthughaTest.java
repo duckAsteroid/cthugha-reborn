@@ -27,11 +27,11 @@ class JCthughaTest {
     @Test
     void toggleNotificationsSuppresses() {
         JCthugha app = new JCthugha();
-        app.toggleNotifications();
+        app.notifications.setValue(0);
         app.notify("suppressed");
         assertNull(app.pollNotification());
         // re-enable
-        app.toggleNotifications();
+        app.notifications.setValue(1);
         app.notify("visible");
         assertEquals("visible", app.pollNotification());
     }

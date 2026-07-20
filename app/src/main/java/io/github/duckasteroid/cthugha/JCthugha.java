@@ -17,6 +17,7 @@ import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import com.asteroid.duck.opengl.util.stats.Stats;
 import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.quote.Constants;
@@ -48,7 +49,9 @@ public class JCthugha extends ParamNode implements Closeable {
 	private static final Duration QUOTE_DURATION = Config.singleton().getConfigAs(
 		Constants.SECTION, Constants.KEY_DURATION, "PT10S", Duration::parse);
 
-	private boolean notify = true;
+	/** Whether transient notifications are shown; auto-persisted across sessions in state.ini. */
+	public final BooleanParameter notifications = new BooleanParameter("Notifications",
+			Config.state().getConfigAs("display", "notifications", "true", Boolean::parseBoolean));
 
 	public OscilloscopeModel oscilloscope = new OscilloscopeModel();
 	public RadialWaveModel radialWave = new RadialWaveModel();
@@ -89,6 +92,8 @@ public class JCthugha extends ParamNode implements Closeable {
 
 	public JCthugha() {
 		super("JCthugha");
+		notifications.addChangeListener(() ->
+				Config.state().setConfig("display", "notifications", String.valueOf(notifications.value)));
 	}
 
 	public void init(Dimension dims, Random rng) throws IOException {
@@ -121,7 +126,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	}
 
 	public void notify(String message) {
-		if (notify) {
+		if (notifications.value) {
 			LOG.info("notify: {}", message);
 			pendingNotification = message;
 		}
@@ -219,11 +224,6 @@ public class JCthugha extends ParamNode implements Closeable {
 	/** All quotes available for selection in the remote UI's Quotes tab. */
 	public List<Quote> quotes() {
 		return quoteSource.quotes();
-	}
-
-	public void toggleNotifications() {
-		notify = !notify;
-		LOG.info("notifications={}", notify);
 	}
 
 }

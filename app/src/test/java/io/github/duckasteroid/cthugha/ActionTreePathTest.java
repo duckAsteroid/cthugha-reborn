@@ -64,6 +64,7 @@ class ActionTreePathTest {
                 BlurTextureRenderer.MAX_KERNEL_SIZE,
                 5);
         DoubleParameter blurFade = new DoubleParameter("Softening", 0.0, 1.0, 0.99);
+        BooleanParameter fullscreenEnabled = new BooleanParameter("Fullscreen", false);
 
         ActionTreeBuilder.Callbacks noOp = new ActionTreeBuilder.Callbacks() {
             @Override public void rebuildTranslateMap() {}
@@ -71,7 +72,6 @@ class ActionTreePathTest {
             @Override public void screenshot() {}
             @Override public void startRecording() {}
             @Override public void stopRecording() {}
-            @Override public void toggleFullscreen() {}
             @Override public void exitApplication() {}
         };
 
@@ -83,7 +83,7 @@ class ActionTreePathTest {
                 app.quotePhase,
                 new NotifPhase(app));
 
-        new ActionTreeBuilder(app, ctx, new RenderActionQueue(), blurEnabled, blurKernelSize, blurFade, noOp)
+        new ActionTreeBuilder(app, ctx, new RenderActionQueue(), blurEnabled, blurKernelSize, blurFade, fullscreenEnabled, noOp)
                 .build(phases);
     }
 
@@ -93,16 +93,15 @@ class ActionTreePathTest {
             // App
             "General/Quit",
             // Display
-            "General/Toggle Fullscreen",
+            "General/Fullscreen",
             "General/Screenshot",
             "General/Record 5s",
             "Render/Palette/Random",
             "Images/Random",
             "Images/Flash White",
             "Quotes/Random",
-            "General/Toggle Notifications",
+            "General/Notifications",
             "Quotes/Toggle Quote Mode",
-            "Audio/Cycle Audio",
             // Translation
             "Tab/Translate Source/Randomise",
             "Tab/Translate Source/New Source",

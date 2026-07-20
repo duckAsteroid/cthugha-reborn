@@ -44,7 +44,6 @@ public class ActionTreeBuilder {
         void screenshot();           // GL thread
         void startRecording();       // GL thread
         void stopRecording();        // GL thread
-        void toggleFullscreen();     // GL thread
         void exitApplication();
     }
 
@@ -54,6 +53,7 @@ public class ActionTreeBuilder {
     private final BooleanParameter blurEnabled;
     private final IntegerParameter blurKernelSize;
     private final DoubleParameter blurFade;
+    private final BooleanParameter fullscreenEnabled;
     private final Callbacks callbacks;
     private final boolean screenCaptureToolbarEnabled;
 
@@ -65,8 +65,9 @@ public class ActionTreeBuilder {
                              BooleanParameter blurEnabled,
                              IntegerParameter blurKernelSize,
                              DoubleParameter blurFade,
+                             BooleanParameter fullscreenEnabled,
                              Callbacks callbacks) {
-        this(cthugha, actionContext, renderActions, blurEnabled, blurKernelSize, blurFade, callbacks, true);
+        this(cthugha, actionContext, renderActions, blurEnabled, blurKernelSize, blurFade, fullscreenEnabled, callbacks, true);
     }
 
     public ActionTreeBuilder(JCthugha cthugha,
@@ -75,6 +76,7 @@ public class ActionTreeBuilder {
                              BooleanParameter blurEnabled,
                              IntegerParameter blurKernelSize,
                              DoubleParameter blurFade,
+                             BooleanParameter fullscreenEnabled,
                              Callbacks callbacks,
                              boolean screenCaptureToolbarEnabled) {
         this.cthugha = cthugha;
@@ -83,6 +85,7 @@ public class ActionTreeBuilder {
         this.blurEnabled = blurEnabled;
         this.blurKernelSize = blurKernelSize;
         this.blurFade = blurFade;
+        this.fullscreenEnabled = fullscreenEnabled;
         this.callbacks = callbacks;
         this.screenCaptureToolbarEnabled = screenCaptureToolbarEnabled;
     }
@@ -196,19 +199,23 @@ public class ActionTreeBuilder {
         generalGroup.addChild(screenshotAction);
         generalGroup.addChild(startRecordingAction);
         generalGroup.addChild(stopRecordingAction);
-        generalGroup.addChild(action("Toggle Fullscreen", "maximize-2", ctx ->
-                renderActions.enqueue("toggleFullscreen", rc -> callbacks.toggleFullscreen())));
-        generalGroup.addChild(action("Toggle Notifications", "bell", ctx -> cthugha.toggleNotifications()));
+        fullscreenEnabled.withUiHint(UiHint.ICON, "maximize-2");
+        fullscreenEnabled.withDescription("Starts the app in fullscreen and remembers this across restarts.");
+        fullscreenEnabled.withNoAnimate();
+        cthugha.notifications.withUiHint(UiHint.ICON, "bell");
+        cthugha.notifications.withDescription("Shows on-screen notifications for actions like preset or palette changes.");
+        cthugha.notifications.withNoAnimate();
+        generalGroup.addChild(fullscreenEnabled);
+        generalGroup.addChild(cthugha.notifications);
 
-        // Each phase registers its own actions (Flash White, Toggle Quote Mode, Cycle Audio,
-        // etc.); the Flash/Quote/Wave phases register into their own tabs instead of General.
+        // Each phase registers its own actions (Flash White, Toggle Quote Mode, etc.); the
+        // Flash/Quote phases register into their own tabs instead of General.
         for (RenderPhase phase : phases) {
-            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase || phase == cthugha.wavePhase) continue;
+            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase) continue;
             phase.registerActions(generalGroup, renderActions);
         }
         cthugha.flashPhase.registerActions(imagesGroup, renderActions);
         cthugha.quotePhase.registerActions(quotesGroup, renderActions);
-        cthugha.wavePhase.registerActions(cthugha.audioSource, renderActions);
 
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);

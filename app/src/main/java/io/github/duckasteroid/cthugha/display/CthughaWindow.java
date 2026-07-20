@@ -75,7 +75,9 @@ public class CthughaWindow extends GLWindow {
     // Render buffer dimensions — may differ from the GLFW window size.
     private int renderWidth;
     private int renderHeight;
-    private final boolean startFullscreen;
+    private final BooleanParameter fullscreenEnabled;
+    /** Mirrors the GL-thread-confirmed fullscreen state, so redundant sets don't re-flip it. */
+    private boolean actualFullscreen = false;
 
     // Palette LUT (256×1 RGBA)
     private Texture paletteTex;
@@ -152,7 +154,8 @@ public class CthughaWindow extends GLWindow {
         this.stdinInjector = stdinEnabled ? new StdinKeyInjector(renderActions) : null;
         this.remoteConfig = remoteConfig;
         this.dumpConfig = dumpConfig;
-        this.startFullscreen = CFG.getConfigAs("display", "fullscreen", "false", Boolean::parseBoolean);
+        this.fullscreenEnabled = new BooleanParameter("Fullscreen",
+                Config.state().getConfigAs("display", "fullscreen", "false", Boolean::parseBoolean));
         applyMonitorPosition();
     }
 
@@ -281,14 +284,13 @@ public class CthughaWindow extends GLWindow {
         // Build action tree (phases register their own actions)
         ActionTreeBuilder treeBuilder = new ActionTreeBuilder(
                 cthugha, actionContext, renderActions,
-                blurEnabled, blurKernelSize, blurFade,
+                blurEnabled, blurKernelSize, blurFade, fullscreenEnabled,
                 new ActionTreeBuilder.Callbacks() {
                     @Override public void rebuildTranslateMap() { CthughaWindow.this.rebuildTranslateMap(); }
                     @Override public void markPaletteDirty() { paletteDirty = true; }
                     @Override public void screenshot() { captureNextFrame(); }
                     @Override public void startRecording() { CthughaWindow.this.startRecording(Duration.ofSeconds(5)); }
                     @Override public void stopRecording() { CthughaWindow.this.stopRecording(); }
-                    @Override public void toggleFullscreen() { CthughaWindow.this.toggleFullscreen(); }
                     @Override public void exitApplication() { exit(); }
                 },
                 remoteConfig == null || remoteConfig.screenCaptureToolbar);
@@ -413,9 +415,22 @@ public class CthughaWindow extends GLWindow {
         cthugha.animation.init(getClock());
         cthugha.triggers.init(getClock(), cthugha, actionContext);
 
-        if (startFullscreen) {
+        // The change listener only runs on subsequent toggles (construction doesn't fire it),
+        // so apply the loaded initial value once here, then keep actualFullscreen in sync.
+        if (fullscreenEnabled.value) {
             toggleFullscreen();
+            actualFullscreen = true;
         }
+        fullscreenEnabled.addChangeListener(() -> {
+            boolean desired = fullscreenEnabled.value;
+            renderActions.enqueue("toggleFullscreen", rc -> {
+                if (desired != actualFullscreen) {
+                    toggleFullscreen();
+                    actualFullscreen = desired;
+                }
+            });
+            Config.state().setConfig("display", "fullscreen", String.valueOf(desired));
+        });
 
         if (dumpConfig.enabled) {
             System.out.println("Dumping param tree to " + dumpConfig.outputFile.toAbsolutePath() + " in format " + dumpConfig.format);

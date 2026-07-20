@@ -3,6 +3,8 @@ package io.github.duckasteroid.cthugha.display;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.NodeType;
 import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.Node;
@@ -23,7 +25,7 @@ import java.util.Set;
  * <h2>Format</h2>
  * <pre>
  * [keys]
- * F               = Toggle Fullscreen
+ * F               = Fullscreen
  * SHIFT+S         = Translate Source/Save
  * PRINT_SCREEN    = Screenshot
  * RIGHT_BRACKET   = Translate Source/Next
@@ -34,8 +36,10 @@ import java.util.Set;
  * constant with the {@code GLFW_KEY_} prefix stripped, e.g. {@code PRINT_SCREEN},
  * {@code RIGHT_BRACKET}).</p>
  *
- * <p>If the resolved node is an {@link Action}, {@link Action#execute} is called.
- * Any other node type falls back to {@link Node#randomise}.</p>
+ * <p>If the resolved node is an {@link Action}, {@link Action#execute} is called. A
+ * {@code BOOLEAN} leaf is flipped deterministically (true&harr;false) rather than randomised,
+ * since {@link Node#randomise} would only have a 50% chance of actually changing it. Any other
+ * node type falls back to {@link Node#randomise}.</p>
  */
 public class KeyBindingConfig {
 
@@ -79,6 +83,9 @@ public class KeyBindingConfig {
     private void dispatch(Node node) {
         if (node instanceof Action a) {
             a.execute(actionContext);
+        } else if (node.getNodeType() == NodeType.BOOLEAN) {
+            AbstractValue v = (AbstractValue) node;
+            v.setValue(v.getValue().doubleValue() >= 0.5 ? 0 : 1);
         } else {
             node.randomise(new Random());
         }

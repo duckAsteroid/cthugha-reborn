@@ -23,12 +23,26 @@ public class Config {
   public static final String CONFIG_PROFILE = "profile";
   public static final String SUFFIX = ".ini";
 
+  /** Base filename (before profile suffix) for the auto-persisted runtime state file. */
+  private static final String STATE_FILENAME = "state";
+
   private final Ini iniFile;
 
   private final static Config SINGLETON = createSingleton();
+  private final static Config STATE_SINGLETON = createStateSingleton();
 
   public static Config singleton() {
     return SINGLETON;
+  }
+
+  /**
+   * A separate, auto-created ini file (e.g. {@code state.ini}) for values the app remembers
+   * across sessions on its own — as opposed to {@link #singleton()}'s {@code cthugha.ini},
+   * which is hand-edited config. Unlike {@link #singleton()}, a missing file is not an error:
+   * it's created on first {@link #setConfig}.
+   */
+  public static Config state() {
+    return STATE_SINGLETON;
   }
 
   private static Config createSingleton() {
@@ -42,6 +56,21 @@ public class Config {
     }
     catch (IOException ioe) {
       LOG.warn("Unable to read ini file "+filename);
+      return new Config(new Ini());
+    }
+  }
+
+  private static Config createStateSingleton() {
+    final String profile = System.getProperty(CONFIG_PROFILE, "");
+    final String filename = (profile.isBlank()) ? STATE_FILENAME + SUFFIX : STATE_FILENAME + "-" + profile + SUFFIX;
+    File f = new File(filename);
+    try {
+      Ini ini = f.exists() ? new Ini(f) : new Ini();
+      ini.setFile(f);
+      LOG.debug("Using state file "+filename);
+      return new Config(ini);
+    } catch (IOException ioe) {
+      LOG.warn("Unable to read state file "+filename, ioe);
       return new Config(new Ini());
     }
   }

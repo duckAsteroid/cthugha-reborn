@@ -116,13 +116,6 @@ public class AudioPipeline {
 
     public BeatDetector getBeatDetector() { return beatDetector; }
 
-    public AudioDataSource cycleSource() {
-        selectedIndex = (selectedIndex + 1) % audioSources.size();
-        AudioDataSource src = audioSources.list().get(selectedIndex);
-        audioReader.setLine(src);
-        return src;
-    }
-
     public String getSelectedSourceName() {
         return audioSources.list().get(selectedIndex).getName();
     }
