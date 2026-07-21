@@ -1,4 +1,4 @@
-package io.github.duckasteroid.cthugha.animation;
+package io.github.duckasteroid.cthugha.binding;
 
 /**
  * A compiled boolean condition script's entry point — the {@link ConditionScript} analogue of

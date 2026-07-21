@@ -34,6 +34,15 @@ export const SCRIPT_HELP: { section: string; items: { name: string; desc: string
     ],
   },
   {
+    section: 'Script state — ephemeral, resets on restart, not saved with configs',
+    items: [
+      { name: 'state.get(key, default)',  desc: 'per-binding value; default if unset' },
+      { name: 'state.set(key, value)',    desc: 'store a per-binding value; returns it, so it composes in an expression' },
+      { name: 'global.get(key, default)', desc: 'value shared across every binding' },
+      { name: 'global.set(key, value)',   desc: 'store a shared value; returns it, same as state.set' },
+    ],
+  },
+  {
     section: 'Also in scope',
     items: [
       { name: 'Math.*', desc: 'sin, cos, abs, min, max, pow, sqrt…' },

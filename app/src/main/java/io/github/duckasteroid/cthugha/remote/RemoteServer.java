@@ -9,8 +9,8 @@ import io.javalin.http.HttpResponseException;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.http.sse.SseClient;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import io.github.duckasteroid.cthugha.animation.AnimationBinding;
-import io.github.duckasteroid.cthugha.animation.AnimationSystem;
+import io.github.duckasteroid.cthugha.binding.BindingSystem;
+import io.github.duckasteroid.cthugha.binding.ContinuousBinding;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.params.ParamNode;
@@ -43,7 +43,7 @@ public class RemoteServer {
     private static final String API_PARAMS_PREFIX = "/api/v1/params/";
 
     private final Node paramRoot;
-    private final AnimationSystem animation;
+    private final BindingSystem bindings;
     private final TokenStore tokenStore;
     private final RemoteEventBroadcaster broadcaster;
     private final RemoteConfig config;
@@ -58,11 +58,11 @@ public class RemoteServer {
     private final MapFileReader mapReader = new MapFileReader(Paths.get("maps"));
     private static final int THUMBNAIL_MAX_DIM = 240;
 
-    public RemoteServer(Node paramRoot, AnimationSystem animation, TokenStore tokenStore,
+    public RemoteServer(Node paramRoot, BindingSystem bindings, TokenStore tokenStore,
                         RemoteEventBroadcaster broadcaster, RemoteConfig config,
                         ActionContext actionContext) {
         this.paramRoot = paramRoot;
-        this.animation = animation;
+        this.bindings = bindings;
         this.tokenStore = tokenStore;
         this.broadcaster = broadcaster;
         this.config = config;
@@ -378,13 +378,13 @@ public class RemoteServer {
         Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
         if (targetOpt.isEmpty()) return;
         AbstractValue target = targetOpt.get();
-        if (animation.findBindingFor(target).isPresent()) {
+        if (bindings.findContinuousBindingFor(nodePath).isPresent()) {
             ctx.status(409).json(Map.of("error", "already_animated"));
             return;
         }
         JsonNode body = mapper.readTree(ctx.body());
         String script = body.has("script") ? body.get("script").asText() : "";
-        animation.addBinding(target.getFullPath().replace('/', '›'), target, script);
+        bindings.addContinuous(nodePath.replace('/', '›'), nodePath, script);
         broadcaster.broadcastAll("treeChanged", "{}");
         ctx.json(serializer.serialize(target).toString());
     }
@@ -392,12 +392,12 @@ public class RemoteServer {
     private void handlePatchAnimation(Context ctx, String nodePath) throws Exception {
         Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
         if (targetOpt.isEmpty()) return;
-        Optional<AnimationBinding> bindingOpt = animation.findBindingFor(targetOpt.get());
+        Optional<ContinuousBinding> bindingOpt = bindings.findContinuousBindingFor(nodePath);
         if (bindingOpt.isEmpty()) {
             ctx.status(404).json(Map.of("error", "not_animated"));
             return;
         }
-        AnimationBinding binding = bindingOpt.get();
+        ContinuousBinding binding = bindingOpt.get();
         JsonNode body = mapper.readTree(ctx.body());
         if (body.has("script")) {
             binding.script.setValue(body.get("script").asText());
@@ -412,12 +412,12 @@ public class RemoteServer {
     private void handleDeleteAnimation(Context ctx, String nodePath) {
         Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
         if (targetOpt.isEmpty()) return;
-        Optional<AnimationBinding> bindingOpt = animation.findBindingFor(targetOpt.get());
+        Optional<ContinuousBinding> bindingOpt = bindings.findContinuousBindingFor(nodePath);
         if (bindingOpt.isEmpty()) {
             ctx.status(404).json(Map.of("error", "not_animated"));
             return;
         }
-        animation.removeBinding(bindingOpt.get());
+        bindings.removeBinding(bindingOpt.get());
         broadcaster.broadcastAll("treeChanged", "{}");
         ctx.json(serializer.serialize(targetOpt.get()).toString());
     }

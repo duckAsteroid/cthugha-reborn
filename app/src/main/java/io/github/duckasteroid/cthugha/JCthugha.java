@@ -2,7 +2,7 @@ package io.github.duckasteroid.cthugha;
 
 
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
-import io.github.duckasteroid.cthugha.animation.AnimationSystem;
+import io.github.duckasteroid.cthugha.binding.BindingSystem;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.AudioSourceNode;
 import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
@@ -27,7 +27,6 @@ import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigStore;
 import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
 import io.github.duckasteroid.cthugha.tab.TabBuffer;
 import io.github.duckasteroid.cthugha.tab.TabStore;
-import io.github.duckasteroid.cthugha.trigger.TriggerSystem;
 import java.awt.Dimension;
 import java.io.Closeable;
 import java.io.IOException;
@@ -57,8 +56,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public RadialWaveModel radialWave = new RadialWaveModel();
 	public SpectrumModel spectrum = new SpectrumModel();
 	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
-	public AnimationSystem animation = new AnimationSystem();
-	public TriggerSystem triggers = new TriggerSystem();
+	public BindingSystem bindings = new BindingSystem();
 	public AudioSourceNode audioSource = new AudioSourceNode();
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
 	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
@@ -72,8 +70,8 @@ public class JCthugha extends ParamNode implements Closeable {
 	public int bufferHeight;
 
 	/** Set by {@link io.github.duckasteroid.cthugha.display.phase.WavePhase} once its audio
-	 * pipeline is initialised; read by animation/trigger scripts via {@link
-	 * io.github.duckasteroid.cthugha.animation.ScriptHelpers#setContext}. */
+	 * pipeline is initialised; read by binding scripts via {@link
+	 * io.github.duckasteroid.cthugha.binding.ScriptHelpers#setContext}. */
 	public volatile BeatDetector beatDetector;
 
 	public MapFileReader reader;
@@ -108,17 +106,24 @@ public class JCthugha extends ParamNode implements Closeable {
 		reader = new MapFileReader(maps);
 		reader.refreshPreviews();
 		paletteMap = reader.random();
+	}
 
-		animation.addBinding("osc rotation",    oscilloscope.transform.rotate, "sine(0.05)");
-		animation.addBinding("radial rotation", radialWave.transform.rotate,   "sine(0.07)");
+	/**
+	 * Registers the default continuous bindings shipped with the app. Must be called after the
+	 * full param tree is wired (i.e. after {@link io.github.duckasteroid.cthugha.ActionTreeBuilder#build}),
+	 * since it captures each target's full path via {@link io.github.duckasteroid.cthugha.params.ParamNode#getFullPath()} —
+	 * calling it any earlier, while targets are still parentless, would capture an empty path.
+	 */
+	public void wireDefaultBindings() {
+		bindings.addContinuous("osc rotation",    oscilloscope.transform.rotate, "sine(0.05)");
+		bindings.addContinuous("radial rotation", radialWave.transform.rotate,   "sine(0.07)");
 	}
 
 	public synchronized Duration doRenderCPU() {
 		final Instant start = Instant.now();
 		try {
 			frameRate.ping();
-			animation.tick();
-			triggers.tick();
+			bindings.tick();
 		} catch (Throwable t) {
 			LOG.error("Processing main loop", t);
 		}

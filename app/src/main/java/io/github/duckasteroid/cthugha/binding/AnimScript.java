@@ -1,10 +1,11 @@
-package io.github.duckasteroid.cthugha.animation;
+package io.github.duckasteroid.cthugha.binding;
 
 /**
- * Base class for Janino-compiled animation scripts.
+ * Base class for Janino-compiled numeric scripts, used by {@link BindingMode#CONTINUOUS}
+ * bindings.
  *
  * <p>Subclasses implement {@link #compute()} and may freely use the helpers inherited from
- * {@link ScriptHelpers} (the {@code t} field, wave/beat/random helpers). {@link #apply(double)}
+ * {@link ScriptHelpers} (the {@code t} field, wave/beat/random/state helpers). {@link #apply(double)}
  * — the {@link TimeFunction} entry point — stores {@code t} and calls {@link #compute()}, so the
  * per-frame call is a single field write + virtual dispatch with no allocation.</p>
  *

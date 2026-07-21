@@ -1,8 +1,8 @@
-package io.github.duckasteroid.cthugha.animation;
+package io.github.duckasteroid.cthugha.binding;
 
 /**
- * Base class for Janino-compiled boolean condition scripts (e.g. trigger conditions like
- * {@code "bass() > 0.7"}).
+ * Base class for Janino-compiled boolean condition scripts (e.g. {@code "bass() > 0.7"}), used
+ * by {@link BindingMode#EDGE_TRIGGERED} bindings.
  *
  * <p>Subclasses implement {@link #test()} and may freely use the helpers inherited from
  * {@link ScriptHelpers}. {@link #apply(double)} — the {@link BooleanTimeFunction} entry point —

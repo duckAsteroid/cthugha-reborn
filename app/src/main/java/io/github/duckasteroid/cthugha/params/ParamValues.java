@@ -3,7 +3,7 @@ package io.github.duckasteroid.cthugha.params;
 /**
  * Applies a raw text value to a leaf node, sharing the coercion/validation rules between the
  * remote PATCH-leaf route ({@code RemoteServer}) and trigger-fired value sets
- * ({@code ActionTrigger}) so the two call sites can't drift apart.
+ * ({@code EdgeTriggeredBinding}) so the two call sites can't drift apart.
  *
  * <p>A {@link StringValue} is assigned the text directly. Any other {@link AbstractValue} is
  * parsed as a {@code double} and range-checked against {@link AbstractValue#getMin()}/{@link

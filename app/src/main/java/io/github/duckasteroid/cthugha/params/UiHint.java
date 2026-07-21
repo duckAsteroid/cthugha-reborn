@@ -106,7 +106,7 @@ public final class UiHint {
     /**
      * Value for {@link #CONTROL_TYPE} on a {@code StringNode}: renders a searchable picker over
      * every {@code Action} and settable value leaf currently in the tree, instead of a free-text
-     * field. Used to reference an existing node by path (e.g. by an {@code ActionTrigger})
+     * field. Used to reference an existing node by path (e.g. by a {@code Binding}'s target)
      * without hand-typing it. When the picked target is a settable leaf (not an {@code Action}),
      * the remote UI also renders a typed/ranged control for the paired value field named by
      * {@link #PAIRED_VALUE_FIELD}, matching the target's own type/min/max/options; when it's an

@@ -119,10 +119,10 @@ public abstract class AbstractValue extends ParamNode {
   }
 
   /**
-   * Returns {@code true} if this parameter may be bound to an {@link
-   * io.github.duckasteroid.cthugha.animation.AnimationSystem} script. Defaults to {@code true};
-   * the remote server rejects animation-create/update requests targeting a non-animatable
-   * parameter with 400, and the remote UI hides the "add animation" control for it.
+   * Returns {@code true} if this parameter may be bound to a {@link
+   * io.github.duckasteroid.cthugha.binding.BindingSystem} continuous binding script. Defaults to
+   * {@code true}; the remote server rejects animation-create/update requests targeting a
+   * non-animatable parameter with 400, and the remote UI hides the "add animation" control for it.
    */
   public boolean isAnimatable() {
     return animatable;
