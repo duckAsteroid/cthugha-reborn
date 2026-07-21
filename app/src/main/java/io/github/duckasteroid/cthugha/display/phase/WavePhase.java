@@ -13,7 +13,6 @@ import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import java.io.IOException;
@@ -44,7 +43,7 @@ public class WavePhase implements RenderPhase {
         // pos = index / paletteSize so PaletteRenderer resolves pixelIndex = pos * totalEntries = index
         float waveIdx = 1.0f; //200f / cthugha.paletteMap.size();
         Vector4f waveColour     = new Vector4f(waveIdx, 0f, 0f, 1f);
-        Vector3f spectrumColour = new Vector3f(waveIdx, 0f, 0f);
+        Vector4f spectrumColour = new Vector4f(waveIdx, 0f, 0f, 1f);
 
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
