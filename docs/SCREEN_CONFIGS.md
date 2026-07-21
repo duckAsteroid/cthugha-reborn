@@ -44,20 +44,33 @@ capture(root)
        ├─ AbstractValue leaf  → record path → Number
        ├─ StringValue leaf    → record path → String
        ├─ node.isPersistExcluded() → skip this subtree entirely
-       └─ container           → recurse into children
-  └─ returns a LinkedHashMap<String, Object>, insertion-ordered to match the walk
+       ├─ node implements DynamicChildList → also record path → node.describe()
+       └─ container           → recurse into children (dynamic-list children too — their
+                                 own leaf values, e.g. a binding's `script`, are captured
+                                 the normal way alongside the ChildSpec)
+  └─ returns a Snapshot(values, dynamicChildren) — both LinkedHashMaps, insertion-ordered
+     to match the walk
 ```
 
 The insertion order is not incidental — it is the whole reason `apply()` is safe:
 
 ```
-apply(root, params)
-  for each (path, value) in params, IN CAPTURE ORDER:
+apply(root, snapshot)
+  for each (path, specs) in snapshot.dynamicChildren():        ← runs FIRST, in full
+      target = root.getChild(path.split("/"))
+      if target implements DynamicChildList → target.recreate(specs)
+
+  for each (path, value) in snapshot.values(), IN CAPTURE ORDER:
       target = root.getChild(path.split("/"))   ← fresh lookup, every time
       if target is AbstractValue and value is Number → target.setValue(value)
       if target is StringValue   and value is String → target.setValue(value)
       (unresolved or type-mismatched paths are silently ignored)
 ```
+
+Dynamic-child recreation always runs to completion before a single leaf value is applied, so by
+the time the leaf-value pass reaches e.g. `Bindings/Trigger 1/condition`, `recreate()` has already
+rebuilt a child actually named "Trigger 1" for it to land on. See "Recreating dynamic child lists"
+below.
 
 ### Why per-entry re-resolution, not one recursive descent
 
@@ -76,6 +89,59 @@ first triggers the rebuild, and the very next entries — which target paths lik
 
 This is covered by `ScreenConfigParamsTest.appliesThroughSelectorDrivenTreeRestructuring()`, which
 exercises the real `GeneratorRegistry`, not a mock.
+
+---
+
+## Recreating dynamic child lists (Bindings, future Waves)
+
+`ScreenConfigParams` only knows how to walk and set values on leaf nodes that already *exist* in
+the live tree. That's fine for the static part of the tree, but some subtrees have children
+created and destroyed at runtime through their own add/remove API rather than fixed at
+construction — `BindingSystem` (the "Bindings" tab) is the one real example today: its list of
+`Binding`s (`ContinuousBinding`/`EdgeTriggeredBinding`) grows and shrinks via `addContinuous` /
+`addEdgeTriggered` / `removeBinding`. Loading a config saved with two bindings into a session that
+currently has zero can't just walk `Bindings/Trigger 1/condition` — there is no child named
+"Trigger 1" to walk to.
+
+`DynamicChildList` (`params/DynamicChildList.java`) is the opt-in contract that closes this gap,
+deliberately kept generic rather than hardcoded to bindings — a planned `WaveSystem` (multiple
+named wave instances) will implement it the same way:
+
+```java
+public interface DynamicChildList {
+    List<ChildSpec> describe();          // current children → recreation specs, in order
+    void recreate(List<ChildSpec> specs); // clear + rebuild children from specs, in order
+
+    record ChildSpec(String name, String type, Map<String, String> fields) {}
+}
+```
+
+`ChildSpec` is deliberately flat and string-typed (round-trips through JSON with no bespoke
+(de)serialisation): `name` is the exact name the recreated child must have (so later leaf-value
+paths captured in the same snapshot resolve against it), `type` is a free-form discriminator the
+implementer defines and interprets (`BindingSystem` uses the `BindingMode` name), and `fields`
+holds whatever primitive strings the implementer's own `addX(...)` call needs.
+
+`BindingSystem implements DynamicChildList`:
+
+- `describe()` returns one `ChildSpec` per current binding — `type` is `"CONTINUOUS"` or
+  `"EDGE_TRIGGERED"`, `fields` holds `target` plus `script` (continuous) or
+  `condition`/`cooldown`/`value` (edge-triggered).
+- `recreate(specs)` removes every current binding (via `removeBinding`, so any live target
+  association releases synchronously) then replays `specs` in order through `addContinuous` /
+  an internal name-preserving `addEdgeTriggeredNamed` — no behavioural change to `BindingSystem`
+  itself, just a new entry point config-loading can call.
+
+The `fields` captured in a `ChildSpec` overlap with what the ordinary leaf-value walk already
+captures for that same binding (`target`, `script`, `condition`, …) — that's intentional
+redundancy, not a bug: `recreate()` alone produces a fully-functional binding without depending on
+the leaf-value pass that runs after it, and the subsequent leaf-value pass then simply reapplies
+the same values (a harmless no-op) plus anything `ChildSpec` doesn't carry (e.g. `enabled`).
+
+Configs saved before this contract existed simply have no `dynamicChildren` entry for `Bindings`
+in their JSON; `ScreenConfigStore.load` treats a missing/`null` map the same as empty, so loading
+such a file just skips dynamic-child recreation (bindings restore as before: not at all, since
+none exist to recreate) without erroring.
 
 ---
 
@@ -127,14 +193,28 @@ Each file is a `ScreenConfig`:
     "Tab/Translate Source/Generator" : 3,
     "Tab/Translate Source/Mandelbrot/Zoom" : 250.0,
     "Render/Palette/Map" : 7,
-    "Render/Blur/Enabled" : 1
+    "Render/Blur/Enabled" : 1,
+    "Bindings/anim/target" : "Wave/Oscilloscope/amplitude",
+    "Bindings/anim/script" : "sine(0.05)",
+    "Bindings/Trigger 1/condition" : "bass() > 0.7",
+    "Bindings/Trigger 1/cooldown" : 0.15
+  },
+  "dynamicChildren" : {
+    "Bindings" : [
+      { "name" : "anim", "type" : "CONTINUOUS",
+        "fields" : { "target" : "Wave/Oscilloscope/amplitude", "script" : "sine(0.05)" } },
+      { "name" : "Trigger 1", "type" : "EDGE_TRIGGERED",
+        "fields" : { "condition" : "bass() > 0.7", "target" : "Flash White", "cooldown" : "0.15", "value" : "" } }
+    ]
   }
 }
 ```
 
 The map is written with insertion order preserved (Jackson serialises a `LinkedHashMap` as-is,
 and reads a JSON object back into one by default), so a config saved on one run applies its
-entries in the same order on the next.
+entries in the same order on the next. `dynamicChildren` is a separate, sibling map — one entry
+per opted-in `DynamicChildList` subtree, keyed by that subtree's own path (here just `"Bindings"`,
+since it hangs directly off the root) — applied in full before `params`, per `apply()` above.
 
 There is no checksum and no per-resolution binary, unlike `TabConfig`/`.tab` files — a screen
 config is pure param data, so there's nothing to invalidate.
@@ -163,8 +243,9 @@ general REST API shape.
 
 | Class | Role |
 |---|---|
-| `ScreenConfigParams` | Static capture/apply tree-walking utility |
-| `ScreenConfig` | Plain JSON-serialisable snapshot (name + ordered param map) |
+| `ScreenConfigParams` | Static capture/apply tree-walking utility; `Snapshot` record pairs the leaf-value map with the dynamic-child-list map |
+| `DynamicChildList` (`params/`) | Opt-in contract (`describe()`/`recreate()`/`ChildSpec`) for a subtree with runtime-created children; implemented by `BindingSystem` today |
+| `ScreenConfig` | Plain JSON-serialisable snapshot (name + ordered param map + dynamic-children map) |
 | `ScreenConfigStore` | Disk I/O: `list()`, `save()`, `load()`, `delete()` |
 | `ScreenConfigNode` | Per-saved-config tree node (Load / Delete actions) |
 | `ScreenConfigLibraryNode` | Root "Configs" tab node: list + Save Name + Save |

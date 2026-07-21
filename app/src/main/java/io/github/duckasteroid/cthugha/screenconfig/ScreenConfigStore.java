@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.screenconfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.duckasteroid.cthugha.params.DynamicChildList;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.tab.TabParams;
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Manages saved "screen config" snapshots on disk.
@@ -67,7 +69,9 @@ public class ScreenConfigStore {
         Files.createDirectories(root);
         ScreenConfig config = new ScreenConfig();
         config.name = displayName;
-        config.params = ScreenConfigParams.capture(treeRoot);
+        ScreenConfigParams.Snapshot snapshot = ScreenConfigParams.capture(treeRoot);
+        config.params = snapshot.values();
+        config.dynamicChildren = snapshot.dynamicChildren();
         String slug = TabParams.slugify(displayName);
         MAPPER.writerWithDefaultPrettyPrinter()
               .writeValue(root.resolve(slug + ".json").toFile(), config);
@@ -76,7 +80,9 @@ public class ScreenConfigStore {
 
     /** Applies {@code config}'s captured params to {@code treeRoot}. */
     public void load(ScreenConfig config, Node treeRoot) {
-        ScreenConfigParams.apply(treeRoot, config.params);
+        Map<String, List<DynamicChildList.ChildSpec>> dynamicChildren =
+                config.dynamicChildren != null ? config.dynamicChildren : Map.of();
+        ScreenConfigParams.apply(treeRoot, new ScreenConfigParams.Snapshot(config.params, dynamicChildren));
         LOG.info("Loaded screen config '{}'", config.name);
     }
 

@@ -2,6 +2,7 @@ package io.github.duckasteroid.cthugha.binding;
 
 import com.asteroid.duck.opengl.util.timer.Clock;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
+import io.github.duckasteroid.cthugha.params.DynamicChildList;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
@@ -11,6 +12,9 @@ import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.StringParameter;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,8 +37,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  * New Target}/{@code New Cooldown} form fields plus {@code Add Trigger} action remain their only
  * creation entry point (the issue's "+" on every leaf/action for edge-triggered bindings is not
  * implemented in this pass — see the PR description).</p>
+ *
+ * <p>Implements {@link DynamicChildList} so a screen config can round-trip the current set of
+ * bindings: {@link #describe()} captures each binding's mode, name, target and mode-specific
+ * fields (script, or condition/cooldown/value), and {@link #recreate(List)} clears the current
+ * list and rebuilds it via {@link #addContinuous} / {@link #addEdgeTriggered}, preserving each
+ * binding's original name so leaf paths captured elsewhere in the same snapshot (e.g. {@code
+ * Bindings/Trigger 1/condition}) resolve against the recreated child.</p>
  */
-public class BindingSystem extends ParamNode {
+public class BindingSystem extends ParamNode implements DynamicChildList {
 
     public final BooleanParameter enabled = new BooleanParameter("enabled", true);
 
@@ -133,12 +144,34 @@ public class BindingSystem extends ParamNode {
      * ticking immediately.
      */
     public EdgeTriggeredBinding addEdgeTriggered(String condition, String targetPath, double cooldownSeconds, String value) {
-        String name = "Trigger " + counter.incrementAndGet();
+        return addEdgeTriggeredNamed("Trigger " + counter.incrementAndGet(), condition, targetPath, cooldownSeconds, value);
+    }
+
+    /**
+     * Same as {@link #addEdgeTriggered(String, String, double, String)} but with an explicit
+     * name rather than an auto-generated {@code "Trigger N"} one — used by {@link #recreate(List)}
+     * so a recreated binding's path matches the one a snapshot's leaf-value entries were captured
+     * under. Also bumps the auto-naming counter past {@code name} if it looks like a {@code
+     * "Trigger N"} name, so a later auto-named addition doesn't collide with it.
+     */
+    private EdgeTriggeredBinding addEdgeTriggeredNamed(String name, String condition, String targetPath,
+                                                         double cooldownSeconds, String value) {
         EdgeTriggeredBinding binding = new EdgeTriggeredBinding(name, condition, targetPath, cooldownSeconds, value,
                 globalState, () -> removeBindingNamed(name));
         register(binding);
         onTreeChanged.run();
+        bumpCounterPast(name);
         return binding;
+    }
+
+    private void bumpCounterPast(String name) {
+        if (name == null || !name.startsWith("Trigger ")) return;
+        try {
+            int n = Integer.parseInt(name.substring("Trigger ".length()).trim());
+            counter.updateAndGet(cur -> Math.max(cur, n));
+        } catch (NumberFormatException ignored) {
+            // not an auto-generated name; nothing to bump
+        }
     }
 
     private void register(Binding binding) {
@@ -195,5 +228,65 @@ public class BindingSystem extends ParamNode {
     /** Registers a callback invoked whenever a binding is added or removed. */
     public void setOnTreeChanged(Runnable r) {
         this.onTreeChanged = r != null ? r : () -> {};
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Captures each binding's {@link BindingMode} as the {@code type} discriminator plus its
+     * {@code target} and mode-specific fields ({@code script} for {@link ContinuousBinding};
+     * {@code condition}/{@code cooldown}/{@code value} for {@link EdgeTriggeredBinding}) — enough
+     * for {@link #recreate(List)} to rebuild an equivalent binding via {@link #addContinuous} /
+     * {@link #addEdgeTriggered}.</p>
+     */
+    @Override
+    public List<ChildSpec> describe() {
+        List<ChildSpec> specs = new ArrayList<>(bindings.size());
+        for (Binding b : bindings) {
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("target", b.target.getValue());
+            if (b instanceof ContinuousBinding cb) {
+                fields.put("script", cb.script.getValue());
+            } else if (b instanceof EdgeTriggeredBinding eb) {
+                fields.put("condition", eb.condition.getValue());
+                fields.put("cooldown", Double.toString(eb.cooldown.value));
+                fields.put("value", eb.value.getValue());
+            }
+            specs.add(new ChildSpec(b.getName(), b.mode.name(), fields));
+        }
+        return specs;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Removes every current binding (via {@link #removeBinding}, so any live target
+     * association is released synchronously) then rebuilds the list from {@code specs} in order,
+     * dispatching on each spec's {@code type} ({@link BindingMode#CONTINUOUS} vs {@link
+     * BindingMode#EDGE_TRIGGERED}) and preserving its original name.</p>
+     */
+    @Override
+    public void recreate(List<ChildSpec> specs) {
+        new ArrayList<>(bindings).forEach(this::removeBinding);
+        for (ChildSpec spec : specs) {
+            Map<String, String> fields = spec.fields();
+            switch (BindingMode.valueOf(spec.type())) {
+                case CONTINUOUS -> addContinuous(spec.name(), fields.getOrDefault("target", ""),
+                        fields.getOrDefault("script", ""));
+                case EDGE_TRIGGERED -> addEdgeTriggeredNamed(spec.name(), fields.getOrDefault("condition", ""),
+                        fields.getOrDefault("target", ""),
+                        parseDouble(fields.get("cooldown"), EdgeTriggeredBinding.DEFAULT_COOLDOWN_SECONDS),
+                        fields.getOrDefault("value", ""));
+            }
+        }
+    }
+
+    private static double parseDouble(String s, double fallback) {
+        if (s == null) return fallback;
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 }
