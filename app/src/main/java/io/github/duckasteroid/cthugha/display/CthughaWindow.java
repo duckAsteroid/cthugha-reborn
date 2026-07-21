@@ -19,7 +19,7 @@ import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import io.github.duckasteroid.cthugha.ActionTreeBuilder;
 import io.github.duckasteroid.cthugha.JCthugha;
-import io.github.duckasteroid.cthugha.animation.ScriptHelpers;
+import io.github.duckasteroid.cthugha.binding.ScriptHelpers;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.phase.QrPhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
@@ -301,12 +301,12 @@ public class CthughaWindow extends GLWindow {
         if (remoteConfig != null && remoteConfig.enabled) {
             tokenStore = new TokenStore(remoteConfig.fixedToken);
             broadcaster = new RemoteEventBroadcaster();
-            remoteServer = new RemoteServer(cthugha, cthugha.animation, tokenStore, broadcaster, remoteConfig, actionContext);
+            remoteServer = new RemoteServer(cthugha, cthugha.bindings, tokenStore, broadcaster, remoteConfig, actionContext);
             remoteServer.start();
 
             cthugha.translateSource.setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
-            cthugha.triggers.setOnTreeChanged(
+            cthugha.bindings.setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
 
             ContainerNode remoteNode = new ContainerNode("Remote");
@@ -412,8 +412,8 @@ public class CthughaWindow extends GLWindow {
         }
 
         ScriptHelpers.setContext(cthugha.beatDetector, cthugha.rng);
-        cthugha.animation.init(getClock());
-        cthugha.triggers.init(getClock(), cthugha, actionContext);
+        cthugha.wireDefaultBindings();
+        cthugha.bindings.init(getClock(), cthugha, actionContext);
 
         // The change listener only runs on subsequent toggles (construction doesn't fire it),
         // so apply the loaded initial value once here, then keep actualFullscreen in sync.

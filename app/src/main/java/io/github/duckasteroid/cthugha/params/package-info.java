@@ -62,9 +62,9 @@
  *
  * <h2>Animation integration</h2>
  * <p>{@link io.github.duckasteroid.cthugha.params.AbstractValue#setNormalisedValue(double)} maps a
- * {@code [0, 1]} fraction linearly to the parameter's {@code [min, max]} range.  The animation
- * system ({@code AnimationSystem} / {@code AnimationBinding}) uses this entry point to drive any
- * {@code AbstractValue} from a render-core {@code WaveFunction} once per frame.</p>
+ * {@code [0, 1]} fraction linearly to the parameter's {@code [min, max]} range.  The binding
+ * system ({@code BindingSystem} / {@code ContinuousBinding}) uses this entry point to drive any
+ * {@code AbstractValue} from a compiled script once per frame.</p>
  *
  * <h2>Remote visibility</h2>
  * <p>{@link io.github.duckasteroid.cthugha.params.Node#isRemoteAllowed()} controls whether a node

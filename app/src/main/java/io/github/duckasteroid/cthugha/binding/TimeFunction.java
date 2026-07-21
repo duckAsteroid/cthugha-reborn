@@ -1,4 +1,4 @@
-package io.github.duckasteroid.cthugha.animation;
+package io.github.duckasteroid.cthugha.binding;
 
 /**
  * A time-driven function that maps elapsed seconds to a normalised value in {@code [0, 1]}.

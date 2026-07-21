@@ -9,7 +9,7 @@ import { SliderControl } from './SliderControl';
 import { EnumControl } from './EnumControl';
 
 interface TargetPickerControlProps {
-  /** Path of the StringParameter holding the chosen target's path (e.g. an ActionTrigger's `target`). */
+  /** Path of the StringParameter holding the chosen target's path (e.g. an edge-triggered Binding's `target`). */
   targetPath: string;
   /** Currently stored target path. */
   targetValue: string;
@@ -76,9 +76,9 @@ function toOption(node: ParamNode, path: string): TargetOption {
   };
 }
 
-/** Flat {path, label, ...} list across the whole tree, used in search mode. Triggers can't target other triggers. */
+/** Flat {path, label, ...} list across the whole tree, used in search mode. Bindings can't target other bindings. */
 function collectTargets(node: ParamNode, prefix: string, out: TargetOption[]): void {
-  if (prefix === 'Triggers' || prefix.startsWith('Triggers/')) return;
+  if (prefix === 'Bindings' || prefix.startsWith('Bindings/')) return;
   if (node.uiHints?.['hidden'] === 'true') return;
   if (node.type === 'CONTAINER') {
     for (const child of node.children) {
@@ -97,7 +97,7 @@ function collectTargets(node: ParamNode, prefix: string, out: TargetOption[]): v
  * for this picker-only view.
  */
 function buildTargetTree(node: ParamNode, prefix: string): TargetTreeItem | null {
-  if (prefix === 'Triggers' || prefix.startsWith('Triggers/')) return null;
+  if (prefix === 'Bindings' || prefix.startsWith('Bindings/')) return null;
   if (node.uiHints?.['hidden'] === 'true') return null;
 
   if (node.type !== 'CONTAINER') {
@@ -286,7 +286,7 @@ function ValueEditor({
 
 /**
  * Picker over every Action and settable value leaf currently in the param tree — used by fields
- * (like an ActionTrigger's `target`) that reference an existing node by path rather than
+ * (like an edge-triggered Binding's `target`) that reference an existing node by path rather than
  * hand-typing it. When the picked target is a settable leaf, also renders a control matching its
  * own type/min/max/options (toggle, slider, dropdown, or text) for the paired `value` field named
  * by the `paired-value-field` UI hint; when it's an Action, that control is omitted entirely since

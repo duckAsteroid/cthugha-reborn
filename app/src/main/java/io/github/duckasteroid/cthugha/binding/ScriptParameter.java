@@ -1,9 +1,11 @@
-package io.github.duckasteroid.cthugha.animation;
+package io.github.duckasteroid.cthugha.binding;
 
 import io.github.duckasteroid.cthugha.params.CompilableValue;
 import io.github.duckasteroid.cthugha.params.StringValue;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import org.codehaus.janino.ClassBodyEvaluator;
+
+import java.util.Map;
 
 /**
  * A {@link StringValue} that Janino-compiles its content into a {@link TimeFunction} each time
@@ -26,11 +28,23 @@ public class ScriptParameter extends StringValue implements CompilableValue {
     private volatile String value;
     private volatile TimeFunction fn;
     private volatile String lastError;
+    private volatile Map<String, Object> localState = Map.of();
+    private volatile Map<String, Object> globalState = Map.of();
 
     public ScriptParameter(String name, String defaultExpression) {
         super(name);
         withUiHint(UiHint.CONTROL_TYPE, UiHint.CODE_EDITOR);
         this.value = defaultExpression != null ? defaultExpression : "";
+    }
+
+    /**
+     * Wires the script-local and global state maps that every future compiled instance will be
+     * bound to (via {@link ScriptHelpers#bindState}). Call once, before the first {@link #compile()}
+     * — typically from the owning {@link Binding}'s constructor.
+     */
+    public void bindState(Map<String, Object> localState, Map<String, Object> globalState) {
+        this.localState = localState != null ? localState : Map.of();
+        this.globalState = globalState != null ? globalState : Map.of();
     }
 
     @Override
@@ -54,7 +68,9 @@ public class ScriptParameter extends StringValue implements CompilableValue {
                 cbe.setExtendedClass(AnimScript.class);
                 cbe.setDefaultImports(new String[]{ "static java.lang.Math.*" });
                 cbe.cook("public double compute() { return (" + this.value + "); }");
-                fn = (TimeFunction) cbe.getClazz().getDeclaredConstructor().newInstance();
+                AnimScript compiled = (AnimScript) cbe.getClazz().getDeclaredConstructor().newInstance();
+                compiled.bindState(localState, globalState);
+                fn = compiled;
                 lastError = null;
             } catch (Exception e) {
                 lastError = e.getMessage();

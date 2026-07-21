@@ -3,8 +3,8 @@ package io.github.duckasteroid.cthugha.remote;
 import com.asteroid.duck.opengl.util.timer.StaticClock;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.duckasteroid.cthugha.animation.AnimationSystem;
-import io.github.duckasteroid.cthugha.animation.ScriptParameter;
+import io.github.duckasteroid.cthugha.binding.BindingSystem;
+import io.github.duckasteroid.cthugha.binding.ScriptParameter;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
@@ -61,7 +61,7 @@ class RemoteServerTest {
     private StringParameter quote;
     private ScriptParameter rawScript;
     private AtomicBoolean actionFired;
-    private AnimationSystem animation;
+    private BindingSystem animation;
     private RemoteServer server;
     private HttpClient http;
     private String base;
@@ -89,20 +89,20 @@ class RemoteServerTest {
         root.addChild(rawScript);
         root.addChild(ping);
 
-        animation = new AnimationSystem();
-        animation.init(new StaticClock(0.0, 0.0));
+        ActionContext actionContext = new ActionContext() {
+            @Override public void notify(String message) { }
+            @Override public Random rng() { return new Random(1); }
+        };
+
+        animation = new BindingSystem();
         root.addChild(animation);
+        animation.init(new StaticClock(0.0, 0.0), root, actionContext);
 
         TokenStore tokenStore = new TokenStore(TOKEN);
         tokenStore.rotate("http://localhost");
 
         RemoteConfig config = new RemoteConfig();
         config.port = 0; // let the OS pick a free port
-
-        ActionContext actionContext = new ActionContext() {
-            @Override public void notify(String message) { }
-            @Override public Random rng() { return new Random(1); }
-        };
 
         server = new RemoteServer(root, animation, tokenStore, new RemoteEventBroadcaster(), config, actionContext);
         server.start();
