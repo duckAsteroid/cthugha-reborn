@@ -9,11 +9,18 @@ interface GridControlProps {
   options: EnumOption[];
   disabled?: boolean;
   onChange: (v: number) => void;
+  /**
+   * When `'SWATCH'`, previews are treated as short, wide strips that already encode all their
+   * information across the full width (e.g. a palette colour swatch) — rendered two-per-row
+   * with `object-fit: fill` instead of the default cropped 1:1 photo-thumbnail tile.
+   */
+  previewStyle?: string;
 }
 
-export function GridControl({ value, options, disabled, onChange }: GridControlProps) {
+export function GridControl({ value, options, disabled, onChange, previewStyle }: GridControlProps) {
   const [search, setSearch] = useState('');
   const [sortDir, setSortDir] = useState<SortDir>('none');
+  const swatch = previewStyle === 'SWATCH';
 
   const groups = useMemo(
     () => Array.from(new Set(options.map((o) => o.group).filter((g): g is string => !!g))).sort(),
@@ -101,7 +108,7 @@ export function GridControl({ value, options, disabled, onChange }: GridControlP
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${swatch ? 'grid-cols-2' : 'grid-cols-3'}`}>
         {filtered.map(({ opt, idx }) => (
           <button
             key={idx}
@@ -118,10 +125,18 @@ export function GridControl({ value, options, disabled, onChange }: GridControlP
                 alt={opt.label}
                 loading="lazy"
                 decoding="async"
-                className="w-full aspect-square rounded object-cover"
+                className={
+                  swatch
+                    ? 'w-full aspect-[4/1] rounded object-fill'
+                    : 'w-full aspect-square rounded object-cover'
+                }
               />
             ) : (
-              <div className="w-full aspect-square rounded bg-neutral-800 flex items-center justify-center">
+              <div
+                className={`w-full rounded bg-neutral-800 flex items-center justify-center ${
+                  swatch ? 'aspect-[4/1]' : 'aspect-square'
+                }`}
+              >
                 <ImageOff className="w-5 h-5 text-neutral-500" />
               </div>
             )}
@@ -129,7 +144,9 @@ export function GridControl({ value, options, disabled, onChange }: GridControlP
           </button>
         ))}
         {filtered.length === 0 && (
-          <p className="text-xs text-neutral-500 px-2 py-1.5 col-span-3">No matches</p>
+          <p className={`text-xs text-neutral-500 px-2 py-1.5 ${swatch ? 'col-span-2' : 'col-span-3'}`}>
+            No matches
+          </p>
         )}
       </div>
     </div>

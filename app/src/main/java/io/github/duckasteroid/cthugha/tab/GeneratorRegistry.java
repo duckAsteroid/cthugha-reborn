@@ -23,7 +23,7 @@ import java.util.stream.StreamSupport;
  * <h2>Param tree layout</h2>
  * <pre>
  * Translate Source (this node)
- *   ├── Generator  [EnumParameter — carousel/dropdown of generator names]
+ *   ├── Generator  [EnumParameter — searchable list of generator names]
  *   ├── &lt;active generator node&gt;  [the selected TabGenerator, swapped on change]
  *   ├── Presets    [AllPresetsNode — flat across all generators, if tabStore provided]
  *   ├── Save Name  [StringParameter, if tabStore provided]
@@ -88,7 +88,7 @@ public class GeneratorRegistry extends ParamNode {
                 .map(g -> g.getClass().getSimpleName())
                 .collect(Collectors.toList());
         generatorSelector = new EnumParameter<>("Generator", names);
-        generatorSelector.withUiHint(UiHint.CONTROL_TYPE, UiHint.CAROUSEL);
+        generatorSelector.withUiHint(UiHint.CONTROL_TYPE, UiHint.LIST);
         generatorSelector.withUiHint(UiHint.ICON, "cpu");
         generatorSelector.withDescription("Selects which translation-table generator (Spiral, "
             + "Hurricane, Smoke, etc.) computes the pixel displacement map. Switching swaps in "
