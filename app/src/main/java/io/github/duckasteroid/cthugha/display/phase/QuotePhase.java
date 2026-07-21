@@ -15,6 +15,7 @@ import io.github.duckasteroid.cthugha.display.TextureBakeRenderer;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
+import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.quote.Constants;
 import io.github.duckasteroid.cthugha.quote.Quote;
 import org.joml.Matrix4f;
@@ -47,12 +48,25 @@ public class QuotePhase implements RenderPhase {
     private final JCthugha cthugha;
     private Mode mode = Mode.OVERLAY;
 
+    // Shared rigid transform applied to both the quote and its attribution, pivoting around the
+    // quote's own computed anchor position (see updateLayout()/applyTransform()). Animatable via
+    // the existing animation system, same as wave renderer transforms.
+    public final TransformParams transform = new TransformParams("Transform");
+
     // Screen overlay renderers
     private StringRenderer quoteRenderer;
     private StringRenderer attrRenderer;
     private Quote lastQuote = null;
     private String attrPosition;
     private String attrAlign;
+
+    // Auto-computed layout: quote anchor position (pixels) and the attribution's offset relative
+    // to that anchor. Recomputed only when the quote text changes; the shared transform above is
+    // re-applied every frame on top of this fixed anchor/offset pair.
+    private float quoteX;
+    private float quoteY;
+    private float attrOffsetX;
+    private float attrOffsetY;
 
     // In-buffer rendering resources
     private Texture textOverlayTex;
@@ -103,6 +117,7 @@ public class QuotePhase implements RenderPhase {
         if (quote == null) return;
 
         syncQuoteText(quote, ctx);
+        applyTransform();
 
         // Save current FBO binding (renderFBO bound by CthughaWindow)
         IntBuffer savedFbo = BufferUtils.createIntBuffer(1);
@@ -134,6 +149,7 @@ public class QuotePhase implements RenderPhase {
         Quote quote = cthugha.getCurrentQuote();
         syncQuoteText(quote, ctx);
         if (quote == null) return;
+        applyTransform();
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -151,6 +167,10 @@ public class QuotePhase implements RenderPhase {
         });
         toggleMode.withUiHint(UiHint.ICON, "message-square");
         generalGroup.addChild(toggleMode);
+
+        transform.withDescription("Spin, scale, or skew the quote and its attribution together as "
+                + "a single rigid unit, pivoting around the quote's own auto-computed position.");
+        generalGroup.addChild(transform);
     }
 
     @Override
@@ -172,34 +192,58 @@ public class QuotePhase implements RenderPhase {
         }
     }
 
+    /**
+     * Recomputes the quote's anchor position and the attribution's offset relative to that
+     * anchor, from window size and text metrics. Does not touch the renderers' transforms — that
+     * happens every frame in {@link #applyTransform()} so the shared, animatable {@link #transform}
+     * is honoured even when the quote text itself hasn't changed.
+     */
     private void updateLayout(Quote quote, int w, int h) {
         String quoteText = quote.quote();
         String attrText  = "— " + quote.author();
         quoteRenderer.setText(quoteText);
         attrRenderer.setText(attrText);
 
-        float quoteX = 40.0f;
-        float quoteY = h / 2.0f;
-        quoteRenderer.setTransform(new Matrix4f().translate(quoteX, quoteY, 0.0f));
+        quoteX = 40.0f;
+        quoteY = h / 2.0f;
 
         FontTexture attrFont  = attrRenderer.getFontTexture();
         FontTexture quoteFont = quoteRenderer.getFontTexture();
         int gap = quoteFont.getFontHeight() / 3;
 
-        float attrY;
+        // Attribution offset relative to the quote anchor (not an absolute position) so it can be
+        // applied *after* the shared transform below and move rigidly with the quote.
         if ("above".equalsIgnoreCase(attrPosition)) {
-            attrY = quoteY - attrFont.getFontHeight() - gap;
+            attrOffsetY = -attrFont.getFontHeight() - gap;
         } else {
-            attrY = quoteY + quoteFont.getHeight(quoteText) + gap;
+            attrOffsetY = quoteFont.getHeight(quoteText) + gap;
         }
 
         float quoteW = quoteFont.getWidth(quoteText);
-        float attrX = switch (attrAlign.toLowerCase()) {
-            case "center" -> quoteX + (quoteW - attrFont.getWidth(attrText)) / 2.0f;
-            case "right"  -> quoteX + quoteW - attrFont.getWidth(attrText);
-            default       -> quoteX;
+        attrOffsetX = switch (attrAlign.toLowerCase()) {
+            case "center" -> (quoteW - attrFont.getWidth(attrText)) / 2.0f;
+            case "right"  -> quoteW - attrFont.getWidth(attrText);
+            default       -> 0.0f;
         };
-        attrRenderer.setTransform(new Matrix4f().translate(attrX, attrY, 0.0f));
+    }
+
+    /**
+     * Applies the shared {@link #transform} to both renderers as a single rigid unit, pivoting
+     * around the quote's own anchor position ({@link #quoteX}, {@link #quoteY}).
+     * <p>
+     * The anchor translate is applied first (establishing the pivot as the new local origin),
+     * then {@code transform}'s scale/shear/rotate are composed on top of it — so they act in the
+     * quote's local space and the quote's own origin never moves. The attribution's position is
+     * then a further local-space translate by its quote-relative offset on top of that same
+     * composed matrix, so it rotates/scales/shears together with the quote around the identical
+     * pivot rather than computing its own absolute, independent placement.
+     */
+    private void applyTransform() {
+        Matrix4f quoteModel = transform.applyTo(new Matrix4f().translate(quoteX, quoteY, 0.0f));
+        quoteRenderer.setTransform(quoteModel);
+
+        Matrix4f attrModel = new Matrix4f(quoteModel).translate(attrOffsetX, attrOffsetY, 0.0f);
+        attrRenderer.setTransform(attrModel);
     }
 
     private static FontTexture makeFontTexture(String prefix, String defaultName,
