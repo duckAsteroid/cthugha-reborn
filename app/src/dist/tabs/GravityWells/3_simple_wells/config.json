@@ -1,0 +1,15 @@
+{
+  "name" : "3 simple wells",
+  "checksum" : "c850faea4c50e482810b5b043f533e83f563697260cfdea6738c31e86fb4308e",
+  "params" : {
+    "Softening" : 384.4,
+    "Strength" : 1680.0,
+    "Well 1/X" : 0.249,
+    "Well 1/Y" : 0.242,
+    "Well 2/X" : 0.782,
+    "Well 2/Y" : 0.743,
+    "Well 3/X" : 0.507,
+    "Well 3/Y" : 0.519,
+    "Wells" : 3
+  }
+}

@@ -1,0 +1,271 @@
+JCthugha
+  Oscilloscope
+    enabled = 1 [0..1]
+    amplitude = 0.2 [0.5..50.0]
+    ellipse = 0 [0..1]
+    transform
+      Perspective
+        enabled = 0 [0..1]
+        fovY (degrees) = 60.0 [10.0..170.0]
+        zDistance = 1.0 [0.1..10.0]
+      Scale
+        X = 1.0 [4.9E-324..1.7976931348623157E308]
+        Y = 1.0 [4.9E-324..1.7976931348623157E308]
+      Shear
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Translation
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Rotation in radians = 0.0 [0.0..6.283185307179586]
+      Rotation center point
+        X = 0.0 [-1.0..1.0]
+        Y = 0.0 [-1.0..1.0]
+  RadialWave
+    enabled = 0 [0..1]
+    amplitude = 0.2 [0.1..10.0]
+    ellipse = 0 [0..1]
+    transform
+      Perspective
+        enabled = 0 [0..1]
+        fovY (degrees) = 60.0 [10.0..170.0]
+        zDistance = 1.0 [0.1..10.0]
+      Scale
+        X = 1.0 [4.9E-324..1.7976931348623157E308]
+        Y = 1.0 [4.9E-324..1.7976931348623157E308]
+      Shear
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Translation
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Rotation in radians = 0.0 [0.0..6.283185307179586]
+      Rotation center point
+        X = 0.0 [-1.0..1.0]
+        Y = 0.0 [-1.0..1.0]
+  Spectrum
+    enabled = 0 [0..1]
+    transform
+      Perspective
+        enabled = 0 [0..1]
+        fovY (degrees) = 60.0 [10.0..170.0]
+        zDistance = 1.0 [0.1..10.0]
+      Scale
+        X = 1.0 [4.9E-324..1.7976931348623157E308]
+        Y = 1.0 [4.9E-324..1.7976931348623157E308]
+      Shear
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Translation
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Rotation in radians = 0.0 [0.0..6.283185307179586]
+      Rotation center point
+        X = 0.0 [-1.0..1.0]
+        Y = 0.0 [-1.0..1.0]
+  RadialSpectrum
+    enabled = 0 [0..1]
+    repeats = 1 [1..8]
+    transform
+      Perspective
+        enabled = 0 [0..1]
+        fovY (degrees) = 60.0 [10.0..170.0]
+        zDistance = 1.0 [0.1..10.0]
+      Scale
+        X = 1.0 [4.9E-324..1.7976931348623157E308]
+        Y = 1.0 [4.9E-324..1.7976931348623157E308]
+      Shear
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Translation
+        X = 0.0 [4.9E-324..1.7976931348623157E308]
+        Y = 0.0 [4.9E-324..1.7976931348623157E308]
+      Rotation in radians = 0.0 [0.0..6.283185307179586]
+      Rotation center point
+        X = 0.0 [-1.0..1.0]
+        Y = 0.0 [-1.0..1.0]
+  Animation
+    enabled = 1 [0..1]
+    osc rotation
+      enabled = 1 [0..1]
+      frequency = 0.05 [0.01..10.0]
+      phase = 0.0 [0.0..6.283185307179586]
+    radial rotation
+      enabled = 1 [0..1]
+      frequency = 0.07 [0.01..10.0]
+      phase = 0.0 [0.0..6.283185307179586]
+  Translate Source
+    Save Name = ""
+    [action] Save
+    Big half wheel
+      Wheel centre location
+        X = 0.4 [0.0..1.0]
+        Y = 0.0 [0.0..1.0]
+      Presets
+    Circle Inversion
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Radius = 0.4 [0.05..1.5]
+      Presets
+    Concentric Rings
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Ring width = 30.0 [5.0..100.0]
+      Angle per ring (rad) = 0.3 [-3.141592653589793..3.141592653589793]
+      Alternate direction = 1 [0..1]
+      Presets
+    Down spiral tab
+      A = 0.75 [0.0..3.4028234663852886E38]
+      B = 1500.0 [1.0..3.4028234663852886E38]
+      Presets
+    Fisheye Lens
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Strength = 1.2 [-3.0..3.0]
+      Presets
+    Gravity Wells
+      Wells = 2 [1..3]
+      Well 1
+        X = 0.3 [0.0..1.0]
+        Y = 0.3 [0.0..1.0]
+      Well 2
+        X = 0.7 [0.0..1.0]
+        Y = 0.7 [0.0..1.0]
+      Well 3
+        X = 0.5 [0.0..1.0]
+        Y = 0.2 [0.0..1.0]
+      Strength = 18000.0 [0.0..60000.0]
+      Softening = 1500.0 [100.0..8000.0]
+      Presets
+    Hurricane
+      Randomness = 6 [0..150]
+      Speed = 36 [0..100]
+      SlowY = 0 [0..1]
+      SlowX = 1 [0..1]
+      revers = 1 [0..1]
+      Center
+        X = 0.7111224061947766 [0.0..1.0]
+        Y = 0.017798938219669602 [0.0..1.0]
+      Presets
+    Kaleidoscope
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Arms = 6 [2..16]
+      Presets
+    LinearSlider
+      Relative focus = 0.3 [0.0..1.0]
+      Speed = 10.0 [-100.0..100.0]
+      Horizontal = 1 [0..1]
+      Presets
+    Log-Polar Zoom
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Zoom = 0.12 [-1.0..1.0]
+      Rotation = 0.05 [-3.141592653589793..3.141592653589793]
+      Presets
+    Pinwheel
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Sectors = 6 [2..16]
+      Rotation per sector (rad) = 0.5235987755982988 [-3.141592653589793..3.141592653589793]
+      Zoom = 1.0 [0.5..2.0]
+      Alternate = 1 [0..1]
+      Presets
+    Plasma Flow
+      Freq A = 0.015 [0.001..0.08]
+      Freq B = 0.022 [0.001..0.08]
+      Amplitude = 18.0 [0.0..60.0]
+      Presets
+    Ripple
+      Source
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Frequency = 0.1 [0.01..0.5]
+      Amplitude = 10.0 [0.0..50.0]
+      Phase = 0.0 [0.0..6.283185307179586]
+      Presets
+    Shatter
+      Cells = 20 [2..64]
+      Zoom strength = 0.12 [-1.0..1.0]
+      Presets
+    Sine Grid Warp
+      Freq X = 0.02 [0.001..0.1]
+      Freq Y = 0.03 [0.001..0.1]
+      Amplitude = 20.0 [0.0..80.0]
+      Phase X = 0.0 [0.0..6.283185307179586]
+      Phase Y = 1.5707963267948966 [0.0..6.283185307179586]
+      Presets
+    Smoke tab
+      Speed = 100 [1..300]
+      Randomness = 70 [1..100]
+      x = -6 [-10..10]
+      y = -4 [-10..10]
+      Presets
+    Space
+      Reverse = 1 [0..1]
+      Randomness = 0 [0..250]
+      Speed = 2 [1..100]
+      Presets
+    Spirals
+      Number of spirals = 1 [0..64]
+      Delta R = 2.0 [0.0..5.0]
+      Delta A = 0.1 [0.0..1.0]
+      Yin/Yang = 1 [0..1]
+      YY Width = 10.0 [0.0..10.0]
+      Presets
+    Spiral Galaxy Plughole
+      Angular Speed = 0.05 [-1.0..1.0]
+      Radial Speed = 1.5 [-10.0..10.0]
+      Plughole = 1 [0..1]
+      Arms = 1 [1..8]
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Presets
+    Twist
+      Center
+        X = 0.5 [0.0..1.0]
+        Y = 0.5 [0.0..1.0]
+      Max angle (rad) = 1.0471975511965976 [-3.141592653589793..3.141592653589793]
+      Falloff radius = 120.0 [10.0..600.0]
+      Presets
+    Wave Interference
+      Sources = 2 [2..3]
+      Source 1
+        X = 0.25 [0.0..1.0]
+        Y = 0.25 [0.0..1.0]
+      Source 2
+        X = 0.75 [0.0..1.0]
+        Y = 0.75 [0.0..1.0]
+      Source 3
+        X = 0.5 [0.0..1.0]
+        Y = 0.15 [0.0..1.0]
+      Frequency = 0.07 [0.005..0.3]
+      Amplitude = 8.0 [0.0..40.0]
+      Presets
+    [action] Randomise
+    [action] New Source
+    [action] Next
+    [action] Previous
+  [action] Screenshot
+  [action] Record 5s
+  [action] Stop Recording
+  [action] Flash Image
+  [action] Flash White
+  [action] Show Quote
+  Palette
+    Map = 31 [0..73]
+    [action] Random
+    [action] Next
+    [action] Previous
+  [action] Toggle Fullscreen
+  [action] Toggle Debug
+  [action] Toggle Notifications
+  [action] Toggle Quote Mode
+  [action] Cycle Audio

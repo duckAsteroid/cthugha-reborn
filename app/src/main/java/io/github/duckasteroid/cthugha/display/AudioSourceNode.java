@@ -1,0 +1,102 @@
+package io.github.duckasteroid.cthugha.display;
+
+import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import io.github.duckasteroid.cthugha.config.Config;
+import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.UiHint;
+import io.github.duckasteroid.cthugha.params.action.AbstractAction;
+import io.github.duckasteroid.cthugha.params.values.EnumParameter;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.function.Consumer;
+
+/**
+ * Lists the audio capture devices Java Sound can see (plus the always-available simulated
+ * fallback) and lets the user pick one, as a top-level "Audio" tab.
+ *
+ * <p>The param tree is assembled by {@code ActionTreeBuilder} before any {@code RenderPhase}
+ * (and therefore before {@link AudioPipeline}, which owns the live {@code AudioSources} used
+ * for actual capture) has been initialised. So this node discovers device names independently
+ * via {@link LineAcquirer}'s static mixer scan plus {@link AudioPipeline#SIMULATED_SOURCE_NAME},
+ * and the caller (see {@link #setOnSourceSelected}) reconciles a selection against the live
+ * pipeline by exact device name once it exists. Names use {@code MixerLine.displayName()} to
+ * match what {@link AudioPipeline} actually selects sources by; if the two scans disagree (e.g.
+ * a line that fails to open), the caller's reconciliation simply reports "not found" rather than
+ * silently selecting the wrong device.</p>
+ */
+public class AudioSourceNode extends ParamNode {
+
+    private final EnumParameter<String> selector;
+    private final Random rng = new Random();
+    private Consumer<String> onSourceSelected;
+    private boolean syncing = false;
+
+    public AudioSourceNode() {
+        this(discoverNames());
+    }
+
+    /** Package-visible for testing with a fixed device list instead of scanning real hardware. */
+    AudioSourceNode(List<String> names) {
+        super("Audio");
+        withUiHint(UiHint.ICON, "mic");
+        withDescription("The audio capture device feeding the waveform and spectrum visualisations.");
+
+        selector = new EnumParameter<>("Source", names);
+        selector.withDescription("Which Java Sound capture device is currently active. "
+            + "Changing it switches live capture to that device.");
+        selector.withNoAnimate();
+        // Environment-specific (depends on what hardware is plugged into this machine), not
+        // part of the visual configuration, so it's excluded from screen-config snapshots.
+        selector.withNoPersist();
+        selector.addChangeListener(() -> {
+            if (syncing || onSourceSelected == null) return;
+            onSourceSelected.accept(selector.getEnumeration());
+        });
+
+        AbstractAction random = new AbstractAction("Random", ctx ->
+            selector.setValue(rng.nextInt(selector.getOptions().size())));
+        random.withUiHint(UiHint.ICON, "shuffle");
+        random.withDescription("Switches to a random audio capture device from the list.");
+
+        AbstractAction saveDefault = new AbstractAction("Save as Default", ctx ->
+            Config.singleton().setConfig(AudioPipeline.CONFIG_SECTION, AudioPipeline.PREFERRED_DEVICE_KEY,
+                selector.getEnumeration()));
+        saveDefault.withUiHint(UiHint.ICON, "save");
+        saveDefault.withDescription("Remembers the current device as the one Cthugha selects on its next startup.");
+
+        addChild(selector);
+        addChild(random);
+        addChild(saveDefault);
+    }
+
+    /** Registers the callback invoked when the user picks a different source by name. */
+    public void setOnSourceSelected(Consumer<String> callback) {
+        this.onSourceSelected = callback;
+    }
+
+    /**
+     * Syncs the displayed selection to the device name the live {@link AudioPipeline} actually
+     * ended up with (e.g. after its own preferred-source heuristic), without re-firing
+     * {@link #setOnSourceSelected}. No-ops if the name isn't among the discovered options.
+     */
+    public void syncSelected(String name) {
+        int idx = selector.getOptions().indexOf(name);
+        if (idx < 0) return;
+        syncing = true;
+        selector.setValue(idx);
+        syncing = false;
+    }
+
+    /** Mixers can expose several matching lines; dedupe on display name for a clean dropdown. */
+    private static List<String> discoverNames() {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        names.add(AudioPipeline.SIMULATED_SOURCE_NAME);
+        LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+                .map(LineAcquirer.MixerLine::displayName)
+                .forEach(names::add);
+        return new ArrayList<>(names);
+    }
+}

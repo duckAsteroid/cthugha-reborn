@@ -1,0 +1,140 @@
+plugins {
+	id 'java'
+	id 'application'
+	id "com.github.ben-manes.versions" version "0.47.0"
+	id 'io.github.duckasteroid.agent-docs' version '1.0.11'
+}
+
+agentDocs {
+	includeSources = true
+}
+
+repositories {
+	mavenLocal()
+	mavenCentral()
+}
+
+dependencies {
+	// Auto-generates META-INF/services/ entries for ServiceLoader (annotation processor only)
+	compileOnly         'com.google.auto.service:auto-service-annotations:1.1.1'
+	annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+
+	// Remote control HTTP server
+	implementation 'io.javalin:javalin:6.6.0'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
+	// QR code generation (nayuki, zero deps)
+	implementation 'io.nayuki:qrcodegen:1.8.0'
+
+	// Logging API
+	implementation(group: 'org.slf4j', name:'slf4j-api', version: '2.0.7')
+	// OpenGL utils
+	implementation('com.asteroid.duck.opengl:render-core:0.0.1')
+	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
+	implementation platform('org.lwjgl:lwjgl-bom:3.4.1')
+	implementation 'org.lwjgl:lwjgl'
+	implementation 'org.lwjgl:lwjgl-opengl'
+	implementation 'org.lwjgl:lwjgl-glfw'
+	// JOML — vector/matrix types used in render-core API
+	implementation 'org.joml:joml:1.10.9'
+
+	// Fast Fourier Transform
+	implementation 'com.github.wendykierp:JTransforms:3.1:with-dependencies'
+	// Apache lang for primitive array utils
+	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+	// INI file parsing
+	implementation group: 'org.ini4j', name: 'ini4j', version: '0.5.4'
+	// fractional number utils
+	implementation 'org.apache.commons:commons-numbers-fraction:1.1'
+	// Runtime Java compiler for animation scripts
+	implementation 'org.codehaus.janino:janino:3.1.12'
+
+	runtimeOnly 'ch.qos.logback:logback-classic:1.4.8'
+
+	// JUnit5 for testing
+	testImplementation(group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.10.0-M1')
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.mockito:mockito-core:5.23.0'
+}
+
+tasks.register('usbStickify', Copy) {
+	dependsOn jar
+	from "$buildDir/libs/cthuga-reborn.jar"
+	into "D:\\cthuga-reborn\\lib"
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}
+
+compileJava {
+	options.incremental = true
+	options.fork = true
+}
+
+test {
+	useJUnitPlatform()
+}
+
+application {
+	mainClass = "io.github.duckasteroid.cthugha.Main"
+	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
+}
+
+run {
+	workingDir = file("src/dist")
+	println "Working directory: ${workingDir}"
+	systemProperty("cthugha.png.stats.enabled", "true")
+	systemProperty("slf4j.internal.verbosity", "WARN")
+	systemProperty("joml.nounsafe", "true")
+	jvmArgs "--enable-native-access=ALL-UNNAMED"
+	// Fixed remote-control token for local dev, so the same browser session/URL survives app restarts.
+	args "--remote-token=THIS_IS_A_TEST"
+	//systemProperty("sun.java2d.opengl", "true")
+	environment '__NV_PRIME_RENDER_OFFLOAD', '1'
+	environment '__GLX_VENDOR_LIBRARY_NAME', 'nvidia'
+	environment 'XAUTHORITY', System.getenv('XAUTHORITY')
+			?: fileTree('/run/user/' + System.getProperty('user.name')).find { it.name.startsWith('.mutter-Xwaylandauth') }?.absolutePath
+
+	def prevAudioSource = ['']
+	doFirst {
+		prevAudioSource[0] = ['pactl', 'get-default-source'].execute().text.trim()
+		['pactl', 'set-default-source', 'alsa_output.pci-0000_00_1f.3.analog-stereo.monitor'].execute().waitFor()
+	}
+	doLast {
+		if (prevAudioSource[0]) {
+			['pactl', 'set-default-source', prevAudioSource[0]].execute().waitFor()
+		}
+	}
+}
+
+processResources {
+	dependsOn ':remote-ui:npmBuild'
+	from(project(':remote-ui').file('dist')) {
+		into 'remote'
+	}
+}
+
+startScripts {
+	doLast {
+		unixScript.text = unixScript.text.replace(
+			'exec "$JAVACMD" "$@"',
+			'''# Parse optional --audio-source=<pactl-source-name> (default: monitor loopback)
+AUDIO_SOURCE="alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
+for _arg in "$@"; do
+    case "$_arg" in
+        --audio-source=*) AUDIO_SOURCE="${_arg#*=}" ;;
+    esac
+done
+_PREV_SOURCE=$(pactl get-default-source 2>/dev/null)
+pactl set-default-source "$AUDIO_SOURCE" 2>/dev/null
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+"$JAVACMD" --enable-native-access=ALL-UNNAMED -Dslf4j.internal.verbosity=WARN -Djoml.nounsafe=true "$@"
+_EXIT=$?
+[ -n "$_PREV_SOURCE" ] && pactl set-default-source "$_PREV_SOURCE" 2>/dev/null
+exit $_EXIT'''
+		)
+	}
+}

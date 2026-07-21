@@ -1,3 +1,23 @@
 /.gradle/
 /.idea/
-/build/
+build/
+/.agents/skills/com-asteroid-duck-opengl-render-core-0-0-1/
+/.claude/
+/remote-ui/node_modules/
+/remote-ui/dist/
+/app/src/dist/logs/
+/app/src/dist/*.log
+/app/src/dist/*.mp4
+/app/src/dist/screenshot-*.png
+/app/logs/*.log
+/logs/*.log
+*~
+/app/src/dist/configs/
+/app/src/dist/state.ini
+/app/src/dist/state-*.ini
+# Auto-created by Config.state() when tests run with the module dir as their working directory.
+/app/state.ini
+/app/state-*.ini
+/app/src/dist/tabs/Spiral/
+/app/src/dist/tabs/**/*.tab
+/app/src/dist/maps/*.MAP.png

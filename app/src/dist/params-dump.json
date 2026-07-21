@@ -1,0 +1,1291 @@
+{
+  "params" : {
+    "name" : "JCthugha",
+    "type" : "CONTAINER",
+    "children" : [ {
+      "name" : "Oscilloscope",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "activity"
+      },
+      "children" : [ {
+        "name" : "enabled",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 1.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "amplitude",
+        "type" : "DOUBLE",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.2,
+        "min" : 0.5,
+        "max" : 50.0,
+        "controlled" : false
+      }, {
+        "name" : "ellipse",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "transform",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "Perspective",
+          "type" : "CONTAINER",
+          "uiHints" : {
+            "icon" : "eye"
+          },
+          "children" : [ {
+            "name" : "enabled",
+            "type" : "BOOLEAN",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 0.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "fovY (degrees)",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 60.0,
+            "min" : 10.0,
+            "max" : 170.0,
+            "controlled" : false
+          }, {
+            "name" : "zDistance",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 0.1,
+            "max" : 10.0,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Scale",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Shear",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Translation",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Rotation in radians",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER",
+            "icon" : "rotate-cw"
+          },
+          "value" : 0.0,
+          "min" : 0.0,
+          "max" : 6.283185307179586,
+          "controlled" : false
+        }, {
+          "name" : "Rotation center point",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          } ]
+        } ]
+      } ]
+    }, {
+      "name" : "RadialWave",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "radio"
+      },
+      "children" : [ {
+        "name" : "enabled",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "amplitude",
+        "type" : "DOUBLE",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.2,
+        "min" : 0.1,
+        "max" : 10.0,
+        "controlled" : false
+      }, {
+        "name" : "ellipse",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "transform",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "Perspective",
+          "type" : "CONTAINER",
+          "uiHints" : {
+            "icon" : "eye"
+          },
+          "children" : [ {
+            "name" : "enabled",
+            "type" : "BOOLEAN",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 0.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "fovY (degrees)",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 60.0,
+            "min" : 10.0,
+            "max" : 170.0,
+            "controlled" : false
+          }, {
+            "name" : "zDistance",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 0.1,
+            "max" : 10.0,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Scale",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Shear",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Translation",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Rotation in radians",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER",
+            "icon" : "rotate-cw"
+          },
+          "value" : 0.0,
+          "min" : 0.0,
+          "max" : 6.283185307179586,
+          "controlled" : false
+        }, {
+          "name" : "Rotation center point",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          } ]
+        } ]
+      } ]
+    }, {
+      "name" : "Spectrum",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "bar-chart-2"
+      },
+      "children" : [ {
+        "name" : "enabled",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "transform",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "Perspective",
+          "type" : "CONTAINER",
+          "uiHints" : {
+            "icon" : "eye"
+          },
+          "children" : [ {
+            "name" : "enabled",
+            "type" : "BOOLEAN",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 0.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "fovY (degrees)",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 60.0,
+            "min" : 10.0,
+            "max" : 170.0,
+            "controlled" : false
+          }, {
+            "name" : "zDistance",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 0.1,
+            "max" : 10.0,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Scale",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Shear",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Translation",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Rotation in radians",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER",
+            "icon" : "rotate-cw"
+          },
+          "value" : 0.0,
+          "min" : 0.0,
+          "max" : 6.283185307179586,
+          "controlled" : false
+        }, {
+          "name" : "Rotation center point",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          } ]
+        } ]
+      } ]
+    }, {
+      "name" : "RadialSpectrum",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "pie-chart"
+      },
+      "children" : [ {
+        "name" : "enabled",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "repeats",
+        "type" : "INTEGER",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 1.0,
+        "min" : 1.0,
+        "max" : 8.0,
+        "controlled" : false
+      }, {
+        "name" : "transform",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "Perspective",
+          "type" : "CONTAINER",
+          "uiHints" : {
+            "icon" : "eye"
+          },
+          "children" : [ {
+            "name" : "enabled",
+            "type" : "BOOLEAN",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 0.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "fovY (degrees)",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 60.0,
+            "min" : 10.0,
+            "max" : 170.0,
+            "controlled" : false
+          }, {
+            "name" : "zDistance",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 0.1,
+            "max" : 10.0,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Scale",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 1.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Shear",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Translation",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : 4.9E-324,
+            "max" : 1.7976931348623157E308,
+            "controlled" : false
+          } ]
+        }, {
+          "name" : "Rotation in radians",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER",
+            "icon" : "rotate-cw"
+          },
+          "value" : 0.0,
+          "min" : 0.0,
+          "max" : 6.283185307179586,
+          "controlled" : false
+        }, {
+          "name" : "Rotation center point",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.0,
+            "min" : -1.0,
+            "max" : 1.0,
+            "controlled" : false
+          } ]
+        } ]
+      } ]
+    }, {
+      "name" : "Animation",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "zap"
+      },
+      "children" : [ {
+        "name" : "enabled",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 1.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "osc rotation",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "enabled",
+          "type" : "BOOLEAN",
+          "uiHints" : {
+            "control-type" : "SLIDER"
+          },
+          "value" : 1.0,
+          "min" : 0.0,
+          "max" : 1.0,
+          "controlled" : false
+        }, {
+          "name" : "frequency",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER"
+          },
+          "value" : 0.05,
+          "min" : 0.01,
+          "max" : 10.0,
+          "controlled" : false
+        }, {
+          "name" : "phase",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER"
+          },
+          "value" : 0.0,
+          "min" : 0.0,
+          "max" : 6.283185307179586,
+          "controlled" : false
+        } ]
+      }, {
+        "name" : "radial rotation",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "enabled",
+          "type" : "BOOLEAN",
+          "uiHints" : {
+            "control-type" : "SLIDER"
+          },
+          "value" : 1.0,
+          "min" : 0.0,
+          "max" : 1.0,
+          "controlled" : false
+        }, {
+          "name" : "frequency",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER"
+          },
+          "value" : 0.07,
+          "min" : 0.01,
+          "max" : 10.0,
+          "controlled" : false
+        }, {
+          "name" : "phase",
+          "type" : "DOUBLE",
+          "uiHints" : {
+            "control-type" : "SLIDER"
+          },
+          "value" : 0.0,
+          "min" : 0.0,
+          "max" : 6.283185307179586,
+          "controlled" : false
+        } ]
+      } ]
+    }, {
+      "name" : "Translate Source",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "layers"
+      },
+      "children" : [ {
+        "name" : "Generator",
+        "type" : "ENUM",
+        "uiHints" : {
+          "control-type" : "CAROUSEL",
+          "icon" : "cpu"
+        },
+        "value" : 0.0,
+        "min" : 0.0,
+        "max" : 21.0,
+        "controlled" : false,
+        "options" : [ {
+          "label" : "BigHalfWheel"
+        }, {
+          "label" : "CircleInversion"
+        }, {
+          "label" : "ConcentricRings"
+        }, {
+          "label" : "DownSpiral"
+        }, {
+          "label" : "FisheyeLens"
+        }, {
+          "label" : "GravityWells"
+        }, {
+          "label" : "Hurricane"
+        }, {
+          "label" : "Kaleidoscope"
+        }, {
+          "label" : "LinearSlider"
+        }, {
+          "label" : "LogPolarZoom"
+        }, {
+          "label" : "Pinwheel"
+        }, {
+          "label" : "PlasmaFlow"
+        }, {
+          "label" : "Ripple"
+        }, {
+          "label" : "Shatter"
+        }, {
+          "label" : "SineGridWarp"
+        }, {
+          "label" : "Smoke"
+        }, {
+          "label" : "Space"
+        }, {
+          "label" : "Spiral"
+        }, {
+          "label" : "SpiralGalaxyPlughole"
+        }, {
+          "label" : "Twist"
+        }, {
+          "label" : "WaveInterference"
+        } ]
+      }, {
+        "name" : "Big half wheel",
+        "type" : "CONTAINER",
+        "children" : [ {
+          "name" : "Wheel centre location",
+          "type" : "CONTAINER",
+          "children" : [ {
+            "name" : "X",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.2721524257570431,
+            "min" : 0.0,
+            "max" : 1.0,
+            "controlled" : false
+          }, {
+            "name" : "Y",
+            "type" : "DOUBLE",
+            "uiHints" : {
+              "control-type" : "SLIDER"
+            },
+            "value" : 0.4545930993841759,
+            "min" : 0.0,
+            "max" : 1.0,
+            "controlled" : false
+          } ]
+        } ]
+      }, {
+        "name" : "Presets",
+        "type" : "CONTAINER",
+        "uiHints" : {
+          "icon" : "bookmark"
+        },
+        "children" : [ ]
+      }, {
+        "name" : "Save Name",
+        "type" : "STRING",
+        "value" : ""
+      }, {
+        "name" : "Save",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "save"
+        }
+      }, {
+        "name" : "Randomise",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "shuffle"
+        }
+      }, {
+        "name" : "New Source",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "plus-circle"
+        }
+      }, {
+        "name" : "Next",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "skip-forward"
+        }
+      }, {
+        "name" : "Previous",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "skip-back"
+        }
+      } ]
+    }, {
+      "name" : "Screenshot",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "camera"
+      }
+    }, {
+      "name" : "Record 5s",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "video"
+      }
+    }, {
+      "name" : "Stop Recording",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "square"
+      }
+    }, {
+      "name" : "Flash Image",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "image"
+      }
+    }, {
+      "name" : "Flash White",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "sun"
+      }
+    }, {
+      "name" : "Show Quote",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "quote"
+      }
+    }, {
+      "name" : "Palette",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "palette"
+      },
+      "children" : [ {
+        "name" : "Map",
+        "type" : "ENUM",
+        "uiHints" : {
+          "control-type" : "CAROUSEL"
+        },
+        "value" : 9.0,
+        "min" : 0.0,
+        "max" : 73.0,
+        "controlled" : false,
+        "options" : [ {
+          "label" : "1",
+          "preview" : "/api/v1/maps/preview/1"
+        }, {
+          "label" : "3",
+          "preview" : "/api/v1/maps/preview/3"
+        }, {
+          "label" : "4",
+          "preview" : "/api/v1/maps/preview/4"
+        }, {
+          "label" : "5",
+          "preview" : "/api/v1/maps/preview/5"
+        }, {
+          "label" : "BLEND1",
+          "preview" : "/api/v1/maps/preview/BLEND1"
+        }, {
+          "label" : "BLEND3",
+          "preview" : "/api/v1/maps/preview/BLEND3"
+        }, {
+          "label" : "BLEND4",
+          "preview" : "/api/v1/maps/preview/BLEND4"
+        }, {
+          "label" : "BLEND8",
+          "preview" : "/api/v1/maps/preview/BLEND8"
+        }, {
+          "label" : "BLUORNG",
+          "preview" : "/api/v1/maps/preview/BLUORNG"
+        }, {
+          "label" : "CLOUDS",
+          "preview" : "/api/v1/maps/preview/CLOUDS"
+        }, {
+          "label" : "CLOUDS2",
+          "preview" : "/api/v1/maps/preview/CLOUDS2"
+        }, {
+          "label" : "COLDFIRE",
+          "preview" : "/api/v1/maps/preview/COLDFIRE"
+        }, {
+          "label" : "COOL",
+          "preview" : "/api/v1/maps/preview/COOL"
+        }, {
+          "label" : "FIRE2",
+          "preview" : "/api/v1/maps/preview/FIRE2"
+        }, {
+          "label" : "FIRESTRM",
+          "preview" : "/api/v1/maps/preview/FIRESTRM"
+        }, {
+          "label" : "FROTH3",
+          "preview" : "/api/v1/maps/preview/FROTH3"
+        }, {
+          "label" : "GAMMA1",
+          "preview" : "/api/v1/maps/preview/GAMMA1"
+        }, {
+          "label" : "GREEN",
+          "preview" : "/api/v1/maps/preview/GREEN"
+        }, {
+          "label" : "GREEN1",
+          "preview" : "/api/v1/maps/preview/GREEN1"
+        }, {
+          "label" : "GREYRED",
+          "preview" : "/api/v1/maps/preview/GREYRED"
+        }, {
+          "label" : "HEAT",
+          "preview" : "/api/v1/maps/preview/HEAT"
+        }, {
+          "label" : "HEAT1",
+          "preview" : "/api/v1/maps/preview/HEAT1"
+        }, {
+          "label" : "ICE",
+          "preview" : "/api/v1/maps/preview/ICE"
+        }, {
+          "label" : "INTRED",
+          "preview" : "/api/v1/maps/preview/INTRED"
+        }, {
+          "label" : "LIGHT",
+          "preview" : "/api/v1/maps/preview/LIGHT"
+        }, {
+          "label" : "LTGRN",
+          "preview" : "/api/v1/maps/preview/LTGRN"
+        }, {
+          "label" : "METAL",
+          "preview" : "/api/v1/maps/preview/METAL"
+        }, {
+          "label" : "METAL2",
+          "preview" : "/api/v1/maps/preview/METAL2"
+        }, {
+          "label" : "PUREPOOL",
+          "preview" : "/api/v1/maps/preview/PUREPOOL"
+        }, {
+          "label" : "PURP1",
+          "preview" : "/api/v1/maps/preview/PURP1"
+        }, {
+          "label" : "PURP2",
+          "preview" : "/api/v1/maps/preview/PURP2"
+        }, {
+          "label" : "RAINBOW",
+          "preview" : "/api/v1/maps/preview/RAINBOW"
+        }, {
+          "label" : "RAINBOW2",
+          "preview" : "/api/v1/maps/preview/RAINBOW2"
+        }, {
+          "label" : "RAINBOW3",
+          "preview" : "/api/v1/maps/preview/RAINBOW3"
+        }, {
+          "label" : "RBY",
+          "preview" : "/api/v1/maps/preview/RBY"
+        }, {
+          "label" : "RUSS1",
+          "preview" : "/api/v1/maps/preview/RUSS1"
+        }, {
+          "label" : "RUSS10",
+          "preview" : "/api/v1/maps/preview/RUSS10"
+        }, {
+          "label" : "RUSS11",
+          "preview" : "/api/v1/maps/preview/RUSS11"
+        }, {
+          "label" : "RUSS12",
+          "preview" : "/api/v1/maps/preview/RUSS12"
+        }, {
+          "label" : "RUSS13",
+          "preview" : "/api/v1/maps/preview/RUSS13"
+        }, {
+          "label" : "RUSS14",
+          "preview" : "/api/v1/maps/preview/RUSS14"
+        }, {
+          "label" : "RUSS15",
+          "preview" : "/api/v1/maps/preview/RUSS15"
+        }, {
+          "label" : "RUSS16",
+          "preview" : "/api/v1/maps/preview/RUSS16"
+        }, {
+          "label" : "RUSS17",
+          "preview" : "/api/v1/maps/preview/RUSS17"
+        }, {
+          "label" : "RUSS18",
+          "preview" : "/api/v1/maps/preview/RUSS18"
+        }, {
+          "label" : "RUSS19",
+          "preview" : "/api/v1/maps/preview/RUSS19"
+        }, {
+          "label" : "RUSS2",
+          "preview" : "/api/v1/maps/preview/RUSS2"
+        }, {
+          "label" : "RUSS20",
+          "preview" : "/api/v1/maps/preview/RUSS20"
+        }, {
+          "label" : "RUSS21",
+          "preview" : "/api/v1/maps/preview/RUSS21"
+        }, {
+          "label" : "RUSS22",
+          "preview" : "/api/v1/maps/preview/RUSS22"
+        }, {
+          "label" : "RUSS23",
+          "preview" : "/api/v1/maps/preview/RUSS23"
+        }, {
+          "label" : "RUSS24",
+          "preview" : "/api/v1/maps/preview/RUSS24"
+        }, {
+          "label" : "RUSS25",
+          "preview" : "/api/v1/maps/preview/RUSS25"
+        }, {
+          "label" : "RUSS3",
+          "preview" : "/api/v1/maps/preview/RUSS3"
+        }, {
+          "label" : "RUSS4",
+          "preview" : "/api/v1/maps/preview/RUSS4"
+        }, {
+          "label" : "RUSS5",
+          "preview" : "/api/v1/maps/preview/RUSS5"
+        }, {
+          "label" : "RUSS6",
+          "preview" : "/api/v1/maps/preview/RUSS6"
+        }, {
+          "label" : "RUSS7",
+          "preview" : "/api/v1/maps/preview/RUSS7"
+        }, {
+          "label" : "RUSS8",
+          "preview" : "/api/v1/maps/preview/RUSS8"
+        }, {
+          "label" : "RUSS9",
+          "preview" : "/api/v1/maps/preview/RUSS9"
+        }, {
+          "label" : "SUN",
+          "preview" : "/api/v1/maps/preview/SUN"
+        }, {
+          "label" : "SUN1",
+          "preview" : "/api/v1/maps/preview/SUN1"
+        }, {
+          "label" : "TROLL",
+          "preview" : "/api/v1/maps/preview/TROLL"
+        }, {
+          "label" : "VOLCANO",
+          "preview" : "/api/v1/maps/preview/VOLCANO"
+        }, {
+          "label" : "VOLCANO2",
+          "preview" : "/api/v1/maps/preview/VOLCANO2"
+        }, {
+          "label" : "VOLCANO3",
+          "preview" : "/api/v1/maps/preview/VOLCANO3"
+        }, {
+          "label" : "VOLCANO4",
+          "preview" : "/api/v1/maps/preview/VOLCANO4"
+        }, {
+          "label" : "VOLCANO5",
+          "preview" : "/api/v1/maps/preview/VOLCANO5"
+        }, {
+          "label" : "VOLCANO6",
+          "preview" : "/api/v1/maps/preview/VOLCANO6"
+        }, {
+          "label" : "VOLCANO7",
+          "preview" : "/api/v1/maps/preview/VOLCANO7"
+        }, {
+          "label" : "WINE",
+          "preview" : "/api/v1/maps/preview/WINE"
+        }, {
+          "label" : "WOODS",
+          "preview" : "/api/v1/maps/preview/WOODS"
+        }, {
+          "label" : "WOODS2",
+          "preview" : "/api/v1/maps/preview/WOODS2"
+        } ]
+      }, {
+        "name" : "Random",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "shuffle"
+        }
+      }, {
+        "name" : "Next",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "skip-forward"
+        }
+      }, {
+        "name" : "Previous",
+        "type" : "ACTION",
+        "uiHints" : {
+          "icon" : "skip-back"
+        }
+      } ]
+    }, {
+      "name" : "Toggle Fullscreen",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "maximize-2"
+      }
+    }, {
+      "name" : "Toggle Debug",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "bug"
+      }
+    }, {
+      "name" : "Toggle Notifications",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "bell"
+      }
+    }, {
+      "name" : "Toggle Quote Mode",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "message-square"
+      }
+    }, {
+      "name" : "Cycle Audio",
+      "type" : "ACTION",
+      "uiHints" : {
+        "icon" : "mic"
+      }
+    }, {
+      "name" : "Blur",
+      "type" : "CONTAINER",
+      "uiHints" : {
+        "icon" : "wind"
+      },
+      "children" : [ {
+        "name" : "Enabled",
+        "type" : "BOOLEAN",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 1.0,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      }, {
+        "name" : "Kernel Size",
+        "type" : "INTEGER",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 5.0,
+        "min" : 3.0,
+        "max" : 65.0,
+        "controlled" : false
+      }, {
+        "name" : "Softening",
+        "type" : "DOUBLE",
+        "uiHints" : {
+          "control-type" : "SLIDER"
+        },
+        "value" : 0.99,
+        "min" : 0.0,
+        "max" : 1.0,
+        "controlled" : false
+      } ]
+    } ]
+  },
+  "keyBindings" : [ ]
+}

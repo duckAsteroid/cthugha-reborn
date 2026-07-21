@@ -1,0 +1,68 @@
+package io.github.duckasteroid.cthugha.tab.generators.rotation;
+
+import io.github.duckasteroid.cthugha.tab.*;
+import com.google.auto.service.AutoService;
+
+import static java.lang.Math.PI;
+import static java.lang.Math.abs;
+import static java.lang.Math.atan;
+import static java.lang.Math.ceil;
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
+
+import io.github.duckasteroid.cthugha.params.ParamNode;
+import java.nio.ShortBuffer;
+import java.util.Random;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+
+@AutoService(TabGenerator.class)
+public class DownSpiral extends ParamNode implements TabGenerator {
+  public DoubleParameter a = new DoubleParameter("A", 0, 5, 0.75);
+  public DoubleParameter b = new DoubleParameter("B", 1, 3000, 1500);
+
+  public DownSpiral() {
+    super("Down spiral tab");
+    initChildren(a,b);
+    withResetAction();
+
+    a.withDescription("Compression factor applied to pixels along the top, bottom, left and right screen edges as they are pulled toward the centre.");
+    b.withDescription("Divisor applied to the radial distance when computing the spiral displacement; higher values produce a tighter, more gradual spiral.");
+  }
+
+  @Override
+  public TabMapping generate(int width, int height, Random rng) {
+    int cx = width / 2;
+    int cy = height / 2;
+    float q = 3.14159265399f / 2;
+    float p = (float) (PI / 4);
+    double av = a.value;
+    double bv = b.value;
+    int area = width * height;
+    return (dstX, dstY, dst, dstOffset, r) -> {
+      int dx, dy;
+      if (dstY == 0 || dstY == height - 1) {
+        dx = (int)((cx - dstX) * av);
+        dy = cy - dstY;
+      } else {
+        int dist = (int) sqrt((dstX - cx) * (dstX - cx) + (dstY - cy) * (dstY - cy));
+        float ang;
+        if (dstX == cx) {
+          ang = dstY > cy ? q : -q;
+        } else {
+          ang = (float) atan((float)(dstY - cy) / (dstX - cx));
+        }
+        if (dstX < cx) ang += PI;
+        dx = (int) ceil(-sin(ang - p) * dist / bv);
+        dy = (int) ceil( cos(ang - p) * dist / bv);
+        if (dstX == 0 || dstX == width - 1) {
+          dx = cx - dstX;
+          dy = (int)((cy - dstY) * av);
+        }
+      }
+      int flat = abs(dstX + dx + (dstY + dy) * width) % area;
+      dst.put(dstOffset,     (short)(flat % width));
+      dst.put(dstOffset + 1, (short)(flat / width));
+    };
+  }
+}

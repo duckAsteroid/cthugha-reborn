@@ -1,0 +1,54 @@
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import type { EnumOption } from '../../types';
+
+interface SearchListControlProps {
+  value: number;
+  options: EnumOption[];
+  disabled?: boolean;
+  onChange: (v: number) => void;
+}
+
+export function SearchListControl({ value, options, disabled, onChange }: SearchListControlProps) {
+  const [search, setSearch] = useState('');
+
+  if (options.length === 0) return null;
+
+  const filtered = options
+    .map((opt, idx) => ({ opt, idx }))
+    .filter(({ opt }) => opt.label.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className={`flex flex-col gap-1.5 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+      <div className="flex items-center gap-1.5 px-2 py-1 bg-neutral-800 border border-neutral-600 rounded">
+        <Search className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search…"
+          className="w-full bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none"
+        />
+      </div>
+
+      <div className="max-h-64 overflow-y-auto flex flex-col gap-1">
+        {filtered.map(({ opt, idx }) => (
+          <button
+            key={idx}
+            onClick={() => onChange(idx)}
+            className={`shrink-0 text-left px-2 py-1.5 rounded-lg border text-sm line-clamp-2 transition-colors ${
+              idx === value
+                ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+                : 'border-transparent bg-neutral-900/50 text-neutral-200 hover:bg-neutral-800'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-xs text-neutral-500 px-2 py-1.5">No matches</p>
+        )}
+      </div>
+    </div>
+  );
+}
