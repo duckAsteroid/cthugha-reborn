@@ -41,6 +41,23 @@ public final class UiHint {
     public static final String LIST = "LIST";
 
     /**
+     * Key: on a {@link #GRID} node, overrides how each option's {@code preview} image is
+     * cropped/fit within its tile. Absent means the default square photo-thumbnail treatment
+     * ({@code object-fit: cover} on a 1:1 tile), which crops wide images. See
+     * {@link #PREVIEW_STYLE_SWATCH} for the alternative used by colour-swatch previews.
+     */
+    public static final String PREVIEW_STYLE = "preview-style";
+
+    /**
+     * Value for {@link #PREVIEW_STYLE}: renders each option's preview as a short, wide strip
+     * with {@code object-fit: fill} instead of a cropped square — appropriate for a preview
+     * image that already encodes all its information across its full width, such as a
+     * palette's colour swatch (see {@code PaletteLibraryNode}), where cropping to a square
+     * would hide most of the colours.
+     */
+    public static final String PREVIEW_STYLE_SWATCH = "SWATCH";
+
+    /**
      * Value for {@link #CONTROL_TYPE} on a {@code ContainerNode}: renders its direct
      * container children as a horizontal tab strip.  Any child container that has
      * {@code control-type=EXPANDER} is excluded from the tab strip and rendered below

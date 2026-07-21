@@ -26,7 +26,8 @@ public class PaletteLibraryNode extends ParamNode {
         Random rng = new Random();
 
         EnumParameter<String> selector = new EnumParameter<>("Map", names);
-        selector.withUiHint(UiHint.CONTROL_TYPE, UiHint.CAROUSEL);
+        selector.withUiHint(UiHint.CONTROL_TYPE, UiHint.GRID);
+        selector.withUiHint(UiHint.PREVIEW_STYLE, UiHint.PREVIEW_STYLE_SWATCH);
         selector.withPreviewUrls(i -> "/api/v1/maps/preview/" + names.get(i));
         selector.withDescription("Selects which palette (.MAP file) is currently active. "
             + "Changing it immediately recolors the display via the palette LUT.");
