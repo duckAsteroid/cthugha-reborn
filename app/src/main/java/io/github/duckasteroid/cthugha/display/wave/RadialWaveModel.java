@@ -27,8 +27,20 @@ public class RadialWaveModel extends ParamNode {
     public EnumParameter<ChannelMode> channelMode = new EnumParameter<>("channelMode", Arrays.asList(ChannelMode.values()));
     public TransformParams transform = new TransformParams("transform");
 
+    /** Default name, used by the fixed single-instance construction path. */
+    public static final String DEFAULT_NAME = "RadialWave";
+
     public RadialWaveModel() {
-        super("RadialWave");
+        this(DEFAULT_NAME);
+    }
+
+    /**
+     * Creates an instance with an explicit name, so {@link io.github.duckasteroid.cthugha.display.wave.WaveSystem}
+     * can mount multiple independently-configured radial waves (auto-named "RadialWave 1",
+     * "RadialWave 2", ...) as siblings.
+     */
+    public RadialWaveModel(String name) {
+        super(name);
         initFields(getClass());
         withUiHint(UiHint.ICON, "radio");
         withResetAction();

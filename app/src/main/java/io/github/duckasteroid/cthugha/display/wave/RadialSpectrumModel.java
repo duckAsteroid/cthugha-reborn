@@ -27,8 +27,20 @@ public class RadialSpectrumModel extends ParamNode {
 
     public TransformParams transform = new TransformParams("transform");
 
+    /** Default name, used by the fixed single-instance construction path. */
+    public static final String DEFAULT_NAME = "RadialSpectrum";
+
     public RadialSpectrumModel() {
-        super("RadialSpectrum");
+        this(DEFAULT_NAME);
+    }
+
+    /**
+     * Creates an instance with an explicit name, so {@link io.github.duckasteroid.cthugha.display.wave.WaveSystem}
+     * can mount multiple independently-configured radial spectrum analysers (auto-named
+     * "RadialSpectrum 1", "RadialSpectrum 2", ...) as siblings.
+     */
+    public RadialSpectrumModel(String name) {
+        super(name);
         initFields(getClass());
         withUiHint(UiHint.ICON, "chart-pie");
         withResetAction();

@@ -99,16 +99,12 @@ public class ActionTreeBuilder {
      */
     public void build(List<RenderPhase> phases) {
         // ---- Wave tab: audio-reactive renderers ----
-        // Continuous bindings (formerly nested here as "Animation") now live entirely under the
-        // top-level "Bindings" node — see cthugha.addChild(cthugha.bindings) below — since they're
-        // hidden from the generic remote tree either way (rendered inline on their target leaf
-        // instead) and no longer need a Wave-specific home.
-        ContainerNode waveGroup = new ContainerNode("Wave");
-        waveGroup.withUiHint(UiHint.ICON, "music");
-        waveGroup.addChild(cthugha.oscilloscope);
-        waveGroup.addChild(cthugha.radialWave);
-        waveGroup.addChild(cthugha.spectrum);
-        waveGroup.addChild(cthugha.radialSpectrum);
+        // A dynamic, ordered list of wave instances (see WaveSystem) — mounted directly, since it
+        // is itself the "Wave" tab's root node. Continuous bindings (formerly nested here as
+        // "Animation") now live entirely under the top-level "Bindings" node — see
+        // cthugha.addChild(cthugha.bindings) below — since they're hidden from the generic remote
+        // tree either way (rendered inline on their target leaf instead) and no longer need a
+        // Wave-specific home.
 
         // ---- Tab tab: translation-table generator ----
         ContainerNode tabGroup = new ContainerNode("Tab");
@@ -222,7 +218,7 @@ public class ActionTreeBuilder {
 
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);
-        cthugha.addChild(waveGroup);
+        cthugha.addChild(cthugha.waveSystem);
         cthugha.addChild(cthugha.audioSource);
         cthugha.addChild(tabGroup);
         cthugha.addChild(renderGroup);

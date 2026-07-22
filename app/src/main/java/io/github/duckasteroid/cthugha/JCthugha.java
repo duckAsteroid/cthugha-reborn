@@ -11,9 +11,8 @@ import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.display.phase.WavePhase;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
-import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
-import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
+import io.github.duckasteroid.cthugha.display.wave.WaveSystem;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.params.ParamNode;
@@ -52,10 +51,8 @@ public class JCthugha extends ParamNode implements Closeable {
 	public final BooleanParameter notifications = new BooleanParameter("Notifications",
 			Config.state().getConfigAs("display", "notifications", "true", Boolean::parseBoolean));
 
-	public OscilloscopeModel oscilloscope = new OscilloscopeModel();
-	public RadialWaveModel radialWave = new RadialWaveModel();
-	public SpectrumModel spectrum = new SpectrumModel();
-	public RadialSpectrumModel radialSpectrum = new RadialSpectrumModel();
+	/** Dynamic list of wave visualisation instances (replaces the old fixed one-of-each-type fields). */
+	public WaveSystem waveSystem = new WaveSystem();
 	public BindingSystem bindings = new BindingSystem();
 	public AudioSourceNode audioSource = new AudioSourceNode();
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
@@ -88,10 +85,21 @@ public class JCthugha extends ParamNode implements Closeable {
 	private Instant quoteExpiry = null;
 	private volatile String pendingNotification = null;
 
+	/** The default instances seeded by the constructor; kept for {@link #wireDefaultBindings()}. */
+	private final OscilloscopeModel defaultOscilloscope;
+	private final RadialWaveModel defaultRadialWave;
+
 	public JCthugha() {
 		super("JCthugha");
 		notifications.addChangeListener(() ->
 				Config.state().setConfig("display", "notifications", String.valueOf(notifications.value)));
+
+		// Seed one instance of each wave type, matching the pre-dynamic-list fixed-field defaults
+		// (Oscilloscope enabled, the other three off) so a fresh session looks the same as before.
+		defaultOscilloscope = (OscilloscopeModel) waveSystem.addWave(WaveSystem.WaveType.OSCILLOSCOPE);
+		defaultRadialWave = (RadialWaveModel) waveSystem.addWave(WaveSystem.WaveType.RADIAL_WAVE);
+		waveSystem.addWave(WaveSystem.WaveType.SPECTRUM);
+		waveSystem.addWave(WaveSystem.WaveType.RADIAL_SPECTRUM);
 	}
 
 	public void init(Dimension dims, Random rng) throws IOException {
@@ -115,8 +123,8 @@ public class JCthugha extends ParamNode implements Closeable {
 	 * calling it any earlier, while targets are still parentless, would capture an empty path.
 	 */
 	public void wireDefaultBindings() {
-		bindings.addContinuous("osc rotation",    oscilloscope.transform.rotate, "sine(0.05)");
-		bindings.addContinuous("radial rotation", radialWave.transform.rotate,   "sine(0.07)");
+		bindings.addContinuous("osc rotation",    defaultOscilloscope.transform.rotate, "sine(0.05)");
+		bindings.addContinuous("radial rotation", defaultRadialWave.transform.rotate,   "sine(0.07)");
 	}
 
 	public synchronized Duration doRenderCPU() {
