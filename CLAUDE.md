@@ -57,7 +57,7 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`
 
 Five implementations live in `display/phase/`:
 
-- **`WavePhase`** — owns `AudioPipeline` and all four wave/spectrum GL renderers. Renders directly into the R16 render texture using palette-index–compatible colours (red channel = 1.0, the maximum normalised value, targeting the last palette entry).
+- **`WavePhase`** — owns `AudioPipeline` and reconciles its live GL renderer objects against `cthugha.waveSystem`'s dynamic instance list once per frame (building/disposing renderers as instances are added/removed), rendering each in list order directly into the R16 render texture using palette-index–compatible colours (red channel = 1.0, the maximum normalised value, targeting the last palette entry).
 - **`FlashPhase`** — one-shot texture flash effects (PNG image or white) baked into `renderTex` via `TextureBakeRenderer`. Registers the "Flash White" action; picking a specific image (or a random one) happens via the "Images" tab's `ImagesLibraryNode`.
 - **`QuotePhase`** — renders the current quote as a screen overlay (default) or baked into the indexed buffer (`quoteInBuffer` mode). In bake mode, saves/restores the GL framebuffer binding (`glGetIntegerv(GL_FRAMEBUFFER_BINDING)`) to temporarily render RGBA text then bake it back into the restored render FBO. Registers the "Toggle Quote Mode" action; picking a specific quote (or a random one) happens via the "Quotes" tab's `QuotesLibraryNode`.
 - **`NotifPhase`** — renders transient notification messages as a 3-second RGBA screen overlay. Notifications are produced by `JCthugha.notify()` and polled each frame.
@@ -101,6 +101,23 @@ Wave renderers live in `display/wave/` and implement the render-core wave interf
 - `SpectrumModel` — frequency spectrum bars
 - `RadialSpectrumModel` — radial spectrum analyser
 
+`WaveSystem` (`display/wave/WaveSystem.java`) extends `ParamNode` (mounted directly as the "Wave"
+tab) and manages a dynamic, ordered `CopyOnWriteArrayList<ParamNode>` of wave instances, following
+the same pattern `BindingSystem` uses for its list of `Binding`s. Where the app used to hardwire
+exactly one of each of the four model types above as fixed fields (each with its own `enabled`
+toggle), `WaveSystem` instead holds any number of independently-configured instances of any of
+those four types, auto-named `"{Type} {N}"` (e.g. "Oscilloscope 1", "Oscilloscope 2") in the order
+they were added via the "New Wave" action's type picker; each instance gets a "Delete" action
+appended as an extra child. Render order (in `WavePhase`) matches list order, so later entries
+composite on top of earlier ones — reordering is not supported. `WaveSystem` implements
+`DynamicChildList` (`describe()`/`recreate()`) so a screen config round-trips the set of instances
+(name + type; per-instance param values are captured separately as ordinary leaf values). Because
+`Binding#target` resolves lazily by path (see Binding System below), a binding targeting a param
+inside a deleted wave instance simply stops resolving on its next tick — no explicit cleanup is
+needed on wave deletion. `JCthugha`'s constructor seeds one instance of each type (matching each
+model's own constructor defaults: Oscilloscope enabled, the other three off) so a fresh session
+looks the same as it did before this list became dynamic.
+
 ### Remote Control
 
 `RemoteServer` (`remote/`) embeds a Javalin HTTP server that exposes the parameter tree as a REST API and serves a React SPA (built from `:remote-ui`, bundled into the jar). Access is secured with a rotating bearer token stored in `TokenStore` and displayed as a QR code overlay via `QrOverlay`. Server-Sent Events (SSE) via `RemoteEventBroadcaster` push parameter changes to connected browsers. See `REMOTE_CONTROL.md` for the full design spec.
@@ -111,7 +128,7 @@ Wave renderers live in `display/wave/` and implement the render-core wave interf
 
 ### Screen Configs
 
-The `screenconfig/` package implements named, resolution-independent snapshots of the whole parameter tree (waves, bindings, blur, active palette, active tab generator and its own params) — surfaced as the "Configs" tab. `ScreenConfigParams.capture()` returns a `Snapshot` record pairing an order-preserving flat map of every leaf value (skipping subtrees marked `Node.isPersistExcluded()`, set via `ParamNode.withNoPersist()`, independent of the remote-visibility and UI-hint mechanisms) with, for every opted-in `DynamicChildList` subtree, the structural description needed to recreate its runtime-created children. `DynamicChildList` (`params/`) is a small opt-in contract — `describe(): List<ChildSpec>` / `recreate(List<ChildSpec>)` — for a subtree whose children are added/removed at runtime via their own API rather than fixed at construction (today: `BindingSystem`'s list of `Binding`s; a planned `WaveSystem` will implement it the same way). `ScreenConfigParams.apply()` calls `recreate(...)` on every opted-in subtree named in the snapshot *before* walking leaf values, so a config saved with N bindings loads correctly into a session with zero — the recreated children's paths (e.g. `Bindings/Trigger 1/condition`) already exist by the time leaf-value application runs. `ScreenConfigStore` persists named configs (leaf-value map + dynamic-children map) as JSON under `configs/`. See `SCREEN_CONFIGS.md` for the full design.
+The `screenconfig/` package implements named, resolution-independent snapshots of the whole parameter tree (waves, bindings, blur, active palette, active tab generator and its own params) — surfaced as the "Configs" tab. `ScreenConfigParams.capture()` returns a `Snapshot` record pairing an order-preserving flat map of every leaf value (skipping subtrees marked `Node.isPersistExcluded()`, set via `ParamNode.withNoPersist()`, independent of the remote-visibility and UI-hint mechanisms) with, for every opted-in `DynamicChildList` subtree, the structural description needed to recreate its runtime-created children. `DynamicChildList` (`params/`) is a small opt-in contract — `describe(): List<ChildSpec>` / `recreate(List<ChildSpec>)` — for a subtree whose children are added/removed at runtime via their own API rather than fixed at construction — implemented by `BindingSystem`'s list of `Binding`s and `WaveSystem`'s list of wave instances. `ScreenConfigParams.apply()` calls `recreate(...)` on every opted-in subtree named in the snapshot *before* walking leaf values, so a config saved with N bindings loads correctly into a session with zero — the recreated children's paths (e.g. `Bindings/Trigger 1/condition`) already exist by the time leaf-value application runs. `ScreenConfigStore` persists named configs (leaf-value map + dynamic-children map) as JSON under `configs/`. See `SCREEN_CONFIGS.md` for the full design.
 
 ## Key Dependencies
 

@@ -37,8 +37,20 @@ public class SpectrumModel extends ParamNode {
 
     public TransformParams transform = new TransformParams("transform");
 
+    /** Default name, used by the fixed single-instance construction path. */
+    public static final String DEFAULT_NAME = "Spectrum";
+
     public SpectrumModel() {
-        super("Spectrum");
+        this(DEFAULT_NAME);
+    }
+
+    /**
+     * Creates an instance with an explicit name, so {@link io.github.duckasteroid.cthugha.display.wave.WaveSystem}
+     * can mount multiple independently-configured spectrum analysers (auto-named "Spectrum 1",
+     * "Spectrum 2", ...) as siblings.
+     */
+    public SpectrumModel(String name) {
+        super(name);
         initFields(getClass());
         withUiHint(UiHint.ICON, "chart-column");
         withResetAction();

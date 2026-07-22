@@ -12,6 +12,7 @@ import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
@@ -19,9 +20,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Renders all audio-reactive wave visualisations directly into the R16 indexed buffer.
+ * Renders every wave instance in {@code cthugha.waveSystem} (see
+ * {@link io.github.duckasteroid.cthugha.display.wave.WaveSystem}) directly into the R16 indexed
+ * buffer, in list order -- later entries composite on top of earlier ones.
  *
  * All wave renderers use {@code waveIdx = 1.0f} (the maximum normalised R16 value), which
  * PaletteRenderer resolves to the last palette entry via
@@ -32,9 +38,17 @@ import java.io.UncheckedIOException;
  * {@link SpectrumModel} / {@link RadialSpectrumModel}, but render-core's {@code SpectrumAnalyser}
  * / {@code RadialSpectrumAnalyser} only accept colours at construction time ({@code withBarColors}
  * / {@code withColors} / {@code withPeakColor} must be called before {@code init()} -- there is no
- * runtime colour setter). To keep those params live-editable from the remote UI, this phase
- * disposes and rebuilds the affected analyser on the render thread whenever a colour or
- * show/hide param changes, instead of only applying them once at startup.
+ * runtime colour setter). To keep those params live-editable from the remote UI, each spectrum
+ * entry disposes and rebuilds its analyser on the render thread whenever a colour or show/hide
+ * param changes, instead of only applying them once at startup.
+ *
+ * <p>The set of live GL renderer objects is kept in sync with {@code cthugha.waveSystem}'s
+ * instance list by reconciling against it once per frame in {@link #indexedRender} (see
+ * {@link #resyncWaves()}) -- waves are added/removed from arbitrary threads (e.g. a remote HTTP
+ * request), but the GL renderer objects backing them may only be built or disposed on the render
+ * thread. {@code WaveSystem}'s own {@code setOnTreeChanged} slot is left free for
+ * {@code CthughaWindow} to wire up remote "tree changed" broadcasts, so this phase doesn't fight
+ * it over that single-listener callback.</p>
  */
 public class WavePhase implements RenderPhase {
 
@@ -42,13 +56,11 @@ public class WavePhase implements RenderPhase {
 
     private final JCthugha cthugha;
     private AudioPipeline audioPipeline;
-    private AudioWave oscWave;
-    private RadialWave radWave;
-    private SpectrumAnalyser specAnalyser;
-    private RadialSpectrumAnalyser radSpecAnalyser;
+    private RenderContext initCtx;
+    private Vector4f waveColour;
 
-    private volatile boolean spectrumColourDirty = false;
-    private volatile boolean radialColourDirty = false;
+    /** Live GL renderer entries, keyed by model instance, kept in {@code waveSystem} list order. */
+    private final Map<ParamNode, WaveEntry> entries = new LinkedHashMap<>();
 
     public WavePhase(JCthugha cthugha) {
         this.cthugha = cthugha;
@@ -56,9 +68,10 @@ public class WavePhase implements RenderPhase {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
+        this.initCtx = ctx;
         // pos = index / paletteSize so PaletteRenderer resolves pixelIndex = pos * totalEntries = index
         float waveIdx = 1.0f; //200f / cthugha.paletteMap.size();
-        Vector4f waveColour = new Vector4f(waveIdx, 0f, 0f, 1f);
+        waveColour = new Vector4f(waveIdx, 0f, 0f, 1f);
 
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
@@ -73,98 +86,7 @@ public class WavePhase implements RenderPhase {
         });
         cthugha.audioSource.syncSelected(audioPipeline.getSelectedSourceName());
 
-        oscWave = new AudioWave(audioPipeline.getPboSink());
-        oscWave.setLineColour(waveColour);
-        oscWave.setClearBeforeRender(false);
-        oscWave.init(ctx);
-
-        radWave = new RadialWave(audioPipeline.getPboSink());
-        radWave.setLineColour(waveColour);
-        radWave.setClearBeforeRender(false);
-        radWave.init(ctx);
-
-        specAnalyser = buildSpectrumAnalyser(cthugha.spectrum);
-        audioPipeline.getFreqProc().addSink(specAnalyser);
-        specAnalyser.init(ctx);
-
-        radSpecAnalyser = buildRadialSpectrumAnalyser(cthugha.radialSpectrum);
-        audioPipeline.getFreqProc().addSink(radSpecAnalyser);
-        radSpecAnalyser.init(ctx);
-
-        registerColourListeners();
-    }
-
-    /** Marks the linear spectrum analyser for rebuild on the next frame. */
-    private void onSpectrumColourChange() {
-        spectrumColourDirty = true;
-    }
-
-    /** Marks the radial spectrum analyser for rebuild on the next frame. */
-    private void onRadialColourChange() {
-        radialColourDirty = true;
-    }
-
-    private void registerColourListeners() {
-        SpectrumModel sm = cthugha.spectrum;
-        sm.barColorLow.addChangeListener(this::onSpectrumColourChange);
-        sm.barColorHigh.addChangeListener(this::onSpectrumColourChange);
-        sm.peakColor.addChangeListener(this::onSpectrumColourChange);
-        sm.showBars.addChangeListener(this::onSpectrumColourChange);
-        sm.showPeakTicks.addChangeListener(this::onSpectrumColourChange);
-
-        RadialSpectrumModel rsm = cthugha.radialSpectrum;
-        rsm.innerColor.addChangeListener(this::onRadialColourChange);
-        rsm.baseColor.addChangeListener(this::onRadialColourChange);
-        rsm.outerColor.addChangeListener(this::onRadialColourChange);
-        rsm.peakColor.addChangeListener(this::onRadialColourChange);
-        rsm.showBars.addChangeListener(this::onRadialColourChange);
-        rsm.showPeakTicks.addChangeListener(this::onRadialColourChange);
-    }
-
-    private SpectrumAnalyser buildSpectrumAnalyser(SpectrumModel sm) {
-        SpectrumAnalyser sa = new SpectrumAnalyser(audioPipeline.getFreqProc())
-                .withBarColors(sm.barColorLowVec(), sm.barColorHighVec())
-                .withPeakColor(sm.peakColorVec());
-        sa.setClearBeforeRender(false);
-        return sa;
-    }
-
-    private RadialSpectrumAnalyser buildRadialSpectrumAnalyser(RadialSpectrumModel rsm) {
-        RadialSpectrumAnalyser rsa = new RadialSpectrumAnalyser(audioPipeline.getFreqProc())
-                .withColors(rsm.innerColorVec(), rsm.baseColorVec(), rsm.outerColorVec())
-                .withPeakColor(rsm.peakColorVec());
-        rsa.setClearBeforeRender(false);
-        return rsa;
-    }
-
-    /** GL thread only: disposes and rebuilds the linear spectrum analyser with current colour params. */
-    private void reinitSpectrumAnalyser(RenderContext ctx) {
-        spectrumColourDirty = false;
-        audioPipeline.getFreqProc().removeSink(specAnalyser);
-        specAnalyser.dispose();
-        specAnalyser = buildSpectrumAnalyser(cthugha.spectrum);
-        audioPipeline.getFreqProc().addSink(specAnalyser);
-        try {
-            specAnalyser.init(ctx);
-        } catch (IOException e) {
-            LOG.error("Failed to reinitialise spectrum analyser after a colour change", e);
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /** GL thread only: disposes and rebuilds the radial spectrum analyser with current colour params. */
-    private void reinitRadialSpectrumAnalyser(RenderContext ctx) {
-        radialColourDirty = false;
-        audioPipeline.getFreqProc().removeSink(radSpecAnalyser);
-        radSpecAnalyser.dispose();
-        radSpecAnalyser = buildRadialSpectrumAnalyser(cthugha.radialSpectrum);
-        audioPipeline.getFreqProc().addSink(radSpecAnalyser);
-        try {
-            radSpecAnalyser.init(ctx);
-        } catch (IOException e) {
-            LOG.error("Failed to reinitialise radial spectrum analyser after a colour change", e);
-            throw new UncheckedIOException(e);
-        }
+        resyncWaves();
     }
 
     /**
@@ -191,55 +113,232 @@ public class WavePhase implements RenderPhase {
     public void indexedRender(RenderContext ctx) {
         audioPipeline.update();
 
-        if (spectrumColourDirty) {
-            reinitSpectrumAnalyser(ctx);
-        }
-        if (radialColourDirty) {
-            reinitRadialSpectrumAnalyser(ctx);
-        }
+        resyncWaves();
 
-        OscilloscopeModel om = cthugha.oscilloscope;
-        if (om.enabled.value) {
-            float amp = (float) om.amplitude.value;
-            oscWave.setLineWidth((float) om.lineWidth.value);
-            oscWave.setChannelMode(om.channelMode.getEnumeration().ordinal());
-            oscWave.setAmplitudeFunction(
-                    om.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            oscWave.setTransform(om.transform.applyTo(new Matrix4f()));
-            oscWave.doRender(ctx);
-        }
-
-        RadialWaveModel rm = cthugha.radialWave;
-        if (rm.enabled.value) {
-            float amp = (float) rm.amplitude.value;
-            radWave.setLineWidth((float) rm.lineWidth.value);
-            radWave.setChannelMode(rm.channelMode.getEnumeration().ordinal());
-            radWave.setAmplitudeFunction(
-                    rm.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            radWave.setTransform(rm.transform.applyTo(new Matrix4f()));
-            radWave.doRender(ctx);
-        }
-
-        SpectrumModel sm = cthugha.spectrum;
-        if (sm.enabled.value) {
-            specAnalyser.setTransform(sm.transform.applyTo(positionBase(sm.position.getEnumeration())));
-            specAnalyser.doRender(ctx);
-        }
-
-        RadialSpectrumModel rsm = cthugha.radialSpectrum;
-        if (rsm.enabled.value) {
-            radSpecAnalyser.withRepeats(rsm.repeats.value);
-            radSpecAnalyser.setTransform(rsm.transform.applyTo(new Matrix4f()));
-            radSpecAnalyser.doRender(ctx);
+        for (WaveEntry entry : entries.values()) {
+            entry.render(ctx);
         }
     }
 
     @Override
     public void dispose() {
-        if (oscWave         != null) oscWave.dispose();
-        if (radWave         != null) radWave.dispose();
-        if (specAnalyser    != null) specAnalyser.dispose();
-        if (radSpecAnalyser != null) radSpecAnalyser.dispose();
-        if (audioPipeline   != null) audioPipeline.dispose();
+        entries.values().forEach(WaveEntry::dispose);
+        entries.clear();
+        if (audioPipeline != null) audioPipeline.dispose();
+    }
+
+    /**
+     * GL thread only: reconciles {@link #entries} with {@code cthugha.waveSystem}'s current
+     * instance list -- disposing renderers for instances that were removed, and building
+     * renderers for instances that are new. Only ever appends new entries (v1 has no reordering
+     * support), so the {@link LinkedHashMap}'s insertion order continues to match the wave
+     * system's render order after every resync.
+     */
+    private void resyncWaves() {
+        List<ParamNode> current = cthugha.waveSystem.instances();
+        entries.keySet().removeIf(model -> {
+            if (current.contains(model)) return false;
+            entries.get(model).dispose();
+            return true;
+        });
+        for (ParamNode model : current) {
+            entries.computeIfAbsent(model, this::buildEntry);
+        }
+    }
+
+    private WaveEntry buildEntry(ParamNode model) {
+        try {
+            if (model instanceof OscilloscopeModel om) return new OscilloscopeEntry(om);
+            if (model instanceof RadialWaveModel rm) return new RadialWaveEntry(rm);
+            if (model instanceof SpectrumModel sm) return new SpectrumEntry(sm);
+            if (model instanceof RadialSpectrumModel rsm) return new RadialSpectrumEntry(rsm);
+            throw new IllegalArgumentException("Unknown wave model type: " + model.getClass());
+        } catch (IOException e) {
+            throw new UncheckedIOException(
+                    "Failed to initialise wave renderer for " + model.getFullPath(), e);
+        }
+    }
+
+    /** One live GL renderer backing a single wave model instance. */
+    private interface WaveEntry {
+        /** Called every frame, whether or not the instance is currently enabled. */
+        void render(RenderContext ctx);
+
+        /** GL thread only: releases this entry's GL resources. */
+        void dispose();
+    }
+
+    private final class OscilloscopeEntry implements WaveEntry {
+        private final OscilloscopeModel model;
+        private final AudioWave wave;
+
+        OscilloscopeEntry(OscilloscopeModel model) throws IOException {
+            this.model = model;
+            wave = new AudioWave(audioPipeline.getPboSink());
+            wave.setLineColour(waveColour);
+            wave.setClearBeforeRender(false);
+            wave.init(initCtx);
+        }
+
+        @Override
+        public void render(RenderContext ctx) {
+            if (!model.enabled.value) return;
+            float amp = (float) model.amplitude.value;
+            wave.setLineWidth((float) model.lineWidth.value);
+            wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
+            wave.setAmplitudeFunction(
+                    model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
+            wave.setTransform(model.transform.applyTo(new Matrix4f()));
+            wave.doRender(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            wave.dispose();
+        }
+    }
+
+    private final class RadialWaveEntry implements WaveEntry {
+        private final RadialWaveModel model;
+        private final RadialWave wave;
+
+        RadialWaveEntry(RadialWaveModel model) throws IOException {
+            this.model = model;
+            wave = new RadialWave(audioPipeline.getPboSink());
+            wave.setLineColour(waveColour);
+            wave.setClearBeforeRender(false);
+            wave.init(initCtx);
+        }
+
+        @Override
+        public void render(RenderContext ctx) {
+            if (!model.enabled.value) return;
+            float amp = (float) model.amplitude.value;
+            wave.setLineWidth((float) model.lineWidth.value);
+            wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
+            wave.setAmplitudeFunction(
+                    model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
+            wave.setTransform(model.transform.applyTo(new Matrix4f()));
+            wave.doRender(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            wave.dispose();
+        }
+    }
+
+    private final class SpectrumEntry implements WaveEntry {
+        private final SpectrumModel model;
+        private SpectrumAnalyser analyser;
+        private volatile boolean colourDirty = false;
+
+        SpectrumEntry(SpectrumModel model) throws IOException {
+            this.model = model;
+            analyser = build();
+            audioPipeline.getFreqProc().addSink(analyser);
+            analyser.init(initCtx);
+            Runnable mark = () -> colourDirty = true;
+            model.barColorLow.addChangeListener(mark);
+            model.barColorHigh.addChangeListener(mark);
+            model.peakColor.addChangeListener(mark);
+            model.showBars.addChangeListener(mark);
+            model.showPeakTicks.addChangeListener(mark);
+        }
+
+        private SpectrumAnalyser build() {
+            SpectrumAnalyser sa = new SpectrumAnalyser(audioPipeline.getFreqProc())
+                    .withBarColors(model.barColorLowVec(), model.barColorHighVec())
+                    .withPeakColor(model.peakColorVec());
+            sa.setClearBeforeRender(false);
+            return sa;
+        }
+
+        /** GL thread only: disposes and rebuilds the analyser with current colour params. */
+        private void reinit(RenderContext ctx) {
+            colourDirty = false;
+            audioPipeline.getFreqProc().removeSink(analyser);
+            analyser.dispose();
+            analyser = build();
+            audioPipeline.getFreqProc().addSink(analyser);
+            try {
+                analyser.init(ctx);
+            } catch (IOException e) {
+                LOG.error("Failed to reinitialise spectrum analyser after a colour change", e);
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        @Override
+        public void render(RenderContext ctx) {
+            if (colourDirty) reinit(ctx);
+            if (!model.enabled.value) return;
+            analyser.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration())));
+            analyser.doRender(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            audioPipeline.getFreqProc().removeSink(analyser);
+            analyser.dispose();
+        }
+    }
+
+    private final class RadialSpectrumEntry implements WaveEntry {
+        private final RadialSpectrumModel model;
+        private RadialSpectrumAnalyser analyser;
+        private volatile boolean colourDirty = false;
+
+        RadialSpectrumEntry(RadialSpectrumModel model) throws IOException {
+            this.model = model;
+            analyser = build();
+            audioPipeline.getFreqProc().addSink(analyser);
+            analyser.init(initCtx);
+            Runnable mark = () -> colourDirty = true;
+            model.innerColor.addChangeListener(mark);
+            model.baseColor.addChangeListener(mark);
+            model.outerColor.addChangeListener(mark);
+            model.peakColor.addChangeListener(mark);
+            model.showBars.addChangeListener(mark);
+            model.showPeakTicks.addChangeListener(mark);
+        }
+
+        private RadialSpectrumAnalyser build() {
+            RadialSpectrumAnalyser rsa = new RadialSpectrumAnalyser(audioPipeline.getFreqProc())
+                    .withColors(model.innerColorVec(), model.baseColorVec(), model.outerColorVec())
+                    .withPeakColor(model.peakColorVec());
+            rsa.setClearBeforeRender(false);
+            return rsa;
+        }
+
+        /** GL thread only: disposes and rebuilds the analyser with current colour params. */
+        private void reinit(RenderContext ctx) {
+            colourDirty = false;
+            audioPipeline.getFreqProc().removeSink(analyser);
+            analyser.dispose();
+            analyser = build();
+            audioPipeline.getFreqProc().addSink(analyser);
+            try {
+                analyser.init(ctx);
+            } catch (IOException e) {
+                LOG.error("Failed to reinitialise radial spectrum analyser after a colour change", e);
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        @Override
+        public void render(RenderContext ctx) {
+            if (colourDirty) reinit(ctx);
+            if (!model.enabled.value) return;
+            analyser.withRepeats(model.repeats.value);
+            analyser.setTransform(model.transform.applyTo(new Matrix4f()));
+            analyser.doRender(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            audioPipeline.getFreqProc().removeSink(analyser);
+            analyser.dispose();
+        }
     }
 }
