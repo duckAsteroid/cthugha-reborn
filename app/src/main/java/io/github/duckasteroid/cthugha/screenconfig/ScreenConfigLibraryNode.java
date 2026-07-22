@@ -37,6 +37,13 @@ public class ScreenConfigLibraryNode extends ParamNode {
     private final StringParameter saveName;
     private final AbstractAction saveAction;
 
+    /**
+     * Name the user has already been warned would overwrite an existing config. Tapping Save
+     * again with this exact (untouched) name confirms the overwrite; typing a different name, or
+     * a successful save of any kind, clears it — see {@link #buildSaveAction()}.
+     */
+    private volatile String pendingOverwriteName;
+
     public ScreenConfigLibraryNode(ScreenConfigStore store, Node treeRoot) {
         super("Configs");
         withUiHint(UiHint.ICON, "bookmark");
@@ -73,11 +80,20 @@ public class ScreenConfigLibraryNode extends ParamNode {
             String name = typed.isEmpty()
                     ? "config_" + LocalDateTime.now().format(TIMESTAMP)
                     : typed;
+            // A second consecutive Save with the exact same (unchanged) name confirms an
+            // overwrite the first attempt warned about below — no SPA changes needed for this
+            // "tap twice to confirm" flow, since Save Name isn't cleared while a warning is
+            // pending (see the catch block).
+            boolean confirmedOverwrite = name.equals(pendingOverwriteName);
             try {
-                store.save(name, treeRoot);
+                store.save(name, treeRoot, confirmedOverwrite);
+                pendingOverwriteName = null;
                 saveName.setValue("");
                 refresh();
                 ctx.notify("saved: " + name);
+            } catch (ScreenConfigStore.ConfigAlreadyExistsException e) {
+                pendingOverwriteName = name;
+                ctx.notify("'" + name + "' already exists — tap Save again to overwrite");
             } catch (IOException e) {
                 LOG.error("Failed to save screen config", e);
                 ctx.notify("save failed");
@@ -85,7 +101,8 @@ public class ScreenConfigLibraryNode extends ParamNode {
         });
         save.withUiHint(UiHint.ICON, "save");
         save.withDescription("Captures the entire current parameter tree as a named, reloadable "
-            + "snapshot under Save Name (or an auto-generated name).");
+            + "snapshot under Save Name (or an auto-generated name). Saving over an existing "
+            + "name requires tapping Save twice to confirm.");
         return save;
     }
 }
