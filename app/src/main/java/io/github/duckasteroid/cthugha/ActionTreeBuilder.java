@@ -206,6 +206,15 @@ public class ActionTreeBuilder {
         cthugha.notifications.withNoAnimate();
         generalGroup.addChild(fullscreenEnabled);
         generalGroup.addChild(cthugha.notifications);
+        AbstractAction resetToDefaults = action("Reset to Defaults", "rotate-ccw", ctx -> {
+            cthugha.resetToDefaults();
+            ctx.notify("Reset to defaults");
+        });
+        resetToDefaults.withDescription("Replaces the current Wave instances and Bindings with "
+            + "the app's fresh-session defaults (one Oscilloscope + gentle rotation animations). "
+            + "Does not touch palette, tab generator, blur, or named configs. See issue #3: this "
+            + "used to run silently on every launch; it's now an explicit, opt-in action instead.");
+        generalGroup.addChild(resetToDefaults);
 
         // Each phase registers its own actions (Flash White, Toggle Quote Mode, etc.); the
         // Flash/Quote phases register into their own tabs instead of General.
