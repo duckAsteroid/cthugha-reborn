@@ -54,6 +54,19 @@ public class MapFileReader {
     return load(randomPalette());
   }
 
+  /**
+   * Deterministic default palette: the first file in sorted (filename) order. Used as the
+   * fresh-session default instead of {@link #random()} so a first-ever launch (no persisted
+   * "current" state yet — see issue #3) doesn't pick a different-looking palette every time.
+   */
+  public PaletteMap first() throws IOException {
+    List<Path> paths = paletteFiles().stream().sorted().collect(Collectors.toList());
+    if (paths.isEmpty()) {
+      throw new IOException("No .MAP palette files found in " + paletteDir);
+    }
+    return load(paths.get(0));
+  }
+
   public PaletteMap load(final Path path) throws IOException {
     if(!cache.containsKey(path)) {
       try(Reader reader = Files.newBufferedReader(path)) {

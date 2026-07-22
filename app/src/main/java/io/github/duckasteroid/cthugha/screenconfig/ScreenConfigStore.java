@@ -43,12 +43,18 @@ public class ScreenConfigStore {
         this.root = root;
     }
 
-    /** Lists all saved configs by scanning {@code <root>/*.json}, sorted by display name. */
+    /**
+     * Lists all saved configs by scanning {@code <root>/*.json}, sorted by display name.
+     * Dot-prefixed files (e.g. {@code .current.json}, the continuously-persisted "current" state
+     * — see {@link CurrentStateStore}) are reserved/internal and always excluded, since Java NIO's
+     * glob matching (unlike a shell glob) does <em>not</em> skip them on its own.
+     */
     public List<ScreenConfig> list() {
         if (!Files.isDirectory(root)) return List.of();
         List<ScreenConfig> result = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(root, "*.json")) {
             for (Path entry : ds) {
+                if (entry.getFileName().toString().startsWith(".")) continue;
                 try {
                     ScreenConfig config = MAPPER.readValue(entry.toFile(), ScreenConfig.class);
                     config.fileName = entry.getFileName().toString();
@@ -64,18 +70,43 @@ public class ScreenConfigStore {
         return result;
     }
 
-    /** Captures {@code treeRoot}'s current state and writes it as {@code <slug>.json}. */
-    public void save(String displayName, Node treeRoot) throws IOException {
+    /** Whether a config named {@code displayName} (by slug) already exists on disk. */
+    public boolean exists(String displayName) {
+        return Files.exists(fileFor(displayName));
+    }
+
+    /**
+     * Captures {@code treeRoot}'s current state and writes it as {@code <slug>.json}.
+     *
+     * @param overwrite if false and a config with this name already exists, throws {@link
+     *                  ConfigAlreadyExistsException} instead of silently replacing it — callers
+     *                  should surface this to the user and re-call with {@code overwrite=true}
+     *                  once they've confirmed.
+     */
+    public void save(String displayName, Node treeRoot, boolean overwrite) throws IOException {
+        Path file = fileFor(displayName);
+        if (!overwrite && Files.exists(file)) {
+            throw new ConfigAlreadyExistsException(displayName);
+        }
         Files.createDirectories(root);
         ScreenConfig config = new ScreenConfig();
         config.name = displayName;
         ScreenConfigParams.Snapshot snapshot = ScreenConfigParams.capture(treeRoot);
         config.params = snapshot.values();
         config.dynamicChildren = snapshot.dynamicChildren();
-        String slug = TabParams.slugify(displayName);
-        MAPPER.writerWithDefaultPrettyPrinter()
-              .writeValue(root.resolve(slug + ".json").toFile(), config);
-        LOG.info("Saved screen config '{}' -> {}", displayName, root.resolve(slug + ".json"));
+        MAPPER.writerWithDefaultPrettyPrinter().writeValue(file.toFile(), config);
+        LOG.info("Saved screen config '{}' -> {}", displayName, file);
+    }
+
+    private Path fileFor(String displayName) {
+        return root.resolve(TabParams.slugify(displayName) + ".json");
+    }
+
+    /** Thrown by {@link #save} when {@code overwrite} is false and a config with that name already exists. */
+    public static class ConfigAlreadyExistsException extends IOException {
+        public ConfigAlreadyExistsException(String displayName) {
+            super("A config named '" + displayName + "' already exists");
+        }
     }
 
     /** Applies {@code config}'s captured params to {@code treeRoot}. */

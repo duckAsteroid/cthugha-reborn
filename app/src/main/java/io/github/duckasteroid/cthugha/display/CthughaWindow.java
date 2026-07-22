@@ -414,7 +414,13 @@ public class CthughaWindow extends GLWindow {
         }
 
         ScriptHelpers.setContext(cthugha.beatDetector, cthugha.rng);
-        cthugha.wireDefaultBindings();
+        // Restores the persisted "current" state (waves, bindings, palette, tab generator, blur,
+        // etc. — everything ScreenConfigParams captures) if one exists from a previous session,
+        // otherwise falls back to deterministic first-launch defaults. Either way this also starts
+        // the periodic background writer that keeps "current" up to date for next time (see
+        // issue #3). Must run after the tree above is fully built, since it resolves/records
+        // param paths.
+        cthugha.restoreCurrentStateOrDefaults();
         cthugha.bindings.init(getClock(), cthugha, actionContext);
 
         // The change listener only runs on subsequent toggles (construction doesn't fire it),
@@ -498,6 +504,17 @@ public class CthughaWindow extends GLWindow {
 
         // Screen overlays: each phase manages its own blend state
         for (RenderPhase p : phases) p.screenRender(this);
+    }
+
+    /**
+     * Best-effort synchronous flush of the "current" state, safe to call from a JVM shutdown hook
+     * (see {@code Main}) as a backstop for abnormal termination that skips the normal {@link
+     * #dispose()} path (e.g. SIGTERM, an uncaught exception escaping the render loop). Does no GL
+     * work — only a param-tree read + JSON write — so it is safe off the GL thread. Idempotent and
+     * safe to call even if {@link #init()} never completed.
+     */
+    public void flushCurrentStateOnShutdown() {
+        cthugha.flushCurrentStateNow();
     }
 
     @Override
