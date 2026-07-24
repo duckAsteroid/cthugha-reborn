@@ -9,16 +9,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 /**
- * Reads key names from stdin and dispatches them as key actions on the GL thread.
+ * Reads key names from an input source (stdin, or a file/named-pipe given via --key-input)
+ * and dispatches them as key actions on the GL thread.
  * Format: KEY or MOD+KEY (e.g. "P", "F12", "SHIFT+T", "ESC", "SHIFT+UP").
- * Only instantiated when --stdin is passed on the command line.
+ * Only instantiated when --stdin or --key-input is passed on the command line.
  */
 public class StdinKeyInjector implements Closeable {
 
@@ -37,18 +40,25 @@ public class StdinKeyInjector implements Closeable {
     );
 
     private final RenderActionQueue renderActions;
+    private final Callable<InputStream> inputSource;
     private Thread thread;
 
-    StdinKeyInjector(RenderActionQueue renderActions) {
+    /**
+     * @param inputSource supplies the stream to read key names from; called on the background
+     *                     reader thread so a blocking open (e.g. a FIFO waiting for a writer)
+     *                     doesn't stall construction/rendering.
+     */
+    StdinKeyInjector(RenderActionQueue renderActions, Callable<InputStream> inputSource) {
         this.renderActions = renderActions;
+        this.inputSource = inputSource;
     }
 
     void start(KeyRegistry keyRegistry) {
-        LOG.info("stdin key injection enabled — type a key name (e.g. P, F12, ESC, SHIFT+T) and press Enter");
+        LOG.info("key injection enabled — type a key name (e.g. P, F12, ESC, SHIFT+T) and press Enter");
         thread = Thread.ofVirtual()
                 .name("stdin-key-injector")
                 .start(() -> {
-                    try (Scanner scanner = new Scanner(System.in)) {
+                    try (InputStream in = inputSource.call(); Scanner scanner = new Scanner(in)) {
                         while (scanner.hasNextLine() && !Thread.currentThread().isInterrupted()) {
                             String line = scanner.nextLine().trim();
                             if (!line.isEmpty()) {
@@ -58,6 +68,8 @@ public class StdinKeyInjector implements Closeable {
                                 );
                             }
                         }
+                    } catch (Exception e) {
+                        LOG.error("key input source failed", e);
                     }
                 });
     }

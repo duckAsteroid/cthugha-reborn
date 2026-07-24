@@ -142,21 +142,29 @@ public class CthughaWindow extends GLWindow {
     private RemoteEventBroadcaster broadcaster;
     private RemoteServer remoteServer;
 
-    public CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, DumpConfig dumpConfig) {
-        this(stdinEnabled, remoteConfig, dumpConfig, resolveDisplaySize());
+    public CthughaWindow(boolean stdinEnabled, String keyInputPath, RemoteConfig remoteConfig, DumpConfig dumpConfig) {
+        this(stdinEnabled, keyInputPath, remoteConfig, dumpConfig, resolveDisplaySize());
     }
 
-    private CthughaWindow(boolean stdinEnabled, RemoteConfig remoteConfig, DumpConfig dumpConfig, int[] size) {
+    private CthughaWindow(boolean stdinEnabled, String keyInputPath, RemoteConfig remoteConfig, DumpConfig dumpConfig, int[] size) {
         super(new ResourceManagerImpl(new PathBasedLoader(Paths.get("."))),
                 "Cthugha Reborn",
                 size[0], size[1], null);
         this.cthugha = new JCthugha();
-        this.stdinInjector = stdinEnabled ? new StdinKeyInjector(renderActions) : null;
+        this.stdinInjector = createKeyInjector(stdinEnabled, keyInputPath);
         this.remoteConfig = remoteConfig;
         this.dumpConfig = dumpConfig;
         this.fullscreenEnabled = new BooleanParameter("Fullscreen",
                 Config.state().getConfigAs("display", "fullscreen", "false", Boolean::parseBoolean));
         applyMonitorPosition();
+    }
+
+    /** {@code --key-input=<path>} takes priority over {@code --stdin}; the path may be a plain file or a FIFO. */
+    private StdinKeyInjector createKeyInjector(boolean stdinEnabled, String keyInputPath) {
+        if (keyInputPath != null) {
+            return new StdinKeyInjector(renderActions, () -> new java.io.FileInputStream(keyInputPath));
+        }
+        return stdinEnabled ? new StdinKeyInjector(renderActions, () -> System.in) : null;
     }
 
     /** Parses "1280", "1280px", or "30%" into pixels relative to screenDim. */

@@ -3,6 +3,7 @@ plugins {
 	id 'application'
 	id "com.github.ben-manes.versions" version "0.47.0"
 	id 'io.github.duckasteroid.agent-docs' version '1.0.11'
+	id 'io.github.duckasteroid.github-packages' version '0.2.0'
 }
 
 agentDocs {
@@ -12,6 +13,10 @@ agentDocs {
 repositories {
 	mavenLocal()
 	mavenCentral()
+	gitHubPackages {
+		owner = "duckAsteroid"
+		repo = "opengl-jogl-template"
+	}
 }
 
 dependencies {
@@ -28,7 +33,7 @@ dependencies {
 	// Logging API
 	implementation(group: 'org.slf4j', name:'slf4j-api', version: '2.0.7')
 	// OpenGL utils
-	implementation('com.asteroid.duck.opengl:render-core:0.0.1')
+	implementation('io.github.duckasteroid:render-core:1.0.0-RC3')
 	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
 	implementation platform('org.lwjgl:lwjgl-bom:3.4.1')
 	implementation 'org.lwjgl:lwjgl'
@@ -74,7 +79,34 @@ compileJava {
 }
 
 test {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'smoke'
+	}
+}
+
+// Launches the installed distribution, drives it via --stdin, and checks for crashes,
+// blank renders, and a healthy remote API. Not part of `test`/`check` since it needs a
+// real display and spawns a GLFW window - run explicitly with `./gradlew smokeTest`.
+tasks.register('smokeTest', Test) {
+	group = 'verification'
+	description = 'Launches the installed app end-to-end and checks for startup/render/remote-API regressions.'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'smoke'
+	}
+	dependsOn installDist
+	def installDir = tasks.named('installDist', Sync).get().destinationDir
+	systemProperty 'smoketest.binary', new File(installDir, "bin/${application.applicationName}").absolutePath
+	systemProperty 'smoketest.workdir', "$projectDir/src/dist"
+	systemProperty 'smoketest.reportdir', "$buildDir/smoke-test"
+	outputs.upToDateWhen { false }
+	// Same GL/display env the `run` task needs on this machine - without a correct XAUTHORITY,
+	// GLFW/AWT font rasterization can silently stall rather than error out.
+	environment '__NV_PRIME_RENDER_OFFLOAD', '1'
+	environment '__GLX_VENDOR_LIBRARY_NAME', 'nvidia'
+	environment 'XAUTHORITY', System.getenv('XAUTHORITY')
+			?: fileTree('/run/user/' + System.getProperty('user.name')).find { it.name.startsWith('.mutter-Xwaylandauth') }?.absolutePath
 }
 
 application {

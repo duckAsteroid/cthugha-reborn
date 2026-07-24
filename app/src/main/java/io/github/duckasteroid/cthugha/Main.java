@@ -10,8 +10,12 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         boolean stdinEnabled = Arrays.asList(args).contains("--stdin");
+        String keyInputPath = Arrays.stream(args)
+                .filter(arg -> arg.startsWith("--key-input="))
+                .map(arg -> arg.substring("--key-input=".length()))
+                .findFirst().orElse(null);
         RemoteConfig remoteConfig = RemoteConfig.parse(args);
         DumpConfig dumpConfig = DumpConfig.parse(args);
-        new CthughaWindow(stdinEnabled, remoteConfig, dumpConfig).displayLoop();
+        new CthughaWindow(stdinEnabled, keyInputPath, remoteConfig, dumpConfig).displayLoop();
     }
 }
