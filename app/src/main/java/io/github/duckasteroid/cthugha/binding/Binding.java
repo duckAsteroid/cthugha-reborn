@@ -3,7 +3,6 @@ package io.github.duckasteroid.cthugha.binding;
 import com.asteroid.duck.opengl.util.timer.Clock;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.ParamNode;
-import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.StringParameter;
@@ -50,7 +49,6 @@ public abstract class Binding extends ParamNode {
         super(name);
         this.mode = mode;
         this.target = new StringParameter("target", defaultTargetPath != null ? defaultTargetPath : "");
-        this.target.withUiHint(UiHint.CONTROL_TYPE, UiHint.TARGET_PICKER);
         this.target.withDescription("Full path of the parameter or action this binding targets, "
             + "resolved fresh from the live tree every tick — a target created or deleted at "
             + "runtime is picked up automatically, with no cleanup step required.");

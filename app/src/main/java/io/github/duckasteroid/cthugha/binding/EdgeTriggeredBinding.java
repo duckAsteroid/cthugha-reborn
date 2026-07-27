@@ -3,7 +3,6 @@ package io.github.duckasteroid.cthugha.binding;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.ParamValues;
 import io.github.duckasteroid.cthugha.params.UiHint;
-import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.StringParameter;
@@ -28,26 +27,21 @@ public final class EdgeTriggeredBinding extends Binding {
 
     public final ConditionParameter condition;
     public final DoubleParameter cooldown;
-    /** Raw text applied (via {@link ParamValues}) when {@link #target} resolves to a settable leaf rather than an {@link Action}. Hidden from the generic tree render; {@link #target}'s picker renders it inline with a control shaped to the target's type. */
+    /** Raw text applied (via {@link ParamValues}) when {@link #target} resolves to a settable leaf rather than an {@link Action}. Hidden from the generic tree render; the remote UI's inline {@code TriggerEditor} renders it with a control shaped to the target's own type. */
     public final StringParameter value;
     public final StringParameter status = new StringParameter("status", "OK");
-    public final AbstractAction delete;
 
     private boolean lastConditionState = false;
     private double lastFireTime = Double.NEGATIVE_INFINITY;
 
     EdgeTriggeredBinding(String name, String defaultCondition, String defaultTargetPath,
-                          double defaultCooldown, String defaultValue, Map<String, Object> globalState,
-                          Runnable onDelete) {
+                          double defaultCooldown, String defaultValue, Map<String, Object> globalState) {
         super(name, BindingMode.EDGE_TRIGGERED, defaultTargetPath);
         this.condition = new ConditionParameter("condition", defaultCondition);
         this.condition.bindState(localState(), globalState);
         this.cooldown = new DoubleParameter("cooldown", 0.0, 10.0, defaultCooldown);
         this.value = new StringParameter("value", defaultValue);
         this.value.withUiHint(UiHint.HIDDEN, "true");
-        this.target.withUiHint(UiHint.PAIRED_VALUE_FIELD, "value");
-        this.delete = new AbstractAction("Delete", ctx -> onDelete.run());
-        this.delete.withUiHint(UiHint.ICON, "trash-2");
 
         condition.withDescription("Boolean expression evaluated each frame (e.g. \"bass() > 0.7\"). "
             + "The trigger fires once on the rising edge (false→true), no more than once per "

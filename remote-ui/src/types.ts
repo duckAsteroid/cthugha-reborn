@@ -20,6 +20,17 @@ export interface AnimationInfo {
   compileError?: string;
 }
 
+export interface TriggerInfo {
+  name: string;
+  condition: string;
+  cooldown: number;
+  enabled: boolean;
+  status: string;
+  compileError?: string;
+  /** Present only when the target is a settable leaf, not an Action. */
+  value?: string;
+}
+
 export interface LeafNode {
   name: string;
   type: Exclude<NodeType, 'CONTAINER' | 'ACTION'>;
@@ -33,6 +44,7 @@ export interface LeafNode {
   animation?: AnimationInfo;
   /** false when the server excludes this param from animation (e.g. a disruptive "picker" enum). Absent means true. */
   animatable?: boolean;
+  triggers?: TriggerInfo[];
 }
 
 export interface ActionNode {
@@ -40,6 +52,7 @@ export interface ActionNode {
   type: 'ACTION';
   uiHints?: Record<string, string>;
   description?: string;
+  triggers?: TriggerInfo[];
 }
 
 export interface StringNode {

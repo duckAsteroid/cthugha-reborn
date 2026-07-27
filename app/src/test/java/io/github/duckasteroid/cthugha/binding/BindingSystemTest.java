@@ -99,4 +99,31 @@ class BindingSystemTest {
 
         assertTrue((Boolean) bindings.globalState().get("seen"));
     }
+
+    @Test
+    void findEdgeTriggeredBindingByNameFindsExactMatchOnly() {
+        BindingSystem bindings = new BindingSystem();
+        Root root = new Root();
+        root.addChild(bindings);
+        bindings.init(new StaticClock(0.0, 0.0), root, CTX);
+
+        EdgeTriggeredBinding trigger = bindings.addEdgeTriggered("true", "Ping", 0.0, "");
+
+        assertEquals(trigger, bindings.findEdgeTriggeredBindingByName(trigger.getName()).orElseThrow());
+        assertFalse(bindings.findEdgeTriggeredBindingByName("no such name").isPresent());
+    }
+
+    @Test
+    void findEdgeTriggeredBindingsForReturnsEveryTriggerOnThatTargetButNotOthers() {
+        BindingSystem bindings = new BindingSystem();
+        Root root = new Root();
+        root.addChild(bindings);
+        bindings.init(new StaticClock(0.0, 0.0), root, CTX);
+
+        EdgeTriggeredBinding first = bindings.addEdgeTriggered("true", "Ping", 0.0, "");
+        EdgeTriggeredBinding second = bindings.addEdgeTriggered("bass() > 0.7", "Ping", 0.1, "");
+        bindings.addEdgeTriggered("true", "Amplitude", 0.0, "1.0");
+
+        assertEquals(java.util.List.of(first, second), bindings.findEdgeTriggeredBindingsFor("Ping"));
+    }
 }

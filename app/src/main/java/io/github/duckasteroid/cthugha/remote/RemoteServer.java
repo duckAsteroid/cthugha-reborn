@@ -11,6 +11,7 @@ import io.javalin.http.sse.SseClient;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import io.github.duckasteroid.cthugha.binding.BindingSystem;
 import io.github.duckasteroid.cthugha.binding.ContinuousBinding;
+import io.github.duckasteroid.cthugha.binding.EdgeTriggeredBinding;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.params.ParamNode;
@@ -67,7 +68,7 @@ public class RemoteServer {
         this.broadcaster = broadcaster;
         this.config = config;
         this.actionContext = actionContext;
-        this.serializer = new ParamSerializer();
+        this.serializer = new ParamSerializer(bindings);
         this.mapper = serializer.getMapper();
     }
 
@@ -147,6 +148,11 @@ public class RemoteServer {
                 handlePatchAnimation(ctx, fullPath.substring(0, fullPath.length() - "/animation".length()));
                 return;
             }
+            Optional<String[]> trigger = splitTriggerPath(fullPath);
+            if (trigger.isPresent()) {
+                handlePatchTrigger(ctx, trigger.get()[0], trigger.get()[1]);
+                return;
+            }
             String nodePath = fullPath;
             Optional<Node> nodeOpt = findNode(nodePath);
             if (nodeOpt.isEmpty()) {
@@ -197,6 +203,11 @@ public class RemoteServer {
                 return;
             }
 
+            if (fullPath.endsWith("/triggers")) {
+                handleCreateTrigger(ctx, fullPath.substring(0, fullPath.length() - "/triggers".length()));
+                return;
+            }
+
             if (fullPath.endsWith("/execute")) {
                 String nodePath = fullPath.substring(0, fullPath.length() - "/execute".length());
                 Optional<Node> nodeOpt = nodePath.isEmpty() ? Optional.of(paramRoot) : findNode(nodePath);
@@ -243,11 +254,16 @@ public class RemoteServer {
 
         app.delete("/api/v1/params/*", ctx -> {
             String fullPath = extractNodePath(ctx);
-            if (!fullPath.endsWith("/animation")) {
-                ctx.status(400).json(Map.of("error", "unknown_action"));
+            if (fullPath.endsWith("/animation")) {
+                handleDeleteAnimation(ctx, fullPath.substring(0, fullPath.length() - "/animation".length()));
                 return;
             }
-            handleDeleteAnimation(ctx, fullPath.substring(0, fullPath.length() - "/animation".length()));
+            Optional<String[]> trigger = splitTriggerPath(fullPath);
+            if (trigger.isPresent()) {
+                handleDeleteTrigger(ctx, trigger.get()[0], trigger.get()[1]);
+                return;
+            }
+            ctx.status(400).json(Map.of("error", "unknown_action"));
         });
 
         app.sse("/api/v1/events", client -> {
@@ -420,5 +436,98 @@ public class RemoteServer {
         bindings.removeBinding(bindingOpt.get());
         broadcaster.broadcastAll("treeChanged", "{}");
         ctx.json(serializer.serialize(targetOpt.get()).toString());
+    }
+
+    /**
+     * Splits a request path ending in {@code .../triggers} or {@code .../triggers/{name}} into
+     * {@code {nodePath, name}} (name empty for the bare {@code /triggers} form). Empty if the
+     * path doesn't contain a {@code /triggers} segment at all.
+     */
+    private Optional<String[]> splitTriggerPath(String fullPath) {
+        int idx = fullPath.indexOf("/triggers");
+        if (idx < 0) return Optional.empty();
+        String nodePath = fullPath.substring(0, idx);
+        String rest = fullPath.substring(idx + "/triggers".length());
+        if (rest.isEmpty()) return Optional.of(new String[] {nodePath, ""});
+        if (!rest.startsWith("/") || rest.length() == 1) return Optional.empty();
+        return Optional.of(new String[] {nodePath, rest.substring(1)});
+    }
+
+    /** Resolves {@code nodePath} to an {@link Action} or settable {@link AbstractValue}, writing an error response and returning empty on failure. */
+    private Optional<Node> resolveTriggerable(Context ctx, String nodePath) {
+        Optional<Node> nodeOpt = findNode(nodePath);
+        if (nodeOpt.isEmpty()) {
+            ctx.status(404).json(Map.of("error", "not_found"));
+            return Optional.empty();
+        }
+        Node node = nodeOpt.get();
+        if (!node.isRemoteAllowed()) {
+            ctx.status(403).json(Map.of("error", "not_allowed"));
+            return Optional.empty();
+        }
+        if (!(node instanceof Action) && !(node instanceof AbstractValue)) {
+            ctx.status(400).json(Map.of("error", "not_triggerable"));
+            return Optional.empty();
+        }
+        return Optional.of(node);
+    }
+
+    private void handleCreateTrigger(Context ctx, String nodePath) throws Exception {
+        Optional<Node> targetOpt = resolveTriggerable(ctx, nodePath);
+        if (targetOpt.isEmpty()) return;
+        JsonNode body = mapper.readTree(ctx.body());
+        String condition = body.has("condition") ? body.get("condition").asText() : "";
+        double cooldown = body.has("cooldown")
+                ? body.get("cooldown").asDouble()
+                : EdgeTriggeredBinding.DEFAULT_COOLDOWN_SECONDS;
+        String value = body.has("value") ? body.get("value").asText() : "";
+        bindings.addEdgeTriggered(condition, nodePath, cooldown, value);
+        broadcaster.broadcastAll("treeChanged", "{}");
+        ctx.json(serializer.serialize(targetOpt.get()).toString());
+    }
+
+    private void handlePatchTrigger(Context ctx, String nodePath, String name) throws Exception {
+        Optional<Node> targetOpt = resolveTriggerable(ctx, nodePath);
+        if (targetOpt.isEmpty()) return;
+        Optional<EdgeTriggeredBinding> bindingOpt = findTriggerOn(nodePath, name);
+        if (bindingOpt.isEmpty()) {
+            ctx.status(404).json(Map.of("error", "not_found"));
+            return;
+        }
+        EdgeTriggeredBinding binding = bindingOpt.get();
+        JsonNode body = mapper.readTree(ctx.body());
+        if (body.has("condition")) {
+            binding.condition.setValue(body.get("condition").asText());
+        }
+        if (body.has("cooldown")) {
+            binding.cooldown.setValue(body.get("cooldown").asDouble());
+        }
+        if (body.has("value")) {
+            binding.value.setValue(body.get("value").asText());
+        }
+        if (body.has("enabled")) {
+            binding.enabled.setValue(body.get("enabled").asBoolean() ? 1 : 0);
+        }
+        broadcaster.broadcastAll("treeChanged", "{}");
+        ctx.json(serializer.serialize(targetOpt.get()).toString());
+    }
+
+    private void handleDeleteTrigger(Context ctx, String nodePath, String name) {
+        Optional<Node> targetOpt = resolveTriggerable(ctx, nodePath);
+        if (targetOpt.isEmpty()) return;
+        Optional<EdgeTriggeredBinding> bindingOpt = findTriggerOn(nodePath, name);
+        if (bindingOpt.isEmpty()) {
+            ctx.status(404).json(Map.of("error", "not_found"));
+            return;
+        }
+        bindings.removeBinding(bindingOpt.get());
+        broadcaster.broadcastAll("treeChanged", "{}");
+        ctx.json(serializer.serialize(targetOpt.get()).toString());
+    }
+
+    /** Looks up an edge-triggered binding by name, rejecting a name that doesn't currently target {@code nodePath} (e.g. a stale client-side reference to a since-retargeted or deleted trigger). */
+    private Optional<EdgeTriggeredBinding> findTriggerOn(String nodePath, String name) {
+        return bindings.findEdgeTriggeredBindingByName(name)
+                .filter(b -> b.target.getValue().equals(nodePath));
     }
 }

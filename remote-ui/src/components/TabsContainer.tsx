@@ -15,7 +15,7 @@ import { useToolbar } from '../ToolbarContext';
 import { isRenderable, flattenSoleContainer } from '../nodeUtils';
 
 /** Boolean toggles pulled out of the General expander into the Settings panel instead. */
-const SETTINGS_CONTROL_NAMES = new Set(['Fullscreen', 'Notifications']);
+const SETTINGS_CONTROL_NAMES = new Set(['Fullscreen', 'Notifications', 'Bindings']);
 /** Tabs pulled out of the main tab row into the Settings panel instead. */
 const SETTINGS_TAB_NAMES = new Set(['Audio']);
 
@@ -24,7 +24,7 @@ interface TabsContainerProps {
   path: string;
 }
 
-function renderChild(child: ParamNode, basePath: string, sseState: Map<string, ParamState>, siblings: ParamNode[]) {
+function renderChild(child: ParamNode, basePath: string, sseState: Map<string, ParamState>) {
   const childPath = basePath ? `${basePath}/${child.name}` : child.name;
   if (child.type === 'CONTAINER') {
     return <ParamContainer key={child.name} node={child as ContainerNode} path={childPath} />;
@@ -33,19 +33,7 @@ function renderChild(child: ParamNode, basePath: string, sseState: Map<string, P
     return <ActionButton key={child.name} path={childPath} node={child as ActionNode} />;
   }
   if (child.type === 'STRING') {
-    const pairedFieldName = child.uiHints?.['paired-value-field'];
-    const pairedValueNode = pairedFieldName
-      ? (siblings.find((c) => c.name === pairedFieldName && c.type === 'STRING') as StringNode | undefined)
-      : undefined;
-    return (
-      <StringLeaf
-        key={child.name}
-        path={childPath}
-        node={child as StringNode}
-        pairedValuePath={pairedValueNode ? `${basePath}/${pairedValueNode.name}` : undefined}
-        pairedValueNode={pairedValueNode}
-      />
-    );
+    return <StringLeaf key={child.name} path={childPath} node={child as StringNode} />;
   }
   const liveState = sseState.get(childPath);
   return (
@@ -110,7 +98,7 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
     const tabPath = path ? `${path}/${tab.name}` : tab.name;
     const visibleTabChildren = tab.children.filter(isRenderable);
     const { children: tabChildren, path: contentPath } = flattenSoleContainer(visibleTabChildren, tabPath);
-    return tabChildren.map(child => renderChild(child, contentPath, sseState, tab.children));
+    return tabChildren.map(child => renderChild(child, contentPath, sseState));
   };
 
   return (

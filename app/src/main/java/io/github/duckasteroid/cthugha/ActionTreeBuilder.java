@@ -204,8 +204,11 @@ public class ActionTreeBuilder {
         cthugha.notifications.withUiHint(UiHint.ICON, "bell");
         cthugha.notifications.withDescription("Shows on-screen notifications for actions like preset or palette changes.");
         cthugha.notifications.withNoAnimate();
+        cthugha.bindings.enabled.withUiHint(UiHint.ICON, "zap");
+        cthugha.bindings.enabled.withNoAnimate();
         generalGroup.addChild(fullscreenEnabled);
         generalGroup.addChild(cthugha.notifications);
+        generalGroup.addChild(cthugha.bindings.enabled);
 
         // Each phase registers its own actions (Flash White, Toggle Quote Mode, etc.); the
         // Flash/Quote phases register into their own tabs instead of General.

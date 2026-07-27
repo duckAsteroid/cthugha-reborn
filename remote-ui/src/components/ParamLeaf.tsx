@@ -13,6 +13,7 @@ import { SearchListControl } from './controls/SearchListControl';
 import { NodeIcon } from './NodeIcon';
 import { InfoButton } from './InfoButton';
 import { AnimationEditor } from './AnimationEditor';
+import { TriggerList } from './TriggerList';
 
 interface ParamLeafProps {
   path: string;
@@ -161,6 +162,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
       )}
       {renderControl()}
       {node.animation && <AnimationEditor path={path} animation={node.animation} />}
+      <TriggerList path={path} triggers={node.triggers} valueNode={node} />
       {!node.animation && draftScript !== null && (
         <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-indigo-500/40">
           <div className="flex items-center justify-end">

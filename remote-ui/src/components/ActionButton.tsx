@@ -4,6 +4,7 @@ import type { ActionNode } from '../types';
 import { executeAction } from '../api';
 import { NodeIcon } from './NodeIcon';
 import { InfoButton } from './InfoButton';
+import { TriggerList } from './TriggerList';
 
 interface ActionButtonProps {
   path: string;
@@ -49,6 +50,9 @@ export function ActionButton({ path, node }: ActionButtonProps) {
       {showInfo && node.description && (
         <p className="text-xs text-neutral-400 px-0.5 mt-1.5">{node.description}</p>
       )}
+      <div className="mt-1.5">
+        <TriggerList path={path} triggers={node.triggers} />
+      </div>
     </div>
   );
 }

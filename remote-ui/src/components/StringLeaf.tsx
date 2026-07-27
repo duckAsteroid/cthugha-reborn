@@ -4,18 +4,13 @@ import type { StringNode } from '../types';
 import { patchStringParam } from '../api';
 import { InfoButton } from './InfoButton';
 import { SCRIPT_HELP } from '../scriptHelp';
-import { TargetPickerControl } from './controls/TargetPickerControl';
 
 interface StringLeafProps {
   path: string;
   node: StringNode;
-  /** Path of the sibling leaf named by this node's `paired-value-field` UI hint, if any (TARGET_PICKER only). */
-  pairedValuePath?: string;
-  /** The sibling node itself, so its current raw text can seed the value editor. */
-  pairedValueNode?: StringNode;
 }
 
-export function StringLeaf({ path, node, pairedValuePath, pairedValueNode }: StringLeafProps) {
+export function StringLeaf({ path, node }: StringLeafProps) {
   const [localValue, setLocalValue] = useState(node.value);
   const [committedValue, setCommittedValue] = useState(node.value);
   const [compileError, setCompileError] = useState<string | null>(null);
@@ -38,28 +33,6 @@ export function StringLeaf({ path, node, pairedValuePath, pairedValueNode }: Str
     setLocalValue(committedValue);
     setCompileError(null);
   };
-
-  if (node.uiHints?.['control-type'] === 'TARGET_PICKER' && pairedValuePath) {
-    return (
-      <div className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-neutral-900/50">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm text-neutral-300 font-medium">{node.name}</span>
-          {node.description && (
-            <InfoButton className="ml-auto" open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
-          )}
-        </div>
-        {showInfo && node.description && (
-          <p className="text-xs text-neutral-400 px-0.5">{node.description}</p>
-        )}
-        <TargetPickerControl
-          targetPath={path}
-          targetValue={node.value}
-          valuePath={pairedValuePath}
-          rawValue={pairedValueNode?.value ?? ''}
-        />
-      </div>
-    );
-  }
 
   if (node.uiHints?.['control-type'] === 'CODE_EDITOR') {
     return (

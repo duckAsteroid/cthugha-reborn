@@ -3,8 +3,11 @@ package io.github.duckasteroid.cthugha.remote;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.duckasteroid.cthugha.binding.BindingSystem;
+import io.github.duckasteroid.cthugha.binding.EdgeTriggeredBinding;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.AnimationBindingView;
+import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.action.Action;
 import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.StringValue;
@@ -19,6 +22,16 @@ import java.util.stream.Collectors;
 public class ParamSerializer {
 
     private final ObjectMapper mapper = new ObjectMapper();
+    /** Nullable: only needed to embed the {@code triggers} array; callers with no bindings to report (e.g. {@code JsonDumpFormat}) just get a serializer that never attaches one. */
+    private final BindingSystem bindings;
+
+    public ParamSerializer() {
+        this(null);
+    }
+
+    public ParamSerializer(BindingSystem bindings) {
+        this.bindings = bindings;
+    }
 
     public ObjectMapper getMapper() {
         return mapper;
@@ -43,6 +56,7 @@ public class ParamSerializer {
 
         if (node instanceof Action) {
             // leaf — no children, no value; type=ACTION is sufficient for the client
+            attachTriggers(obj, node, false);
         } else if (node instanceof StringValue sv) {
             obj.put("value", sv.getValue());
         } else if (node instanceof AbstractValue value) {
@@ -63,6 +77,7 @@ public class ParamSerializer {
                 }
                 obj.set("animation", animNode);
             }
+            attachTriggers(obj, node, true);
             if (value instanceof EnumParameter<?> ep) {
                 ArrayNode options = mapper.createArrayNode();
                 List<String> labels = ep.getOptions();
@@ -86,6 +101,36 @@ public class ParamSerializer {
         }
 
         return obj;
+    }
+
+    /**
+     * Attaches a {@code "triggers"} array to {@code obj} listing every
+     * {@link EdgeTriggeredBinding} currently targeting {@code node} — a node can have more than
+     * one, unlike the 1:1 {@code animation} field. Omitted entirely when there are none, so
+     * existing clients that don't look for it are unaffected. {@code includeValue} is {@code
+     * true} for settable leaves (an {@link Action} target has nothing to set).
+     */
+    private void attachTriggers(ObjectNode obj, Node node, boolean includeValue) {
+        if (bindings == null || !(node instanceof ParamNode pn)) return;
+        List<EdgeTriggeredBinding> matches = bindings.findEdgeTriggeredBindingsFor(pn.getFullPath());
+        if (matches.isEmpty()) return;
+        ArrayNode arr = mapper.createArrayNode();
+        for (EdgeTriggeredBinding binding : matches) {
+            ObjectNode t = mapper.createObjectNode();
+            t.put("name", binding.getName());
+            t.put("condition", binding.condition.getValue());
+            t.put("cooldown", binding.cooldown.value);
+            t.put("enabled", binding.enabled.value);
+            t.put("status", binding.status.getValue());
+            if (includeValue) {
+                t.put("value", binding.value.getValue());
+            }
+            if (binding.condition.getLastCompileError() != null) {
+                t.put("compileError", binding.condition.getLastCompileError());
+            }
+            arr.add(t);
+        }
+        obj.set("triggers", arr);
     }
 
     /**

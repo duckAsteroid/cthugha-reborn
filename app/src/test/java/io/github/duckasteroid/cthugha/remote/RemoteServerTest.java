@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.timer.StaticClock;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.duckasteroid.cthugha.binding.BindingSystem;
+import io.github.duckasteroid.cthugha.binding.EdgeTriggeredBinding;
 import io.github.duckasteroid.cthugha.binding.ScriptParameter;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
@@ -21,6 +22,8 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -169,6 +172,11 @@ class RemoteServerTest {
     }
 
     private HttpResponse<String> get(String path) throws Exception { return send("GET", path, null); }
+
+    /** URL-encodes a single path segment (e.g. a binding name like "Trigger 1") for use in a request path. */
+    private static String encodePathSegment(String segment) {
+        return URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20");
+    }
 
     // --- SSE test infrastructure ---
     //
@@ -346,11 +354,9 @@ class RemoteServerTest {
     //
     // This is the StringValue branch of ParamValues.applyText (as opposed to the AbstractValue
     // branch), reached via RemoteServer's PATCH handler. Used by StringLeaf.tsx for plain text
-    // fields and by TargetPickerControl.tsx to write a chosen action/parameter path. ScriptParameter
-    // (a CompilableValue) also flows through here whenever a script-typed leaf is edited directly
-    // rather than through the dedicated /animation routes — e.g. the trigger system's condition
-    // script, which CLAUDE.md notes rides this same generic PATCH-leaf endpoint instead of a
-    // dedicated one.
+    // fields. ScriptParameter (a CompilableValue) also flows through here whenever a script-typed
+    // leaf is edited directly rather than through a dedicated sub-resource — edge-triggered
+    // bindings' own condition script rides the dedicated /triggers routes instead (see below).
 
     @Test
     void patchStringSetsPlainValue() throws Exception {
@@ -482,6 +488,112 @@ class RemoteServerTest {
 
         assertTrue(amplitude.isControlled(), "previous compiled function keeps running per ScriptParameter's documented behaviour");
         assertEquals(5.0, amplitude.getValue().doubleValue());
+    }
+
+    // --- Trigger lifecycle ---
+
+    @Test
+    void createTriggerOnActionTargetFiresOnTick() throws Exception {
+        HttpResponse<String> create = send("POST", "/api/v1/params/Ping/triggers", "{\"condition\":\"true\"}");
+        assertEquals(200, create.statusCode());
+        JsonNode created = mapper.readTree(create.body());
+        assertEquals(1, created.get("triggers").size());
+        assertEquals("true", created.get("triggers").get(0).get("condition").asText());
+        assertFalse(actionFired.get(), "not fired until the next tick");
+
+        animation.tick();
+
+        assertTrue(actionFired.get());
+    }
+
+    @Test
+    void createTriggerOnLeafTargetAppliesValueOnTick() throws Exception {
+        HttpResponse<String> create = send("POST", "/api/v1/params/Amplitude/triggers",
+                "{\"condition\":\"true\",\"value\":\"7.5\"}");
+        assertEquals(200, create.statusCode());
+        assertEquals("7.5", mapper.readTree(create.body()).get("triggers").get(0).get("value").asText());
+
+        animation.tick();
+
+        assertEquals(7.5, amplitude.getValue().doubleValue());
+    }
+
+    @Test
+    void createTriggerOmittingCooldownUsesDefault() throws Exception {
+        HttpResponse<String> create = send("POST", "/api/v1/params/Ping/triggers", "{\"condition\":\"true\"}");
+        JsonNode trigger = mapper.readTree(create.body()).get("triggers").get(0);
+        assertEquals(EdgeTriggeredBinding.DEFAULT_COOLDOWN_SECONDS, trigger.get("cooldown").asDouble(), 1e-9);
+    }
+
+    @Test
+    void createTriggerOnUnknownPathReturns404() throws Exception {
+        HttpResponse<String> resp = send("POST", "/api/v1/params/DoesNotExist/triggers", "{\"condition\":\"true\"}");
+        assertEquals(404, resp.statusCode());
+    }
+
+    @Test
+    void createTriggerOnNonTriggerableNodeReturns400() throws Exception {
+        // Quote is a plain StringValue: settable via PATCH, but out of scope for v1 triggering
+        // (only Action targets and AbstractValue leaves are supported).
+        HttpResponse<String> resp = send("POST", "/api/v1/params/Quote/triggers", "{\"condition\":\"true\"}");
+        assertEquals(400, resp.statusCode());
+        assertEquals("not_triggerable", mapper.readTree(resp.body()).get("error").asText());
+    }
+
+    @Test
+    void multipleTriggersCanTargetTheSameNode() throws Exception {
+        send("POST", "/api/v1/params/Ping/triggers", "{\"condition\":\"true\"}");
+        send("POST", "/api/v1/params/Ping/triggers", "{\"condition\":\"bass() > 0.7\"}");
+
+        HttpResponse<String> resp = get("/api/v1/params/Ping");
+        JsonNode triggers = mapper.readTree(resp.body()).get("triggers");
+
+        assertEquals(2, triggers.size());
+    }
+
+    @Test
+    void patchTriggerUpdatesConditionCooldownAndEnabled() throws Exception {
+        HttpResponse<String> create = send("POST", "/api/v1/params/Ping/triggers", "{\"condition\":\"true\"}");
+        String name = mapper.readTree(create.body()).get("triggers").get(0).get("name").asText();
+
+        HttpResponse<String> patch = send("PATCH", "/api/v1/params/Ping/triggers/" + encodePathSegment(name),
+                "{\"condition\":\"false\",\"cooldown\":2.5,\"enabled\":false}");
+        assertEquals(200, patch.statusCode());
+        JsonNode trigger = mapper.readTree(patch.body()).get("triggers").get(0);
+        assertEquals("false", trigger.get("condition").asText());
+        assertEquals(2.5, trigger.get("cooldown").asDouble(), 1e-9);
+        assertFalse(trigger.get("enabled").asBoolean());
+    }
+
+    @Test
+    void patchTriggerOnUnknownNameReturns404() throws Exception {
+        HttpResponse<String> resp = send("PATCH", "/api/v1/params/Ping/triggers/NoSuchTrigger",
+                "{\"condition\":\"false\"}");
+        assertEquals(404, resp.statusCode());
+    }
+
+    @Test
+    void deleteTriggerRemovesIt() throws Exception {
+        HttpResponse<String> create = send("POST", "/api/v1/params/Ping/triggers", "{\"condition\":\"true\"}");
+        String name = mapper.readTree(create.body()).get("triggers").get(0).get("name").asText();
+
+        HttpResponse<String> del = send("DELETE", "/api/v1/params/Ping/triggers/" + encodePathSegment(name), null);
+        assertEquals(200, del.statusCode());
+        assertFalse(mapper.readTree(del.body()).has("triggers"));
+
+        animation.tick();
+        assertFalse(actionFired.get(), "deleted trigger must not fire");
+    }
+
+    @Test
+    void triggerBadConditionSurfacesCompileErrorAndNeverFires() throws Exception {
+        HttpResponse<String> create = send("POST", "/api/v1/params/Ping/triggers",
+                "{\"condition\":\"not valid java\"}");
+        assertTrue(mapper.readTree(create.body()).get("triggers").get(0).has("compileError"));
+
+        animation.tick();
+
+        assertFalse(actionFired.get());
     }
 
     // --- SSE ---

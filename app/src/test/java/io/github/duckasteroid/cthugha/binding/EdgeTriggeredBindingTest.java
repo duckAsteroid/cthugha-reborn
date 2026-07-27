@@ -43,7 +43,7 @@ class EdgeTriggeredBindingTest {
         Root root = new Root();
         MutableClock clock = new MutableClock();
         EdgeTriggeredBinding binding = new EdgeTriggeredBinding("t", "true", "Ping", 0.0, "",
-                new HashMap<>(), () -> {});
+                new HashMap<>());
         binding.init(clock, root, CTX);
 
         binding.tick();
@@ -60,7 +60,7 @@ class EdgeTriggeredBindingTest {
         // Toggle every tick via state, so the rising edge is re-armed each time — cooldown is
         // then the only thing standing between "condition true" and "fires again".
         EdgeTriggeredBinding binding = new EdgeTriggeredBinding("t",
-                "state.set(\"on\", !state.get(\"on\", false))", "Ping", 5.0, "", new HashMap<>(), () -> {});
+                "state.set(\"on\", !state.get(\"on\", false))", "Ping", 5.0, "", new HashMap<>());
         binding.init(clock, root, CTX);
 
         clock.t = 0.0;
@@ -85,7 +85,7 @@ class EdgeTriggeredBindingTest {
         Root root = new Root();
         MutableClock clock = new MutableClock();
         EdgeTriggeredBinding binding = new EdgeTriggeredBinding("t", "true", "Amplitude", 0.0, "7.5",
-                new HashMap<>(), () -> {});
+                new HashMap<>());
         binding.init(clock, root, CTX);
 
         binding.tick();
@@ -99,7 +99,7 @@ class EdgeTriggeredBindingTest {
         Root root = new Root();
         MutableClock clock = new MutableClock();
         EdgeTriggeredBinding binding = new EdgeTriggeredBinding("t", "true", "NoSuchNode", 0.0, "",
-                new HashMap<>(), () -> {});
+                new HashMap<>());
         binding.init(clock, root, CTX);
 
         binding.tick();

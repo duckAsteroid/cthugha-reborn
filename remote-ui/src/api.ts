@@ -1,5 +1,5 @@
 import { getToken } from './token';
-import type { LeafNode, ParamNode, ServerInfo, StringPatchResult } from './types';
+import type { LeafNode, ActionNode, ParamNode, ServerInfo, StringPatchResult } from './types';
 
 const BASE_URL = window.location.origin;
 
@@ -87,6 +87,33 @@ export async function updateAnimation(
 
 export async function deleteAnimation(path: string): Promise<LeafNode> {
   return apiFetch<LeafNode>(`/api/v1/params/${path}/animation`, {
+    method: 'DELETE',
+  });
+}
+
+export async function createTrigger(
+  path: string,
+  body: { condition: string; cooldown?: number; value?: string },
+): Promise<LeafNode | ActionNode> {
+  return apiFetch<LeafNode | ActionNode>(`/api/v1/params/${path}/triggers`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateTrigger(
+  path: string,
+  name: string,
+  patch: { condition?: string; cooldown?: number; value?: string; enabled?: boolean },
+): Promise<LeafNode | ActionNode> {
+  return apiFetch<LeafNode | ActionNode>(`/api/v1/params/${path}/triggers/${encodeURIComponent(name)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteTrigger(path: string, name: string): Promise<LeafNode | ActionNode> {
+  return apiFetch<LeafNode | ActionNode>(`/api/v1/params/${path}/triggers/${encodeURIComponent(name)}`, {
     method: 'DELETE',
   });
 }
