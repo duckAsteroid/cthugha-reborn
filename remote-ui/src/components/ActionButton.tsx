@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import type { ActionNode } from '../types';
 import { executeAction } from '../api';
 import { NodeIcon } from './NodeIcon';
 import { InfoButton } from './InfoButton';
-import { TriggerList } from './TriggerList';
+import { TriggerEditor } from './TriggerEditor';
+import { BindingCreatorPanel } from './BindingCreatorPanel';
+import { useBindingCreator } from '../hooks/useBindingCreator';
 
 interface ActionButtonProps {
   path: string;
@@ -15,6 +17,7 @@ export function ActionButton({ path, node }: ActionButtonProps) {
   const [busy, setBusy] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const iconName = node.uiHints?.['icon'];
+  const binding = useBindingCreator({ path });
 
   const handleClick = async () => {
     if (busy) return;
@@ -43,15 +46,40 @@ export function ActionButton({ path, node }: ActionButtonProps) {
           ) : null}
           {node.name}
         </button>
-        {node.description && (
-          <InfoButton className="ml-auto" open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
-        )}
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          {node.description && (
+            <InfoButton open={showInfo} onToggle={() => setShowInfo((v) => !v)} />
+          )}
+          {!binding.isOpen && (
+            <button
+              onClick={binding.handleAddClick}
+              aria-label="Add trigger"
+              className="p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       {showInfo && node.description && (
         <p className="text-xs text-neutral-400 px-0.5 mt-1.5">{node.description}</p>
       )}
-      <div className="mt-1.5">
-        <TriggerList path={path} triggers={node.triggers} />
+      <div className="mt-1.5 flex flex-col gap-1.5">
+        {(node.triggers ?? []).map((trigger) => (
+          <TriggerEditor key={trigger.name} path={path} trigger={trigger} />
+        ))}
+        <BindingCreatorPanel
+          menuOpen={binding.menuOpen}
+          draftKind={binding.draftKind}
+          draftValue={binding.draftValue}
+          setDraftValue={binding.setDraftValue}
+          showHelp={binding.showHelp}
+          setShowHelp={binding.setShowHelp}
+          chooseAnimation={binding.chooseAnimation}
+          chooseTrigger={binding.chooseTrigger}
+          cancelDraft={binding.cancelDraft}
+          confirmDraft={binding.confirmDraft}
+        />
       </div>
     </div>
   );
