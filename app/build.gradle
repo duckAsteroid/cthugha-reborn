@@ -35,7 +35,7 @@ dependencies {
 	// OpenGL utils
 	implementation('io.github.duckasteroid:render-core:1.0.0-RC3')
 	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
-	implementation platform('org.lwjgl:lwjgl-bom:3.4.1')
+	implementation platform('org.lwjgl:lwjgl-bom:3.4.2')
 	implementation 'org.lwjgl:lwjgl'
 	implementation 'org.lwjgl:lwjgl-opengl'
 	implementation 'org.lwjgl:lwjgl-glfw'
@@ -132,7 +132,8 @@ run {
 	def prevAudioSource = ['']
 	doFirst {
 		prevAudioSource[0] = ['pactl', 'get-default-source'].execute().text.trim()
-		['pactl', 'set-default-source', 'alsa_output.pci-0000_00_1f.3.analog-stereo.monitor'].execute().waitFor()
+		def defaultSink = ['pactl', 'get-default-sink'].execute().text.trim()
+		['pactl', 'set-default-source', "${defaultSink}.monitor"].execute().waitFor()
 	}
 	doLast {
 		if (prevAudioSource[0]) {
@@ -152,13 +153,14 @@ startScripts {
 	doLast {
 		unixScript.text = unixScript.text.replace(
 			'exec "$JAVACMD" "$@"',
-			'''# Parse optional --audio-source=<pactl-source-name> (default: monitor loopback)
-AUDIO_SOURCE="alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
+			'''# Parse optional --audio-source=<pactl-source-name> (default: monitor of the current default sink)
+AUDIO_SOURCE=""
 for _arg in "$@"; do
     case "$_arg" in
         --audio-source=*) AUDIO_SOURCE="${_arg#*=}" ;;
     esac
 done
+[ -z "$AUDIO_SOURCE" ] && AUDIO_SOURCE="$(pactl get-default-sink 2>/dev/null).monitor"
 _PREV_SOURCE=$(pactl get-default-source 2>/dev/null)
 pactl set-default-source "$AUDIO_SOURCE" 2>/dev/null
 export __NV_PRIME_RENDER_OFFLOAD=1
