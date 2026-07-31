@@ -9,6 +9,7 @@ import java.util.Arrays;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        GameModeIntegration.registerIfAvailable();
         boolean stdinEnabled = Arrays.asList(args).contains("--stdin");
         String keyInputPath = Arrays.stream(args)
                 .filter(arg -> arg.startsWith("--key-input="))
