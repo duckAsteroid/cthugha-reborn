@@ -115,8 +115,10 @@ public class ActionTreeBuilder {
             cthugha.newTranslation(ctx.rng());
             renderActions.enqueue("rebuildTranslateMap", rc -> callbacks.rebuildTranslateMap());
         }));
-        cthugha.translateSource.addChild(action("New Source", "circle-plus", ctx ->
-                cthugha.translateSource.selectRandom(ctx.rng())));
+        AbstractAction randomSource = action("Random Source", "dice-5", ctx ->
+                cthugha.translateSource.selectRandom(ctx.rng()));
+        randomSource.withDescription("Pick a random tab generator effect.");
+        cthugha.translateSource.addChild(randomSource);
         // Next/Previous are hidden from remote UI but remain in the tree for INI key bindings.
         AbstractAction nextGen = action("Next", "skip-forward", ctx ->
                 cthugha.translateSource.stepSelection(+1));

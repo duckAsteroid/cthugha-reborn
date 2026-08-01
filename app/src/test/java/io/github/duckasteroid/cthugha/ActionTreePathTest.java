@@ -104,7 +104,7 @@ class ActionTreePathTest {
             "Quotes/Toggle Quote Mode",
             // Translation
             "Tab/Translate Source/Randomise",
-            "Tab/Translate Source/New Source",
+            "Tab/Translate Source/Random Source",
             "Tab/Translate Source/Next",
             "Tab/Translate Source/Previous",
             "Tab/Translate Source/Save",
