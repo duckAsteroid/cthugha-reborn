@@ -271,6 +271,12 @@ public abstract class ParamNode implements Node {
     if (child instanceof ParamNode someChild) someChild.setParent(this);
   }
 
+  /** Like {@link #addChild(Node)} but inserts at the front, so it renders before existing children. */
+  public void addChildFirst(Node child) {
+    children.add(0, child);
+    if (child instanceof ParamNode someChild) someChild.setParent(this);
+  }
+
   @Override
   public void removeChild(Node child) {
     children.remove(child);

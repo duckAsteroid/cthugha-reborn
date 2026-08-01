@@ -380,14 +380,18 @@ public class VideoPhase implements RenderPhase {
     public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {
         this.renderActions = renderActions;
         if (currentEntry == null) return;
-        ContainerNode videoGroup = new ContainerNode("Video");
+        // Named "Playback", not "Video" — the picker's EnumParameter is already named "Video"
+        // (VideosLibraryNode) and ParamNode's children list allows duplicate names, which broke
+        // path resolution (Videos/Video/... always found the picker, never this group).
+        ContainerNode videoGroup = new ContainerNode("Playback");
         videoGroup.withDescription("Alpha-blended full-screen video overlay, playing on loop for the whole session.");
         videoGroup.addChild(enabled);
         videoGroup.addChild(alpha);
         videoGroup.addChild(speed);
         videoGroup.addChild(paused);
         videoGroup.addChild(loop);
-        generalGroup.addChild(videoGroup);
+        // Inserted first so playback controls render above the picker grid.
+        generalGroup.addChildFirst(videoGroup);
     }
 
     /** Stops the current decode thread and grabber, if any. Safe to call off the GL thread. */
