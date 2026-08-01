@@ -96,6 +96,7 @@ class ActionTreePathTest {
             "General/Fullscreen",
             "General/Screenshot",
             "General/Record 5s",
+            "General/Reset to Defaults",
             "Render/Palette/Random",
             "Images/Random",
             "Images/Flash White",
