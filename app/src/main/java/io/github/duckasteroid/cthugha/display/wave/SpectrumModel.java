@@ -21,7 +21,7 @@ public class SpectrumModel extends ParamNode {
      */
     public enum Position { BOTTOM, TOP, LEFT, RIGHT }
 
-    public BooleanParameter enabled = new BooleanParameter("enabled", false);
+    public BooleanParameter enabled = new BooleanParameter("enabled", true);
     public EnumParameter<Position> position = new EnumParameter<>("position", Arrays.asList(Position.values()));
 
     /** Palette index (0-1, normalised) at the base of each bar. */

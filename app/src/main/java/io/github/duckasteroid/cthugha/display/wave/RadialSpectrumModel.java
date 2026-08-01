@@ -9,7 +9,7 @@ import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import org.joml.Vector4f;
 
 public class RadialSpectrumModel extends ParamNode {
-    public BooleanParameter enabled = new BooleanParameter("enabled", false);
+    public BooleanParameter enabled = new BooleanParameter("enabled", true);
     public IntegerParameter repeats = new IntegerParameter("repeats", 1, 8, 1);
 
     /** Palette index (0-1, normalised) at the inward tip of the filled shape. */
