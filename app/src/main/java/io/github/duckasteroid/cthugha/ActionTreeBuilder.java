@@ -109,6 +109,7 @@ public class ActionTreeBuilder {
         // ---- Tab tab: translation-table generator ----
         ContainerNode tabGroup = new ContainerNode("Tab");
         tabGroup.withUiHint(UiHint.ICON, "layers");
+        tabGroup.withUiHint(UiHint.CONTROL_TYPE, UiHint.GENERATOR_TAB);
         tabGroup.addChild(cthugha.translateSource);
 
         cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx -> {

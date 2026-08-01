@@ -7,6 +7,8 @@ import { ParamLeaf } from './ParamLeaf';
 import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
+import { AddListTab } from './AddListTab';
+import { GeneratorTab } from './GeneratorTab';
 import type { ToolbarEntry } from './ActionToolbar';
 import { useSSEState } from '../SSEContext';
 import type { ParamState } from '../SSEContext';
@@ -96,8 +98,14 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
 
   const renderTabContent = (tab: ContainerNode) => {
     const tabPath = path ? `${path}/${tab.name}` : tab.name;
+    if (tab.uiHints?.['control-type'] === 'ADD_LIST') {
+      return <AddListTab node={tab} path={tabPath} />;
+    }
     const visibleTabChildren = tab.children.filter(isRenderable);
     const { children: tabChildren, path: contentPath } = flattenSoleContainer(visibleTabChildren, tabPath);
+    if (tab.uiHints?.['control-type'] === 'GENERATOR_TAB') {
+      return <GeneratorTab children={tabChildren} path={contentPath} />;
+    }
     return tabChildren.map(child => renderChild(child, contentPath, sseState));
   };
 

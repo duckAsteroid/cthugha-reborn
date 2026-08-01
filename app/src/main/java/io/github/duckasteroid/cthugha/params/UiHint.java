@@ -103,5 +103,26 @@ public final class UiHint {
      */
     public static final String XY_PAD = "XY_PAD";
 
+    /**
+     * Value for {@link #CONTROL_TYPE} on a {@code ContainerNode} whose children are a dynamic
+     * list of item containers (e.g. {@code WaveSystem}'s wave instances) plus exactly one picker
+     * leaf and one create {@link io.github.duckasteroid.cthugha.params.action.Action} used to add
+     * more. The remote UI renders the existing items first and keeps the picker hidden behind an
+     * "add" button below them, revealing it only once that button is clicked, rather than showing
+     * it permanently above the list.
+     */
+    public static final String ADD_LIST = "ADD_LIST";
+
+    /**
+     * Value for {@link #CONTROL_TYPE} on a top-level tab {@code ContainerNode} whose content is a
+     * single "active item" container (e.g. {@code GeneratorRegistry}'s currently-selected
+     * {@code TabGenerator}) alongside a {@code Save Name} leaf and {@code Save} action that apply
+     * to it. The remote UI renders {@code Save Name}/{@code Save} nested inside the active item's
+     * own expander instead of as siblings above/below it — display only: their param-tree paths
+     * are unchanged, since {@code cthugha.ini} key bindings (e.g. {@code SHIFT+S}) reference the
+     * {@code Save} action's real, fixed path and would break if it moved with the active item.
+     */
+    public static final String GENERATOR_TAB = "GENERATOR_TAB";
+
     private UiHint() {}
 }

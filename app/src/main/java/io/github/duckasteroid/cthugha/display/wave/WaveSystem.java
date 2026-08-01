@@ -88,6 +88,7 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
     public WaveSystem() {
         super("Wave");
         withUiHint(UiHint.ICON, "music");
+        withUiHint(UiHint.CONTROL_TYPE, UiHint.ADD_LIST);
         withDescription("Audio-reactive wave visualisations rendered directly into the "
             + "palette-indexed buffer. Add multiple independently-configured instances of the "
             + "same type to layer them -- later entries in the list render on top of earlier ones.");
