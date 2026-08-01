@@ -50,7 +50,7 @@ export function XYPadControl({ x, y, minX, maxX, minY, maxY, disabled, onChange 
       const tx = clamp01((clientX - rect.left) / rect.width);
       const ty = clamp01((clientY - rect.top) / rect.height);
       const nx = minX + tx * (maxX - minX);
-      const ny = minY + ty * (maxY - minY);
+      const ny = maxY - ty * (maxY - minY);
       setLocal({ x: nx, y: ny });
       commit(nx, ny);
     },
@@ -69,7 +69,7 @@ export function XYPadControl({ x, y, minX, maxX, minY, maxY, disabled, onChange 
   };
 
   const tx = clamp01((local.x - minX) / (maxX - minX)) * 100;
-  const ty = clamp01((local.y - minY) / (maxY - minY)) * 100;
+  const ty = clamp01((maxY - local.y) / (maxY - minY)) * 100;
 
   return (
     <div className={`flex flex-col items-center gap-1.5 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
