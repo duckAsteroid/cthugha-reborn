@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.events.ResizeListener;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
@@ -74,12 +75,19 @@ public class QuotePhase implements RenderPhase {
     private TextureBakeRenderer textBaker;
     private TextureUnit textBakerUnit;
 
+    // Re-runs updateLayout() on window resize, independent of quote-text changes, so a live
+    // resize with the same quote still showing doesn't leave quoteX/quoteY stale.
+    private final ResizeListener resizeListener = (w, h) -> {
+        if (lastQuote != null) updateLayout(lastQuote, w, h);
+    };
+
     public QuotePhase(JCthugha cthugha) {
         this.cthugha = cthugha;
     }
 
     @Override
     public void init(RenderContext ctx) throws IOException {
+        ctx.addResizeListener(resizeListener);
         java.awt.Rectangle win = ctx.getWindow();
         FontTexture quoteFont = makeFontTexture("quote", "Serif", Font.ITALIC, Constants.DEFAULT_QUOTE_SIZE, win.height);
         FontTexture attrFont  = makeFontTexture("attr",  "Serif", Font.PLAIN,  Constants.DEFAULT_ATTR_SIZE,  win.height);
@@ -204,11 +212,13 @@ public class QuotePhase implements RenderPhase {
         quoteRenderer.setText(quoteText);
         attrRenderer.setText(attrText);
 
-        quoteX = 40.0f;
-        quoteY = h / 2.0f;
-
         FontTexture attrFont  = attrRenderer.getFontTexture();
         FontTexture quoteFont = quoteRenderer.getFontTexture();
+        float quoteW = quoteFont.getWidth(quoteText);
+
+        quoteX = (w - quoteW) / 2.0f;
+        quoteY = h / 2.0f;
+
         int gap = quoteFont.getFontHeight() / 3;
 
         // Attribution offset relative to the quote anchor (not an absolute position) so it can be
@@ -219,7 +229,6 @@ public class QuotePhase implements RenderPhase {
             attrOffsetY = quoteFont.getHeight(quoteText) + gap;
         }
 
-        float quoteW = quoteFont.getWidth(quoteText);
         attrOffsetX = switch (attrAlign.toLowerCase()) {
             case "center" -> (quoteW - attrFont.getWidth(attrText)) / 2.0f;
             case "right"  -> quoteW - attrFont.getWidth(attrText);
