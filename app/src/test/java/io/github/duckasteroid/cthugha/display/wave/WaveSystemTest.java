@@ -91,7 +91,7 @@ class WaveSystemTest {
         assertEquals(1, fresh.instances().size());
         OscilloscopeModel recreated = (OscilloscopeModel) fresh.instances().get(0);
         assertEquals("Oscilloscope 1", recreated.getName());
-        assertEquals(0.2, recreated.amplitude.value, 1e-9, "recreate() must build a fresh default instance");
+        assertEquals(1.0, recreated.amplitude.value, 1e-9, "recreate() must build a fresh default instance");
     }
 
     private enum NoopActionContext implements io.github.duckasteroid.cthugha.params.action.ActionContext {

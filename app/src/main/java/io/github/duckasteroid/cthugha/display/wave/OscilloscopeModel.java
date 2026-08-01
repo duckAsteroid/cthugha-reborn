@@ -19,7 +19,7 @@ public class OscilloscopeModel extends ParamNode {
     public enum ChannelMode { BLEND, LEFT, RIGHT, STEREO }
 
     public BooleanParameter enabled = new BooleanParameter("enabled", true);
-    public DoubleParameter amplitude = new DoubleParameter("amplitude", 0.5, 50.0, 0.2);
+    public DoubleParameter amplitude = new DoubleParameter("amplitude", 0.01, 5.0, 1.0);
     public DoubleParameter lineWidth = new DoubleParameter("lineWidth", 0.5, 10.0, 2.0);
     public BooleanParameter ellipse = new BooleanParameter("ellipse", false);
     public EnumParameter<ChannelMode> channelMode = new EnumParameter<>("channelMode", Arrays.asList(ChannelMode.values()));
