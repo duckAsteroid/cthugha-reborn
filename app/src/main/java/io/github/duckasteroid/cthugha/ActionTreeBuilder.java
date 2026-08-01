@@ -15,6 +15,7 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.quote.QuotesLibraryNode;
 import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigLibraryNode;
+import io.github.duckasteroid.cthugha.video.VideosLibraryNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,6 +169,9 @@ public class ActionTreeBuilder {
             imagesGroup = fallback;
         }
 
+        // ---- Videos tab: video-overlay picker ----
+        VideosLibraryNode videosGroup = new VideosLibraryNode(cthugha.videoPhase);
+
         // ---- Quotes tab: quote picker ----
         QuotesLibraryNode quotesGroup = new QuotesLibraryNode(cthugha.quotes(), cthugha);
 
@@ -223,13 +227,14 @@ public class ActionTreeBuilder {
         generalGroup.addChild(resetToDefaults);
 
         // Each phase registers its own actions (Flash White, Toggle Quote Mode, etc.); the
-        // Flash/Quote phases register into their own tabs instead of General.
+        // Flash/Quote/Video phases register into their own tabs instead of General.
         for (RenderPhase phase : phases) {
-            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase) continue;
+            if (phase == cthugha.flashPhase || phase == cthugha.quotePhase || phase == cthugha.videoPhase) continue;
             phase.registerActions(generalGroup, renderActions);
         }
         cthugha.flashPhase.registerActions(imagesGroup, renderActions);
         cthugha.quotePhase.registerActions(quotesGroup, renderActions);
+        cthugha.videoPhase.registerActions(videosGroup, renderActions);
 
         // ---- Root layout ----
         cthugha.withUiHint(UiHint.CONTROL_TYPE, UiHint.TABS);
@@ -238,6 +243,7 @@ public class ActionTreeBuilder {
         cthugha.addChild(tabGroup);
         cthugha.addChild(renderGroup);
         cthugha.addChild(imagesGroup);
+        cthugha.addChild(videosGroup);
         cthugha.addChild(quotesGroup);
         cthugha.addChild(configsGroup);
         cthugha.addChild(cthugha.bindings);

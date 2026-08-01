@@ -9,6 +9,7 @@ import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
 import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
 import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
+import io.github.duckasteroid.cthugha.display.phase.VideoPhase;
 import io.github.duckasteroid.cthugha.display.phase.WavePhase;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.WaveSystem;
@@ -71,6 +72,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public FlashPhase flashPhase = new FlashPhase();
 	public final QuotePhase quotePhase = new QuotePhase(this);
 	public final WavePhase wavePhase = new WavePhase(this);
+	public final VideoPhase videoPhase = new VideoPhase();
 
 	public PaletteMap paletteMap;
 	public int bufferWidth;
@@ -281,6 +283,7 @@ public class JCthugha extends ParamNode implements Closeable {
 		List<RenderPhase> list = new ArrayList<>();
 		list.add(wavePhase);
 		list.add(flashPhase);
+		list.add(videoPhase);
 		list.add(quotePhase);
 		list.add(new NotifPhase(this));
 		return list;

@@ -53,6 +53,14 @@ dependencies {
 	// Runtime Java compiler for animation scripts
 	implementation 'org.codehaus.janino:janino:3.1.12'
 
+	// Video overlay playback. javacv is a thin, native-free Java API; the two classified jars
+	// below carry the actual native .so binaries, scoped to linux-x86_64 only (this is a
+	// Linux-only personal project — do NOT use org.bytedeco:ffmpeg-platform, which pulls
+	// win64/mac-x86_64/mac-arm64/linux-arm64 natives too, ~5x the download).
+	implementation 'org.bytedeco:javacv:1.5.13'
+	implementation 'org.bytedeco:javacpp:1.5.13:linux-x86_64'
+	implementation 'org.bytedeco:ffmpeg:8.0.1-1.5.13:linux-x86_64'
+
 	runtimeOnly 'ch.qos.logback:logback-classic:1.4.8'
 
 	// JUnit5 for testing

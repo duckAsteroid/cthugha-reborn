@@ -8,6 +8,8 @@ build/
 /app/src/dist/logs/
 /app/src/dist/*.log
 /app/src/dist/*.mp4
+/app/src/dist/videos/*
+!/app/src/dist/videos/manifest.json
 /app/src/dist/screenshot-*.png
 /app/logs/*.log
 /logs/*.log

@@ -14,6 +14,8 @@ import io.github.duckasteroid.cthugha.binding.ContinuousBinding;
 import io.github.duckasteroid.cthugha.binding.EdgeTriggeredBinding;
 import io.github.duckasteroid.cthugha.img.RandomImageSource;
 import io.github.duckasteroid.cthugha.map.MapFileReader;
+import io.github.duckasteroid.cthugha.video.VideoEntry;
+import io.github.duckasteroid.cthugha.video.VideoLibrary;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.action.Action;
@@ -57,6 +59,7 @@ public class RemoteServer {
     private final AtomicBoolean firstAuthFired = new AtomicBoolean(false);
     private final RandomImageSource imageSource = new RandomImageSource(Paths.get("images"));
     private final MapFileReader mapReader = new MapFileReader(Paths.get("maps"));
+    private final VideoLibrary videoLibrary = new VideoLibrary(Paths.get("videos"));
     private static final int THUMBNAIL_MAX_DIM = 240;
 
     public RemoteServer(Node paramRoot, BindingSystem bindings, TokenStore tokenStore,
@@ -127,6 +130,27 @@ public class RemoteServer {
             setCacheHeaders(ctx, file.get());
             ctx.contentType("image/png");
             ctx.result(imageSource.loadThumbnail(file.get(), THUMBNAIL_MAX_DIM));
+        });
+
+        app.get("/api/v1/videos/preview/*", ctx -> {
+            String name = ctx.path().substring("/api/v1/videos/preview/".length());
+            Optional<VideoEntry> entry = videoLibrary.findByFile(name);
+            if (entry.isEmpty()) {
+                ctx.status(404);
+                return;
+            }
+            Path thumb;
+            try {
+                thumb = videoLibrary.thumbnailFile(entry.get(), THUMBNAIL_MAX_DIM);
+            } catch (IOException e) {
+                LOG.warn("Failed to generate video thumbnail for {}", name, e);
+                ctx.status(404);
+                return;
+            }
+            if (notModified(ctx, thumb)) return;
+            setCacheHeaders(ctx, thumb);
+            ctx.contentType("image/png");
+            ctx.result(Files.newInputStream(thumb));
         });
 
         app.get("/api/v1/params", ctx ->
@@ -312,7 +336,8 @@ public class RemoteServer {
         String path = ctx.path();
         // Only API paths require auth; static files and SPA root are public.
         if (!path.startsWith("/api/") || path.equals("/api/v1/info")
-                || path.startsWith("/api/v1/maps/preview/") || path.startsWith("/api/v1/images/preview/")) {
+                || path.startsWith("/api/v1/maps/preview/") || path.startsWith("/api/v1/images/preview/")
+                || path.startsWith("/api/v1/videos/preview/")) {
             return;
         }
         String auth = ctx.header("Authorization");

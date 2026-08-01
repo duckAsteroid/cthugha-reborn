@@ -1,0 +1,542 @@
+{
+  "$comment": "Scratch manifest for iterating on video-as-render-source content. Video files themselves are gitignored (see .gitignore) — only this manifest is tracked, so licensing/attribution and theme tags survive even as the actual clips get swapped out.",
+  "themes": {
+    "grunge-abstract": "Video feedback, kaleidoscope, ink/particle abstraction — pure texture, no representational content",
+    "folk-horror": "Masks, ritual costume, weird figures — Midlake/Shame-by-Brad/Wicker-Man vibe",
+    "retro-psa-cold-war": "1950s-60s civil-defense and educational shorts, nuclear test/launch footage — Boards of Canada sample-source vibe",
+    "urban-grunge": "Cityscapes, traffic, transit, crowds, night neon",
+    "nature": "Leaves, water, wildlife, desert, scenery",
+    "people-scenery": "Human figures in landscape, not urban",
+    "animation-weird": "Hand-drawn/animated, surreal or morphing imagery",
+    "urban-decay": "Abandoned buildings, Chernobyl exclusion zone, decay, brutalist architecture — grungy and eerie",
+    "vhs-glitch": "VCR UI, CRT static, SMPTE bars, tape noise, double-exposure retro-TV art — analog/broadcast glitch texture",
+    "carnival": "Ferris wheels, carousels, fairground rides — nostalgic/uncanny fairground imagery"
+  },
+  "videos": [
+    {
+      "file": "01_video-feedback-a.mp4",
+      "title": "Video feedback – NYE2016 session clip 13",
+      "source": "archive.org:numbstation-nye-13",
+      "license": "CC BY 4.0",
+      "tags": ["grunge-abstract", "video-feedback", "loop"]
+    },
+    {
+      "file": "02_video-feedback-b.mp4",
+      "title": "Video feedback – NYE2016 session clip 14",
+      "source": "archive.org:numbstation-nye-14",
+      "license": "CC BY 4.0",
+      "tags": ["grunge-abstract", "video-feedback", "loop"]
+    },
+    {
+      "file": "03_kaleidoscope-clouds.mp4",
+      "title": "Wide Screen Kaleidoscope Clouds",
+      "source": "archive.org:IMB_WSSF_R43_C9",
+      "license": "CC BY 3.0",
+      "tags": ["grunge-abstract", "kaleidoscope", "nature"]
+    },
+    {
+      "file": "04_grainy-bw-amsterdam.ogv",
+      "title": "Beautiful Amsterdam (B/W)",
+      "source": "archive.org:antonwithagen_gmail_BA",
+      "license": "Public Domain Mark",
+      "tags": ["urban-grunge", "black-and-white", "grainy", "people-scenery"]
+    },
+    {
+      "file": "05_fantasmagorie-1908.mp4",
+      "title": "Fantasmagorie (1908) — Émile Cohl, earliest fully-animated cartoon; hand-drawn morphing figures",
+      "source": "archive.org:fantasmagorie-1908_202605",
+      "license": "Public Domain Mark",
+      "tags": ["animation-weird", "black-and-white", "grainy"]
+    },
+    {
+      "file": "06_sand-portrait.mp4",
+      "title": "A Sand Portrait (2015)",
+      "source": "archive.org:jorgemariozuletaSand",
+      "license": "Public Domain Mark",
+      "tags": ["grunge-abstract", "animation-weird"]
+    },
+    {
+      "file": "07_kaleidoscope-song.mp4",
+      "title": "Color Kaleidoscope Song",
+      "source": "archive.org:color-kaleidoscope-song",
+      "license": "Public Domain Mark",
+      "tags": ["grunge-abstract", "kaleidoscope"]
+    },
+    {
+      "file": "08_city-urban-blight-1939.mp4",
+      "title": "The City (Part II), 1939 — planning documentary contrasting slum tenements with planned suburbs",
+      "source": "archive.org:CityTheP1939_2",
+      "license": "Public Domain",
+      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"]
+    },
+    {
+      "file": "09_valley-town-industrial-1940.mp4",
+      "title": "Valley Town, 1940 — industrial decline documentary, gritty mill-town footage",
+      "source": "archive.org:ValleyTo1940",
+      "license": "Public Domain",
+      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"]
+    },
+    {
+      "file": "10_desert-venture-1958.mp4",
+      "title": "Desert Venture (Part I), 1958",
+      "source": "archive.org:DesertVe1958",
+      "license": "Public Domain",
+      "tags": ["retro-psa-cold-war", "nature", "black-and-white", "grainy"]
+    },
+    {
+      "file": "12_duck-and-cover-1951.mp4",
+      "title": "Duck and Cover (1951) — Bert the Turtle civil-defense PSA, the classic Boards-of-Canada-sampled short",
+      "source": "archive.org:DuckandC1951",
+      "license": "Public Domain",
+      "tags": ["retro-psa-cold-war", "nuclear", "black-and-white", "grainy"]
+    },
+    {
+      "file": "13_about-fallout-1963.mp4",
+      "title": "About Fallout (1963) — civil-defense/nuclear-fallout educational film",
+      "source": "archive.org:AboutFal1963",
+      "license": "Public Domain",
+      "tags": ["retro-psa-cold-war", "nuclear", "grainy"]
+    },
+    {
+      "file": "14_atomic-alert-1951.mp4",
+      "title": "Atomic Alert (Elementary version), 1951 — school civil-defense film",
+      "source": "archive.org:AtomicAl1951",
+      "license": "Public Domain",
+      "tags": ["retro-psa-cold-war", "nuclear", "black-and-white", "grainy"]
+    },
+    {
+      "file": "15_saturn-v-apollo14-launch.mp4",
+      "title": "Apollo 14 16mm launch footage, official NASA collection",
+      "source": "archive.org:APOLLO16MMLAUNCHVIEWS",
+      "license": "US Govt work (public domain by default; no explicit licenseurl set on this NASA-collection item)",
+      "tags": ["retro-psa-cold-war", "space", "launch", "nasa"]
+    },
+    {
+      "file": "16_bikini-atoll-atomic-test.mp4",
+      "title": "Explosion, atomic weapon test, Operation Crossroads, Bikini Atoll (1946)",
+      "source": "archive.org:explosion-atomic-weapon-test-operation-crossroads-bikini-atoll",
+      "license": "Public Domain Mark",
+      "tags": ["retro-psa-cold-war", "nuclear", "black-and-white", "grainy"]
+    },
+    {
+      "file": "1003-142621162_medium.mp4",
+      "title": "Subway train doors, motion blur (B/W)",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "transit", "black-and-white", "motion-blur"]
+    },
+    {
+      "file": "1049-142623920_medium.mp4",
+      "title": "Person sitting on riverbank, back view",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["people-scenery", "nature"]
+    },
+    {
+      "file": "125900-735656336_medium.mp4",
+      "title": "Bare feet walking on wet sand",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["people-scenery", "nature"]
+    },
+    {
+      "file": "131625-750753093_medium.mp4",
+      "title": "Couple silhouetted at sunset with drinks",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["people-scenery", "nature"]
+    },
+    {
+      "file": "134112-758552431_medium.mp4",
+      "title": "Aerial view of illuminated skyscrapers at night",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge"]
+    },
+    {
+      "file": "144267-784384538_medium.mp4",
+      "title": "Two people walking on beach at sunset, silhouette",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["people-scenery", "nature"]
+    },
+    {
+      "file": "165065-831695780_medium.mp4",
+      "title": "Macro red flower with bee",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "macro"]
+    },
+    {
+      "file": "176935-856259161_medium.mp4",
+      "title": "Sparkling sunlit water surface",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "grunge-abstract"]
+    },
+    {
+      "file": "177347-857376739_medium.mp4",
+      "title": "City skyline at night with neon signage",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge"]
+    },
+    {
+      "file": "180386-864121573_medium.mp4",
+      "title": "Aerial view of night traffic intersection",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "traffic"]
+    },
+    {
+      "file": "21116-315137080_medium.mp4",
+      "title": "City street at night with traffic light trails",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "traffic"]
+    },
+    {
+      "file": "2-135653517_medium.mp4",
+      "title": "Earth from space, night side with city lights",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["space"]
+    },
+    {
+      "file": "21536-318978190_medium.mp4",
+      "title": "Red/pink ink bloom diffusing in dark water",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["grunge-abstract"]
+    },
+    {
+      "file": "21985-323496013_medium.mp4",
+      "title": "Aerial cityscape at night with traffic",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "traffic"]
+    },
+    {
+      "file": "2299-157183618_medium.mp4",
+      "title": "Subway/metro train, black and white",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "transit", "black-and-white"]
+    },
+    {
+      "file": "230060_medium.mp4",
+      "title": "Sparrow perched on a ledge",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "wildlife"]
+    },
+    {
+      "file": "23258-334228230_medium.mp4",
+      "title": "Busy neon-lit shopping street crowd, night",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "crowd"]
+    },
+    {
+      "file": "3627-172488393_medium.mp4",
+      "title": "Feet of crowd walking, street-level",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "crowd"]
+    },
+    {
+      "file": "44289-438661771_medium.mp4",
+      "title": "Ocean beach at sunset",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature"]
+    },
+    {
+      "file": "80310-572838324_medium.mp4",
+      "title": "Orange embers/particles drifting in the dark",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["grunge-abstract"]
+    },
+    {
+      "file": "85745-590014808_medium.mp4",
+      "title": "Wolf in green foliage",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "wildlife"]
+    },
+    {
+      "file": "9005-216332135_medium.mp4",
+      "title": "Subway tunnel, first-person motion blur",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "transit", "motion-blur"]
+    },
+    {
+      "file": "110734-688648666_medium.mp4",
+      "title": "Aerial view of a surfer riding a big wave",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "ocean"]
+    },
+    {
+      "file": "119818-719443755_medium.mp4",
+      "title": "Decayed, colourfully painted abandoned carousel (Chernobyl exclusion zone)",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay", "carnival", "grunge-abstract"]
+    },
+    {
+      "file": "127603-739144640_medium.mp4",
+      "title": "Abandoned indoor swimming pool, decayed",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay"]
+    },
+    {
+      "file": "137272-766338243_medium.mp4",
+      "title": "Weathered old sign board in forest, faded text",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay", "nature"]
+    },
+    {
+      "file": "13772-251867974_medium.mp4",
+      "title": "Aerial view of surfers waiting in the ocean",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "ocean"]
+    },
+    {
+      "file": "138143-768338753_medium.mp4",
+      "title": "Abandoned building corridor, numbered door",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay"]
+    },
+    {
+      "file": "138147-768352340_medium.mp4",
+      "title": "Railway track through autumn forest, dog walking away",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "urban-decay"]
+    },
+    {
+      "file": "138156-768820139_medium.mp4",
+      "title": "Mural/graffiti portrait on industrial concrete pillar",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay", "grunge-abstract"]
+    },
+    {
+      "file": "139027-771365651_medium.mp4",
+      "title": "Duga over-the-horizon radar array (Chernobyl exclusion zone)",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay", "retro-psa-cold-war"]
+    },
+    {
+      "file": "139030-771365664_medium.mp4",
+      "title": "Abandoned teddy bear toy hanging outdoors, eerie",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay"]
+    },
+    {
+      "file": "139032-771365671_medium.mp4",
+      "title": "Dark abandoned corridor/tunnel with light at the far end",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay"]
+    },
+    {
+      "file": "14037-254146876_medium.mp4",
+      "title": "Driving POV through a dark tunnel/underpass at night",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "transit", "motion-blur"]
+    },
+    {
+      "file": "142146-779482345_medium.mp4",
+      "title": "Ferris wheel silhouette at dusk",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["carnival"]
+    },
+    {
+      "file": "167782-837438539_medium.mp4",
+      "title": "Retro VCR deck-control UI screen (\"DECK 1 / DECK 2 TV VIEW\")",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "169259-840702572_medium.mp4",
+      "title": "Old dusty CRT television showing static",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "2141-155244186_medium.mp4",
+      "title": "Circular SMPTE colour-bar test pattern",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "261503_medium.mp4",
+      "title": "VHS static noise with \"PLAY\" timecode overlay",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "269084_medium.mp4",
+      "title": "Snowy field with distant mountains",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature"]
+    },
+    {
+      "file": "27706-365890968_medium.mp4",
+      "title": "Scrolling green terminal/code text, hacker aesthetic",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "29730-377510641_medium.mp4",
+      "title": "Ornate carousel lit up at night",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["carnival"]
+    },
+    {
+      "file": "312081_medium.mp4",
+      "title": "Surreal double-exposure: old TV floating over a pink/orange sunset seascape",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch", "grunge-abstract"]
+    },
+    {
+      "file": "312094_medium.mp4",
+      "title": "Retro TV screen showing sunset clouds, double-exposure art",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch", "grunge-abstract"]
+    },
+    {
+      "file": "315001_medium.mp4",
+      "title": "VHS static noise with \"PLAY\" timecode overlay",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "316742_medium.mp4",
+      "title": "Motion-blurred countryside seen through a train window",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "transit", "motion-blur"]
+    },
+    {
+      "file": "317072_medium.mp4",
+      "title": "Classic SMPTE colour-bar test pattern",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch"]
+    },
+    {
+      "file": "330880_medium.mp4",
+      "title": "Horse running in a golden field at sunset",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "wildlife"]
+    },
+    {
+      "file": "344453_medium.mp4",
+      "title": "Horse silhouette running at sunset, dusty ground",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "wildlife"]
+    },
+    {
+      "file": "361134_medium.mp4",
+      "title": "Horse running across Icelandic landscape with glacier",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "wildlife"]
+    },
+    {
+      "file": "3639-172561652_medium.mp4",
+      "title": "Railway track through forest, POV",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "transit"]
+    },
+    {
+      "file": "36609-411342371_medium.mp4",
+      "title": "Aerial view of paddleboarders/surfers in turquoise water",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "ocean"]
+    },
+    {
+      "file": "45245-442557060_medium.mp4",
+      "title": "VHS static/scanline glitch texture, black and white",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch", "black-and-white"]
+    },
+    {
+      "file": "45246-442509411_medium.mp4",
+      "title": "Collapsed, smoking building — disaster aesthetic",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay", "disaster"]
+    },
+    {
+      "file": "45247-442509420_medium.mp4",
+      "title": "Brutalist concrete apartment architecture, moody",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-decay"]
+    },
+    {
+      "file": "45249-442509432_medium.mp4",
+      "title": "VHS static/scanline glitch texture, black and white",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch", "black-and-white"]
+    },
+    {
+      "file": "49471-459502277_medium.mp4",
+      "title": "VHS static/scanline glitch texture, black and white",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["vhs-glitch", "black-and-white"]
+    },
+    {
+      "file": "79087-568265389_medium.mp4",
+      "title": "Aerial view of a herd of horses running (Iceland)",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["nature", "wildlife"]
+    },
+    {
+      "file": "8131-207209033_medium.mp4",
+      "title": "Chair-swing carnival ride against the sky",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["carnival"]
+    },
+    {
+      "file": "920-141890454_medium.mp4",
+      "title": "Crowd of people walking in hazy, yellow-tinted light",
+      "source": "pexels",
+      "license": "Pexels License (free, no attribution required)",
+      "tags": ["urban-grunge", "crowd"]
+    }
+  ]
+}
