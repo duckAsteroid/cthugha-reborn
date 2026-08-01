@@ -13,6 +13,7 @@ import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
@@ -22,6 +23,7 @@ import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
+import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +88,10 @@ public class VideoPhase implements RenderPhase {
     // (screen-diagonal-independent) distance from centre where the darkening fade begins.
     public final DoubleParameter vignetteRadius = new DoubleParameter("Vignette Radius", 0.05, 1.5, 0.75);
     public final DoubleParameter vignetteDarkness = new DoubleParameter("Vignette Darkness", 0.0, 1.0, 0.0);
+    // Same translate/scale/shear/rotate(+pivot)/perspective convention as QuotePhase's own
+    // `transform` and each wave model's — see TransformParams.applyTo for the exact NDC-space
+    // matrix built from these params.
+    public final TransformParams transform = new TransformParams("Transform");
     // Playback rate multiplier, read live by the decode thread every frame (same unsynchronised
     // cross-thread read convention as `alpha`/`enabled` above — animatable via the standard
     // "Animate" binding since it's just a normal DoubleParameter leaf). 0 holds on the current
@@ -118,6 +124,7 @@ public class VideoPhase implements RenderPhase {
     private Uniform<Float> uAspect;
     private Uniform<Float> uVigRadius;
     private Uniform<Float> uVigDarkness;
+    private Uniform<Matrix4f> uTransform;
     private Texture videoTex;
 
     // Updated via a resize listener rather than queried per-frame; used only to keep the
@@ -150,6 +157,7 @@ public class VideoPhase implements RenderPhase {
     // language=GLSL
     private static final String VERT = """
             #version 330 core
+            uniform mat4 uTransform;
             in vec2 screenPosition;
             in vec2 texturePosition;
             out vec2 vTex;
@@ -157,7 +165,9 @@ public class VideoPhase implements RenderPhase {
                 // Rectangle's UV mapping puts buffer row 0 at v=0 (screen bottom), but FFmpeg's
                 // decoded frames are top-down (row 0 = top scanline) — flip to compensate.
                 vTex = vec2(texturePosition.x, 1.0 - texturePosition.y);
-                gl_Position = vec4(screenPosition, 0.0, 1.0);
+                // Moves the quad's corners in NDC space (translate/rotate/scale/shear) — the UVs
+                // above are untouched, so the video image itself isn't distorted, just placed.
+                gl_Position = uTransform * vec4(screenPosition, 0.0, 1.0);
             }
             """;
 
@@ -235,6 +245,7 @@ public class VideoPhase implements RenderPhase {
         uAspect = shader.uniforms().get("uAspect", Float.class);
         uVigRadius = shader.uniforms().get("uVigRadius", Float.class);
         uVigDarkness = shader.uniforms().get("uVigDarkness", Float.class);
+        uTransform = shader.uniforms().get("uTransform", Matrix4f.class);
 
         ctx.addResizeListener(resizeListener);
         java.awt.Rectangle win = ctx.getWindow();
@@ -469,6 +480,7 @@ public class VideoPhase implements RenderPhase {
         uAspect.set(windowHeight == 0 ? 1.0f : (float) windowWidth / windowHeight);
         uVigRadius.set((float) vignetteRadius.value);
         uVigDarkness.set((float) vignetteDarkness.value);
+        uTransform.set(transform.applyTo(new Matrix4f()));
 
         glEnable(GL_BLEND);
         applyBlendMode(blendMode.getEnumeration());
@@ -529,6 +541,7 @@ public class VideoPhase implements RenderPhase {
         videoGroup.addChild(invert);
         videoGroup.addChild(vignetteRadius);
         videoGroup.addChild(vignetteDarkness);
+        videoGroup.addChild(transform);
         videoGroup.addChild(speed);
         videoGroup.addChild(paused);
         videoGroup.addChild(loop);
