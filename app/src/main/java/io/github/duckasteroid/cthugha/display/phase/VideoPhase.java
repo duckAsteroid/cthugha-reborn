@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.events.ResizeListener;
 import com.asteroid.duck.opengl.util.geom.Rectangle;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
@@ -14,6 +15,7 @@ import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 import io.github.duckasteroid.cthugha.video.VideoEntry;
 import io.github.duckasteroid.cthugha.video.VideoLibrary;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -28,9 +30,14 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL14.GL_FUNC_ADD;
+import static org.lwjgl.opengl.GL14.GL_MAX;
+import static org.lwjgl.opengl.GL14.GL_MIN;
+import static org.lwjgl.opengl.GL14.glBlendEquation;
 
 /**
  * Screen-overlay phase that plays a single, randomly-chosen video file on loop, alpha-blended
@@ -56,8 +63,29 @@ public class VideoPhase implements RenderPhase {
         avutil.av_log_set_level(avutil.AV_LOG_ERROR);
     }
 
+    public enum ColorMode { COLOR, GRAYSCALE, BLACK_WHITE }
+
+    // GPU compositing mode against whatever's already in the screen framebuffer (the core
+    // visualisation). Each mode pairs a glBlendFunc/glBlendEquation with a matching adjustment
+    // to the colour the fragment shader outputs, so `alpha` keeps acting as an intensity dial
+    // for every mode, not just NORMAL — see the `uBlendMode` branch in FRAG and the switch in
+    // screenRender for the paired GL state. DARKEN/LIGHTEN use MIN/MAX equations, which ignore
+    // glBlendFunc factors entirely (per the GL spec), so their alpha-fade is baked into the
+    // shader output instead (mixing towards each equation's identity colour: white for MIN,
+    // black for MAX).
+    public enum BlendMode { NORMAL, ADD, MULTIPLY, SCREEN, DARKEN, LIGHTEN }
+
     public final BooleanParameter enabled = new BooleanParameter("Enabled", true);
     public final DoubleParameter alpha = new DoubleParameter("Alpha", 0.0, 1.0, 0.5);
+    public final EnumParameter<BlendMode> blendMode =
+            new EnumParameter<>("Blend Mode", Arrays.asList(BlendMode.values()));
+    public final EnumParameter<ColorMode> colorMode =
+            new EnumParameter<>("Color Mode", Arrays.asList(ColorMode.values()));
+    public final BooleanParameter invert = new BooleanParameter("Invert", false);
+    // 0 disables the vignette entirely (Darkness defaults to 0). Radius is the normalised
+    // (screen-diagonal-independent) distance from centre where the darkening fade begins.
+    public final DoubleParameter vignetteRadius = new DoubleParameter("Vignette Radius", 0.05, 1.5, 0.75);
+    public final DoubleParameter vignetteDarkness = new DoubleParameter("Vignette Darkness", 0.0, 1.0, 0.0);
     // Playback rate multiplier, read live by the decode thread every frame (same unsynchronised
     // cross-thread read convention as `alpha`/`enabled` above — animatable via the standard
     // "Animate" binding since it's just a normal DoubleParameter leaf). 0 holds on the current
@@ -84,7 +112,22 @@ public class VideoPhase implements RenderPhase {
     private Rectangle quad;
     private TextureUnit texUnit;
     private Uniform<Float> uAlpha;
+    private Uniform<Integer> uColorMode;
+    private Uniform<Boolean> uInvert;
+    private Uniform<Integer> uBlendMode;
+    private Uniform<Float> uAspect;
+    private Uniform<Float> uVigRadius;
+    private Uniform<Float> uVigDarkness;
     private Texture videoTex;
+
+    // Updated via a resize listener rather than queried per-frame; used only to keep the
+    // vignette circular (not elliptical) on non-square windows.
+    private int windowWidth = 1;
+    private int windowHeight = 1;
+    private final ResizeListener resizeListener = (w, h) -> {
+        windowWidth = w;
+        windowHeight = h;
+    };
 
     private FFmpegFrameGrabber grabber;
     private Thread decodeThread;
@@ -123,11 +166,52 @@ public class VideoPhase implements RenderPhase {
             #version 330 core
             uniform sampler2D uVideo;
             uniform float uAlpha;
+            uniform int uColorMode; // 0 = colour, 1 = greyscale, 2 = black & white
+            uniform bool uInvert;
+            uniform int uBlendMode; // 0 NORMAL, 1 ADD, 2 MULTIPLY, 3 SCREEN, 4 DARKEN, 5 LIGHTEN
+            uniform float uAspect;
+            uniform float uVigRadius;
+            uniform float uVigDarkness;
             in vec2 vTex;
             out vec4 fragColor;
             void main() {
                 vec4 c = texture(uVideo, vTex);
-                fragColor = vec4(c.rgb, c.a * uAlpha);
+                vec3 rgb = c.rgb;
+                if (uColorMode == 1) {
+                    float lum = dot(rgb, vec3(0.299, 0.587, 0.114));
+                    rgb = vec3(lum);
+                } else if (uColorMode == 2) {
+                    float lum = dot(rgb, vec3(0.299, 0.587, 0.114));
+                    rgb = vec3(step(0.5, lum));
+                }
+                if (uInvert) {
+                    rgb = vec3(1.0) - rgb;
+                }
+
+                vec2 centred = (vTex - 0.5) * vec2(uAspect, 1.0);
+                float vig = 1.0 - smoothstep(uVigRadius * 0.5, uVigRadius, length(centred));
+                rgb *= mix(1.0, vig, uVigDarkness);
+
+                // Fixed-function blending (glBlendFunc/glBlendEquation, set per-mode in
+                // screenRender) does the actual compositing against the framebuffer; here we
+                // only shape the colour handed to that blend stage so `uAlpha` still behaves as
+                // an intensity dial under every mode, not just NORMAL.
+                vec3 outColor;
+                float outAlpha = c.a * uAlpha;
+                if (uBlendMode == 1 || uBlendMode == 3) {
+                    // ADD, SCREEN — additive-style blendFuncs read no src alpha factor.
+                    outColor = rgb * outAlpha;
+                } else if (uBlendMode == 2 || uBlendMode == 4) {
+                    // MULTIPLY, DARKEN — fade towards white (the identity colour for both
+                    // GL_DST_COLOR*GL_ZERO multiply and the MIN equation) as alpha drops.
+                    outColor = mix(vec3(1.0), rgb, outAlpha);
+                } else if (uBlendMode == 5) {
+                    // LIGHTEN — fade towards black (the identity colour for the MAX equation).
+                    outColor = mix(vec3(0.0), rgb, outAlpha);
+                } else {
+                    outColor = rgb;
+                }
+                fragColor = vec4(outColor, outAlpha);
             }
             """;
 
@@ -145,6 +229,17 @@ public class VideoPhase implements RenderPhase {
                 null);
         shader.use(ctx);
         uAlpha = shader.uniforms().get("uAlpha", Float.class);
+        uColorMode = shader.uniforms().get("uColorMode", Integer.class);
+        uInvert = shader.uniforms().get("uInvert", Boolean.class);
+        uBlendMode = shader.uniforms().get("uBlendMode", Integer.class);
+        uAspect = shader.uniforms().get("uAspect", Float.class);
+        uVigRadius = shader.uniforms().get("uVigRadius", Float.class);
+        uVigDarkness = shader.uniforms().get("uVigDarkness", Float.class);
+
+        ctx.addResizeListener(resizeListener);
+        java.awt.Rectangle win = ctx.getWindow();
+        windowWidth = win.width;
+        windowHeight = win.height;
 
         texUnit = ctx.getResourceManager().nextTextureUnit();
         texUnit.useInShader(shader, "uVideo");
@@ -368,12 +463,54 @@ public class VideoPhase implements RenderPhase {
         shader.use(ctx);
         texUnit.bind(videoTex);
         uAlpha.set((float) alpha.value);
+        uColorMode.set(colorMode.getEnumeration().ordinal());
+        uInvert.set(invert.value);
+        uBlendMode.set(blendMode.getEnumeration().ordinal());
+        uAspect.set(windowHeight == 0 ? 1.0f : (float) windowWidth / windowHeight);
+        uVigRadius.set((float) vignetteRadius.value);
+        uVigDarkness.set((float) vignetteDarkness.value);
 
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        applyBlendMode(blendMode.getEnumeration());
         quad.getVertexArrayObject().bind(ctx);
         quad.render(ctx);
+        // Reset to the GL default so later screen-pass phases aren't left with a MIN/MAX
+        // equation or a non-standard blendFunc from whichever mode was active this frame.
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_BLEND);
+    }
+
+    private static void applyBlendMode(BlendMode mode) {
+        switch (mode) {
+            case NORMAL -> {
+                glBlendEquation(GL_FUNC_ADD);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            }
+            case ADD -> {
+                glBlendEquation(GL_FUNC_ADD);
+                glBlendFunc(GL_ONE, GL_ONE);
+            }
+            case MULTIPLY -> {
+                glBlendEquation(GL_FUNC_ADD);
+                glBlendFunc(GL_DST_COLOR, GL_ZERO);
+            }
+            case SCREEN -> {
+                glBlendEquation(GL_FUNC_ADD);
+                glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE);
+            }
+            case DARKEN -> {
+                // MIN/MAX equations ignore glBlendFunc factors entirely (GL spec) — the
+                // alpha-fade for these two modes is baked into the shader's output colour
+                // instead (see FRAG).
+                glBlendEquation(GL_MIN);
+                glBlendFunc(GL_ONE, GL_ONE);
+            }
+            case LIGHTEN -> {
+                glBlendEquation(GL_MAX);
+                glBlendFunc(GL_ONE, GL_ONE);
+            }
+        }
     }
 
     @Override
@@ -387,6 +524,11 @@ public class VideoPhase implements RenderPhase {
         videoGroup.withDescription("Alpha-blended full-screen video overlay, playing on loop for the whole session.");
         videoGroup.addChild(enabled);
         videoGroup.addChild(alpha);
+        videoGroup.addChild(blendMode);
+        videoGroup.addChild(colorMode);
+        videoGroup.addChild(invert);
+        videoGroup.addChild(vignetteRadius);
+        videoGroup.addChild(vignetteDarkness);
         videoGroup.addChild(speed);
         videoGroup.addChild(paused);
         videoGroup.addChild(loop);
