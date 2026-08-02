@@ -1,8 +1,34 @@
 import { useMemo, useState } from 'react';
 import type { EnumOption } from '../../types';
-import { ArrowDownAZ, ArrowUpAZ, ImageOff, Search } from 'lucide-react';
+import { ArrowDownAZ, ArrowUpAZ, Columns2, Columns3, Columns4, ImageOff, Search } from 'lucide-react';
 
 type SortDir = 'none' | 'asc' | 'desc';
+type ThumbSize = 'large' | 'medium' | 'small';
+
+const THUMB_SIZE_KEY = 'cthugha:thumbSize';
+
+const THUMB_SIZE_COLS: Record<ThumbSize, { normal: string; swatch: string }> = {
+  large: { normal: 'grid-cols-3', swatch: 'grid-cols-2' },
+  medium: { normal: 'grid-cols-4', swatch: 'grid-cols-3' },
+  small: { normal: 'grid-cols-6', swatch: 'grid-cols-4' },
+};
+
+const NEXT_THUMB_SIZE: Record<ThumbSize, ThumbSize> = {
+  large: 'medium',
+  medium: 'small',
+  small: 'large',
+};
+
+const THUMB_SIZE_ICON: Record<ThumbSize, typeof Columns2> = {
+  large: Columns2,
+  medium: Columns3,
+  small: Columns4,
+};
+
+function loadThumbSize(): ThumbSize {
+  const stored = localStorage.getItem(THUMB_SIZE_KEY);
+  return stored === 'small' || stored === 'medium' || stored === 'large' ? stored : 'large';
+}
 
 interface GridControlProps {
   value: number;
@@ -20,6 +46,7 @@ interface GridControlProps {
 export function GridControl({ value, options, disabled, onChange, previewStyle }: GridControlProps) {
   const [search, setSearch] = useState('');
   const [sortDir, setSortDir] = useState<SortDir>('none');
+  const [thumbSize, setThumbSize] = useState<ThumbSize>(loadThumbSize);
   const swatch = previewStyle === 'SWATCH';
 
   const groups = useMemo(
@@ -48,6 +75,15 @@ export function GridControl({ value, options, disabled, onChange, previewStyle }
 
   const cycleSort = () =>
     setSortDir((d) => (d === 'none' ? 'asc' : d === 'asc' ? 'desc' : 'none'));
+
+  const cycleThumbSize = () =>
+    setThumbSize((size) => {
+      const next = NEXT_THUMB_SIZE[size];
+      localStorage.setItem(THUMB_SIZE_KEY, next);
+      return next;
+    });
+
+  const ThumbSizeIcon = THUMB_SIZE_ICON[thumbSize];
 
   return (
     <div className={`flex flex-col gap-2 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -85,6 +121,13 @@ export function GridControl({ value, options, disabled, onChange, previewStyle }
             <ArrowUpAZ className="w-3.5 h-3.5" />
           )}
         </button>
+        <button
+          onClick={cycleThumbSize}
+          title={`${NEXT_THUMB_SIZE[thumbSize][0].toUpperCase()}${NEXT_THUMB_SIZE[thumbSize].slice(1)} thumbnails`}
+          className="shrink-0 p-1.5 rounded border border-neutral-600 text-neutral-400 hover:bg-neutral-800 transition-colors"
+        >
+          <ThumbSizeIcon className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {groups.length > 1 && (
@@ -108,7 +151,7 @@ export function GridControl({ value, options, disabled, onChange, previewStyle }
         </div>
       )}
 
-      <div className={`grid gap-2 ${swatch ? 'grid-cols-2' : 'grid-cols-3'}`}>
+      <div className={`grid gap-2 ${THUMB_SIZE_COLS[thumbSize][swatch ? 'swatch' : 'normal']}`}>
         {filtered.map(({ opt, idx }) => (
           <button
             key={idx}
@@ -144,9 +187,7 @@ export function GridControl({ value, options, disabled, onChange, previewStyle }
           </button>
         ))}
         {filtered.length === 0 && (
-          <p className={`text-xs text-neutral-500 px-2 py-1.5 ${swatch ? 'col-span-2' : 'col-span-3'}`}>
-            No matches
-          </p>
+          <p className="col-span-full text-xs text-neutral-500 px-2 py-1.5">No matches</p>
         )}
       </div>
     </div>
