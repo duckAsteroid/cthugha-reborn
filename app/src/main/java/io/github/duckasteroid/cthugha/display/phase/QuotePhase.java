@@ -1,7 +1,6 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.events.ResizeListener;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
@@ -75,11 +74,14 @@ public class QuotePhase implements RenderPhase {
     private TextureBakeRenderer textBaker;
     private TextureUnit textBakerUnit;
 
-    // Re-runs updateLayout() on window resize, independent of quote-text changes, so a live
-    // resize with the same quote still showing doesn't leave quoteX/quoteY stale.
-    private final ResizeListener resizeListener = (w, h) -> {
-        if (lastQuote != null) updateLayout(lastQuote, w, h);
-    };
+    // The window size in effect when the renderers were initialised — the size baked into their
+    // frozen GL projection matrix (StringRenderer sets its `projection` uniform once at init and
+    // never refreshes it on resize). quoteX/quoteY must stay expressed in *this* coordinate space,
+    // not the live window size, otherwise they drift out of sync with the frozen projection as the
+    // window is resized: the GL viewport stretch already re-maps this fixed coordinate space onto
+    // whatever the current window size is, so no resize-time recomputation is needed at all.
+    private int refWidth;
+    private int refHeight;
 
     public QuotePhase(JCthugha cthugha) {
         this.cthugha = cthugha;
@@ -87,8 +89,9 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        ctx.addResizeListener(resizeListener);
         java.awt.Rectangle win = ctx.getWindow();
+        refWidth = win.width;
+        refHeight = win.height;
         FontTexture quoteFont = makeFontTexture("quote", "Serif", Font.ITALIC, Constants.DEFAULT_QUOTE_SIZE, win.height);
         FontTexture attrFont  = makeFontTexture("attr",  "Serif", Font.PLAIN,  Constants.DEFAULT_ATTR_SIZE,  win.height);
         attrPosition = CFG.getConfig(Constants.SECTION, Constants.KEY_ATTR_POSITION, "below");
@@ -195,18 +198,18 @@ public class QuotePhase implements RenderPhase {
         if (quote == lastQuote) return;
         lastQuote = quote;
         if (quote != null) {
-            java.awt.Rectangle win = ctx.getWindow();
-            updateLayout(quote, win.width, win.height);
+            updateLayout(quote);
         }
     }
 
     /**
      * Recomputes the quote's anchor position and the attribution's offset relative to that
-     * anchor, from window size and text metrics. Does not touch the renderers' transforms — that
-     * happens every frame in {@link #applyTransform()} so the shared, animatable {@link #transform}
-     * is honoured even when the quote text itself hasn't changed.
+     * anchor, from the reference window size ({@link #refWidth}/{@link #refHeight}) and text
+     * metrics. Does not touch the renderers' transforms — that happens every frame in
+     * {@link #applyTransform()} so the shared, animatable {@link #transform} is honoured even
+     * when the quote text itself hasn't changed.
      */
-    private void updateLayout(Quote quote, int w, int h) {
+    private void updateLayout(Quote quote) {
         String quoteText = quote.quote();
         String attrText  = "— " + quote.author();
         quoteRenderer.setText(quoteText);
@@ -216,8 +219,8 @@ public class QuotePhase implements RenderPhase {
         FontTexture quoteFont = quoteRenderer.getFontTexture();
         float quoteW = quoteFont.getWidth(quoteText);
 
-        quoteX = (w - quoteW) / 2.0f;
-        quoteY = h / 2.0f;
+        quoteX = (refWidth - quoteW) / 2.0f;
+        quoteY = refHeight / 2.0f;
 
         int gap = quoteFont.getFontHeight() / 3;
 
