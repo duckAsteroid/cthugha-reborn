@@ -53,10 +53,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 import com.asteroid.duck.opengl.util.Monitor;
 
@@ -70,7 +73,10 @@ public class CthughaWindow extends GLWindow {
     private static final Logger LOG = LoggerFactory.getLogger(CthughaWindow.class);
     private static final Config CFG = Config.singleton();
 
+    private static final Path SPLASH_DIR = Paths.get("textures", "splash");
+
     private final JCthugha cthugha;
+    private SplashRenderer splashRenderer;
 
     // Render buffer dimensions — may differ from the GLFW window size.
     private int renderWidth;
@@ -232,6 +238,37 @@ public class CthughaWindow extends GLWindow {
         if (stdinInjector != null) {
             stdinInjector.start(kr);
         }
+    }
+
+    /**
+     * Shows a random splash image before {@link #init()} runs, so the window has at least one
+     * visible frame and event-pump/buffer-swap before the slow synchronous startup work begins
+     * (window managers otherwise flag a long-blocking {@code init()} as "not responding").
+     */
+    @Override
+    protected void drawSplash() throws IOException {
+        List<Path> candidates;
+        try (var stream = Files.list(SPLASH_DIR)) {
+            candidates = stream
+                    .filter(p -> p.toString().toUpperCase().endsWith(".PNG"))
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            return; // no splash directory — continue without a splash
+        }
+        if (candidates.isEmpty()) {
+            return;
+        }
+        Path chosen = candidates.get(new Random().nextInt(candidates.size()));
+        String relPath = Paths.get("textures").relativize(chosen).toString();
+        Texture tex = getResourceManager().getTexture("splash", relPath);
+        if (tex == null) {
+            return;
+        }
+        splashRenderer = new SplashRenderer();
+        splashRenderer.init(this);
+        splashRenderer.setTexture(tex);
+        clearScreen();
+        splashRenderer.doRender(this);
     }
 
     @Override
@@ -527,6 +564,7 @@ public class CthughaWindow extends GLWindow {
 
     @Override
     public void dispose() {
+        if (splashRenderer != null) splashRenderer.dispose();
         if (phases != null) {
             for (RenderPhase p : phases) p.dispose();
         }
