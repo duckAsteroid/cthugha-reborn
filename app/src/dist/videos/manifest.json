@@ -47,7 +47,11 @@
       "title": "Fantasmagorie (1908) — Émile Cohl, earliest fully-animated cartoon; hand-drawn morphing figures",
       "source": "archive.org:fantasmagorie-1908_202605",
       "license": "Public Domain Mark",
-      "tags": ["animation-weird", "black-and-white", "grainy"]
+      "tags": ["animation-weird", "black-and-white", "grainy"],
+      "durationSeconds": 222,
+      "chapters": [
+        {"name": "animation", "start": 51, "end": 151}
+      ]
     },
     {
       "file": "06_sand-portrait.mp4",
@@ -68,14 +72,28 @@
       "title": "The City (Part II), 1939 — planning documentary contrasting slum tenements with planned suburbs",
       "source": "archive.org:CityTheP1939_2",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"]
+      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"],
+      "durationSeconds": 937,
+      "chapters": [
+        {"name": "Introduction", "start": 0, "end": 120},
+        {"name": "Tenement Slums", "start": 120, "end": 420},
+        {"name": "Planned Suburbs", "start": 420, "end": 750},
+        {"name": "Conclusion", "start": 750, "end": 910}
+      ]
     },
     {
       "file": "09_valley-town-industrial-1940.mp4",
       "title": "Valley Town, 1940 — industrial decline documentary, gritty mill-town footage",
       "source": "archive.org:ValleyTo1940",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"]
+      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"],
+      "durationSeconds": 1472,
+      "chapters": [
+        {"name": "Opening", "start": 0, "end": 180},
+        {"name": "Mill Town Life", "start": 180, "end": 600},
+        {"name": "Industrial Decline", "start": 600, "end": 1100},
+        {"name": "Closing", "start": 1100, "end": 1450}
+      ]
     },
     {
       "file": "10_desert-venture-1958.mp4",

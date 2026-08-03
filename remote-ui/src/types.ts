@@ -1,10 +1,18 @@
 export type NodeType = 'CONTAINER' | 'DOUBLE' | 'INTEGER' | 'LONG' | 'BOOLEAN' | 'ENUM' | 'ACTION' | 'STRING';
 
+export interface EnumChapter {
+  name: string;
+  start: number;
+  end: number;
+}
+
 export interface EnumOption {
   label: string;
   preview?: string;
   group?: string;
   tags?: string[];
+  duration?: number;
+  chapters?: EnumChapter[];
 }
 
 export interface ContainerNode {

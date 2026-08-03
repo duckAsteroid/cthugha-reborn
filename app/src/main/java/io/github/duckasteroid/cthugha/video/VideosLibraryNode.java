@@ -27,6 +27,10 @@ public class VideosLibraryNode extends ParamNode {
         selector.withPreviewUrls(i -> "/api/v1/videos/preview/" + entries.get(i).file());
         selector.withGroups(i -> lib.primaryTheme(entries.get(i)));
         selector.withTags(i -> entries.get(i).tags());
+        selector.withDuration(i -> entries.get(i).durationSeconds());
+        selector.withChapters(i -> entries.get(i).chapters().stream()
+                .map(c -> new EnumParameter.Chapter(c.name(), c.start(), c.end()))
+                .toList());
         selector.withDescription("Picks which video plays as the background overlay. Selecting one loads it immediately.");
         selector.withNoAnimate();
 

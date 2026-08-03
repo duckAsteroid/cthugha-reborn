@@ -26,6 +26,11 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   private Function<Integer, String> previewUrlProvider = null;
   private Function<Integer, String> groupProvider = null;
   private Function<Integer, List<String>> tagsProvider = null;
+  private Function<Integer, List<Chapter>> chaptersProvider = null;
+  private Function<Integer, Double> durationProvider = null;
+
+  /** A named, non-overlapping sub-range of an option's underlying media, in seconds from its start. */
+  public record Chapter(String name, double start, double end) {}
 
   /**
    * @param description display name
@@ -88,6 +93,28 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   /** Returns the full tag list for option {@code index}, or {@code null} if none was set. */
   public List<String> getTags(int index) {
     return tagsProvider != null ? tagsProvider.apply(index) : null;
+  }
+
+  /** Attaches named sub-range markers (e.g. video chapters) to each option, for a client-side timeline. */
+  public EnumParameter<T> withChapters(Function<Integer, List<Chapter>> provider) {
+    this.chaptersProvider = provider;
+    return this;
+  }
+
+  /** Returns the chapter list for option {@code index}, or {@code null} if none was set. */
+  public List<Chapter> getChapters(int index) {
+    return chaptersProvider != null ? chaptersProvider.apply(index) : null;
+  }
+
+  /** Attaches a total duration (seconds) to each option, for scaling a client-side timeline. */
+  public EnumParameter<T> withDuration(Function<Integer, Double> provider) {
+    this.durationProvider = provider;
+    return this;
+  }
+
+  /** Returns the duration (seconds) for option {@code index}, or {@code null} if none was set. */
+  public Double getDuration(int index) {
+    return durationProvider != null ? durationProvider.apply(index) : null;
   }
 
   /** Returns the string labels for all options, in order. */

@@ -94,6 +94,20 @@ public class ParamSerializer {
                         tags.forEach(tagsNode::add);
                         opt.set("tags", tagsNode);
                     }
+                    Double duration = ep.getDuration(i);
+                    if (duration != null) opt.put("duration", duration);
+                    List<EnumParameter.Chapter> chapters = ep.getChapters(i);
+                    if (chapters != null && !chapters.isEmpty()) {
+                        ArrayNode chaptersNode = mapper.createArrayNode();
+                        for (EnumParameter.Chapter chapter : chapters) {
+                            ObjectNode chapterNode = mapper.createObjectNode();
+                            chapterNode.put("name", chapter.name());
+                            chapterNode.put("start", chapter.start());
+                            chapterNode.put("end", chapter.end());
+                            chaptersNode.add(chapterNode);
+                        }
+                        opt.set("chapters", chaptersNode);
+                    }
                     options.add(opt);
                 }
                 obj.set("options", options);

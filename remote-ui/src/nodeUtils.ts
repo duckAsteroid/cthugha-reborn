@@ -91,3 +91,50 @@ export function resolvePauseControl(
   const paused = (liveValue ?? child.value) !== 0;
   return { path: childPath, paused };
 }
+
+export interface ChapterControl {
+  /** Full param path of the INTEGER leaf, e.g. {@code "Videos/Playback/Chapter"}. */
+  path: string;
+  /** Index into the current video's {@code chapters} list, or {@code -1} for "Whole Video". */
+  index: number;
+}
+
+/**
+ * Resolves a {@code chapter-control} uiHint (see UiHint.java) on {@code node} into its own
+ * {@code INTEGER} child's live path/value, so a chapter timeline can read the current selection
+ * and PATCH it directly instead of rendering that child as its own row (the child also carries
+ * {@code hidden} so it doesn't double up).
+ */
+export function resolveChapterControl(
+  node: ContainerNode,
+  path: string,
+  sseState: Map<string, ParamState>,
+): ChapterControl | undefined {
+  const childName = node.uiHints?.['chapter-control'];
+  if (!childName) return undefined;
+  const child = node.children.find((c) => c.name === childName);
+  if (!child || child.type !== 'INTEGER') return undefined;
+  const childPath = path ? `${path}/${child.name}` : child.name;
+  const liveValue = sseState.get(childPath)?.value;
+  const index = Math.round(liveValue ?? child.value);
+  return { path: childPath, index };
+}
+
+/**
+ * Resolves a {@code position-of} uiHint (see UiHint.java) on {@code node} into its own
+ * {@code DOUBLE} child's live value (seconds), for drawing a moving playhead marker on a chapter
+ * timeline. The child carries {@code hidden} so it doesn't also render as its own row.
+ */
+export function resolvePositionOf(
+  node: ContainerNode,
+  path: string,
+  sseState: Map<string, ParamState>,
+): number | undefined {
+  const childName = node.uiHints?.['position-of'];
+  if (!childName) return undefined;
+  const child = node.children.find((c) => c.name === childName);
+  if (!child || child.type !== 'DOUBLE') return undefined;
+  const childPath = path ? `${path}/${child.name}` : child.name;
+  const liveValue = sseState.get(childPath)?.value;
+  return liveValue ?? child.value;
+}

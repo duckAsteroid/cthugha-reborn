@@ -18,6 +18,7 @@ import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
+import io.github.duckasteroid.cthugha.params.values.IntegerParameter;
 import io.github.duckasteroid.cthugha.video.VideoEntry;
 import io.github.duckasteroid.cthugha.video.VideoLibrary;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -34,6 +35,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -102,6 +104,13 @@ public class VideoPhase implements RenderPhase {
     // rate was dialled in — resuming picks the current `speed` back up rather than a fixed value.
     public final BooleanParameter paused = new BooleanParameter("Paused", false);
     public final BooleanParameter loop = new BooleanParameter("Loop", true);
+    // -1 plays the whole file; otherwise an index into currentEntry.chapters(), clamping playback
+    // to [start, end) — see decodeLoop. A disruptive picker value (same reasoning as the "Video"
+    // picker itself), so excluded from animation.
+    public final IntegerParameter chapter = new IntegerParameter("Chapter", -1, 255, -1);
+    // Live playback position in seconds, published once per decoded frame (see decodeLoop) purely
+    // for the remote UI's timeline playhead — see UiHint.POSITION_OF.
+    public final DoubleParameter position = new DoubleParameter("Position", 0.0, 1_000_000.0, 0.0);
 
     private final VideoLibrary videoLibrary = new VideoLibrary(Paths.get("videos"));
 
@@ -329,6 +338,10 @@ public class VideoPhase implements RenderPhase {
         int newHeight = newGrabber.getImageHeight();
         grabber = newGrabber;
         currentEntry = entry;
+        // Chapter indices are only meaningful against the video they were selected for — the new
+        // video's chapters (if any) start from "Whole Video" rather than silently keeping a
+        // now-mismatched index (or one that happens to coincide with an unrelated chapter).
+        chapter.setValue(-1);
         LOG.info("Loading video overlay: {}", entry.file());
 
         renderActions.enqueue("loadVideo", ctx -> {
@@ -355,12 +368,24 @@ public class VideoPhase implements RenderPhase {
      */
     private void decodeLoop() {
         long lastPtsUs = -1;
+        int lastChapterIndex = Integer.MIN_VALUE;
         try {
             while (running) {
                 double currentSpeed = speed.value;
                 if (paused.value || currentSpeed <= 0.0) {
                     // Paused — hold the last displayed frame; don't advance or burn CPU.
                     if (!sleepMillis(50)) return;
+                    continue;
+                }
+
+                int chapterIndex = chapter.value;
+                VideoEntry.Chapter active = resolveChapter(chapterIndex);
+                if (chapterIndex != lastChapterIndex) {
+                    // Chapter selection changed since the last iteration (including switching
+                    // back to "Whole Video") — jump to the new range's start before grabbing.
+                    seekTo(active != null ? active.start() : 0.0);
+                    lastChapterIndex = chapterIndex;
+                    lastPtsUs = -1;
                     continue;
                 }
 
@@ -373,10 +398,15 @@ public class VideoPhase implements RenderPhase {
                     lastPtsUs = -1;
                     continue;
                 }
-                if (frame == null) {
-                    // End of stream.
+
+                // End of stream, or (with a chapter selected) end of that chapter's range —
+                // handled identically: wrap to the range's start if looping, else hold.
+                boolean rangeEnded = frame == null
+                        || (active != null && frame.timestamp >= (long) (active.end() * 1_000_000));
+                if (rangeEnded) {
+                    double restartAt = active != null ? active.start() : 0.0;
                     if (loop.value) {
-                        safeRestart();
+                        seekTo(restartAt);
                         lastPtsUs = -1;
                         continue;
                     }
@@ -385,7 +415,7 @@ public class VideoPhase implements RenderPhase {
                         if (!sleepMillis(100)) return;
                     }
                     if (running) {
-                        safeRestart();
+                        seekTo(restartAt);
                         lastPtsUs = -1;
                     }
                     continue;
@@ -406,6 +436,7 @@ public class VideoPhase implements RenderPhase {
                     }
                 }
                 lastPtsUs = ptsUs;
+                position.setValue(ptsUs / 1_000_000.0);
 
                 ByteBuffer src = (ByteBuffer) frame.image[0];
                 // The Buffer object is reused by the grabber across calls, so its position/limit
@@ -452,6 +483,24 @@ public class VideoPhase implements RenderPhase {
         } catch (FrameGrabber.Exception e) {
             LOG.error("Failed to restart video grabber; stopping decode thread", e);
             running = false;
+        }
+    }
+
+    /** The chapter at {@code index} in the currently-playing video, or {@code null} if unselected/out of range. */
+    private VideoEntry.Chapter resolveChapter(int index) {
+        VideoEntry entry = currentEntry;
+        if (index < 0 || entry == null) return null;
+        List<VideoEntry.Chapter> chapters = entry.chapters();
+        return index < chapters.size() ? chapters.get(index) : null;
+    }
+
+    /** Seeks the grabber to {@code seconds}; falls back to a full restart if the seek itself fails. */
+    private void seekTo(double seconds) {
+        try {
+            grabber.setTimestamp((long) (seconds * 1_000_000));
+        } catch (FrameGrabber.Exception e) {
+            LOG.warn("Failed to seek video grabber; restarting stream instead", e);
+            safeRestart();
         }
     }
 
@@ -542,6 +591,14 @@ public class VideoPhase implements RenderPhase {
         // see UiHint.PAUSE_CONTROL. `paused` stays a normal, addressable, serialized leaf.
         videoGroup.withUiHint(UiHint.PAUSE_CONTROL, "Paused");
         paused.withUiHint(UiHint.HIDDEN, "true");
+        // Chapter timeline — see UiHint.CHAPTER_CONTROL/POSITION_OF. Both children stay normal,
+        // addressable/serialized leaves (HIDDEN only suppresses their own generic row) so the
+        // remote UI's timeline can read/PATCH them directly.
+        videoGroup.withUiHint(UiHint.CHAPTER_CONTROL, "Chapter");
+        videoGroup.withUiHint(UiHint.POSITION_OF, "Position");
+        chapter.withUiHint(UiHint.HIDDEN, "true");
+        chapter.withNoAnimate();
+        position.withUiHint(UiHint.HIDDEN, "true");
         videoGroup.addChild(enabled);
         videoGroup.addChild(alpha);
         videoGroup.addChild(blendMode);
@@ -553,6 +610,8 @@ public class VideoPhase implements RenderPhase {
         videoGroup.addChild(speed);
         videoGroup.addChild(paused);
         videoGroup.addChild(loop);
+        videoGroup.addChild(chapter);
+        videoGroup.addChild(position);
         // Inserted first so playback controls render above the picker grid.
         generalGroup.addChildFirst(videoGroup);
     }

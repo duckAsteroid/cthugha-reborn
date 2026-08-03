@@ -147,5 +147,27 @@ public final class UiHint {
      */
     public static final String PAUSE_CONTROL = "pause-control";
 
+    /**
+     * Key: on a {@code ContainerNode}, names a direct {@code INTEGER} child (by node name, not
+     * full path) holding the index of the currently-selected chapter into the {@link #PREVIEW_OF}
+     * sibling's current option's {@code chapters} list ({@code -1} meaning no chapter selected /
+     * whole item) — e.g. {@code VideoPhase}'s "Playback" group points at its own "Chapter" child.
+     * The remote UI renders that child as a tap-to-select timeline of chapter segments (sized
+     * from the sibling option's {@code duration}/{@code chapters}) instead of as its own row; the
+     * child should also carry {@link #HIDDEN} so it doesn't additionally render as a row, while
+     * remaining a normal addressable/serialized leaf the timeline PATCHes directly.
+     */
+    public static final String CHAPTER_CONTROL = "chapter-control";
+
+    /**
+     * Key: on a {@code ContainerNode} that also carries {@link #CHAPTER_CONTROL}, names a direct
+     * {@code DOUBLE} child (by node name, not full path) holding live playback position in
+     * seconds — e.g. {@code VideoPhase}'s "Playback" group points at its own "Position" child.
+     * The remote UI reads this child's live SSE value to draw a moving playhead marker on the
+     * chapter timeline instead of rendering it as its own row; the child should also carry
+     * {@link #HIDDEN} for the same reason as {@link #CHAPTER_CONTROL}'s target.
+     */
+    public static final String POSITION_OF = "position-of";
+
     private UiHint() {}
 }

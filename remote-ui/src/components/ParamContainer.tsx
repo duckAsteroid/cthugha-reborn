@@ -9,9 +9,17 @@ import { NodeIcon } from './NodeIcon';
 import { TabsContainer } from './TabsContainer';
 import { XYPadParam } from './XYPadParam';
 import { useSSEState } from '../SSEContext';
-import { isRenderable, resolveCurrentPreview, resolvePauseControl, type CurrentPreview } from '../nodeUtils';
+import {
+  isRenderable,
+  resolveCurrentPreview,
+  resolvePauseControl,
+  resolveChapterControl,
+  resolvePositionOf,
+  type CurrentPreview,
+} from '../nodeUtils';
 import { dispatchSelectTag } from '../tagSelection';
 import { patchParam } from '../api';
+import { TimelineControl } from './controls/TimelineControl';
 
 interface ParamContainerProps {
   node: ContainerNode;
@@ -33,6 +41,8 @@ export function ParamContainer({ node, path, defaultOpen = false, currentPreview
   // per-container subscription needed.
   const sseState = useSSEState();
   const pauseControl = resolvePauseControl(node, path, sseState);
+  const chapterControl = resolveChapterControl(node, path, sseState);
+  const position = resolvePositionOf(node, path, sseState);
 
   const togglePause = () => {
     if (!pauseControl) return;
@@ -119,6 +129,14 @@ export function ParamContainer({ node, path, defaultOpen = false, currentPreview
               )}
             </div>
           </div>
+        )}
+        {chapterControl && currentPreview?.option?.chapters && currentPreview.option.chapters.length > 0 && (
+          <TimelineControl
+            chapters={currentPreview.option.chapters}
+            duration={currentPreview.option.duration}
+            position={position}
+            chapterControl={chapterControl}
+          />
         )}
         {visibleChildren.map((child) => {
           const childPath = path ? `${path}/${child.name}` : child.name;
