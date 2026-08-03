@@ -198,6 +198,7 @@ public class GeneratorRegistry extends ParamNode {
     private void applySelection(int idx, boolean triggerRegenerate) {
         TabGenerator next = generators.get(idx);
         boolean changed = (next != selected);
+        TabGenerator previous = selected;
 
         selected = next;
         selectedIndex = idx;
@@ -209,7 +210,10 @@ public class GeneratorRegistry extends ParamNode {
 
         if (changed) {
             watchParamChanges(selected);
-            rebuildChildren();
+            // Swap only the generator node in place, rather than wiping and rebuilding the whole
+            // child list — ActionTreeBuilder attaches extra actions (Randomise, Next, Previous,
+            // etc.) onto this node after construction, and a full rebuild would silently drop them.
+            replaceChild(previous, selected);
             if (onTreeChanged != null) onTreeChanged.run();
         }
 
@@ -219,8 +223,6 @@ public class GeneratorRegistry extends ParamNode {
     }
 
     private void rebuildChildren() {
-        List<Node> current = getChildren().collect(Collectors.toList());
-        current.forEach(this::removeChild);
         addChild(generatorSelector);
         addChild(selected);
         if (presetsNode != null) addChild(presetsNode);

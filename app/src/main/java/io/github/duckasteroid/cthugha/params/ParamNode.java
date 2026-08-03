@@ -283,6 +283,24 @@ public abstract class ParamNode implements Node {
     if (child instanceof ParamNode someChild) someChild.setParent(null);
   }
 
+  /**
+   * Swaps {@code oldChild} for {@code newChild} at the same list position, leaving every other
+   * child (including ones added by unrelated code) untouched. Falls back to appending
+   * {@code newChild} if {@code oldChild} isn't currently a child. Unlike a
+   * remove-everything-then-re-add-the-fixed-set rebuild, this can't accidentally drop children
+   * that some other part of the tree attached after construction.
+   */
+  public void replaceChild(Node oldChild, Node newChild) {
+    int idx = children.indexOf(oldChild);
+    if (idx < 0) {
+      addChild(newChild);
+      return;
+    }
+    children.set(idx, newChild);
+    if (oldChild instanceof ParamNode oldParamChild) oldParamChild.setParent(null);
+    if (newChild instanceof ParamNode newParamChild) newParamChild.setParent(this);
+  }
+
   @Override
   public void randomise(Random rng) {
     children.forEach(child -> child.randomise(rng));
