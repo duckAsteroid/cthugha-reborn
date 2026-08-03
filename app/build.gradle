@@ -81,6 +81,30 @@ java {
 	}
 }
 
+// installDist/distZip/distTar (application plugin) copy all of src/dist verbatim into the
+// packaged distribution. That directory is also the local run/smokeTest working directory, so
+// it accumulates large or machine-local files (videos, generated tab presets, screenshots, logs,
+// state) that were never meant to ship - videos alone is multiple GB and was blowing distZip/
+// distTar past a usable size. Mirror .gitignore's local-only exclusions here so the packaged
+// distribution stays small while `run`/`smokeTest` (which use src/dist directly, not the copy)
+// keep working unchanged.
+distributions {
+	main {
+		contents {
+			exclude 'videos/**'
+			exclude 'logs/**'
+			exclude '*.log'
+			exclude 'screenshot-*.png'
+			exclude 'configs/**'
+			exclude 'state.ini'
+			exclude 'state-*.ini'
+			exclude 'tabs/Spiral/**'
+			exclude 'tabs/**/*.tab'
+			exclude 'maps/*.MAP.png'
+		}
+	}
+}
+
 compileJava {
 	options.incremental = true
 	options.fork = true
@@ -118,6 +142,7 @@ tasks.register('smokeTest', Test) {
 }
 
 application {
+	applicationName = "cthugha-reborn"
 	mainClass = "io.github.duckasteroid.cthugha.Main"
 	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
 }
