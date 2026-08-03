@@ -19,66 +19,143 @@
       "title": "Video feedback – NYE2016 session clip 13",
       "source": "archive.org:numbstation-nye-13",
       "license": "CC BY 4.0",
-      "tags": ["grunge-abstract", "video-feedback", "loop"]
+      "tags": [
+        "grunge-abstract",
+        "video-feedback",
+        "loop"
+      ]
     },
     {
       "file": "02_video-feedback-b.mp4",
       "title": "Video feedback – NYE2016 session clip 14",
       "source": "archive.org:numbstation-nye-14",
       "license": "CC BY 4.0",
-      "tags": ["grunge-abstract", "video-feedback", "loop"]
+      "tags": [
+        "grunge-abstract",
+        "video-feedback",
+        "loop"
+      ]
     },
     {
       "file": "03_kaleidoscope-clouds.mp4",
       "title": "Wide Screen Kaleidoscope Clouds",
       "source": "archive.org:IMB_WSSF_R43_C9",
       "license": "CC BY 3.0",
-      "tags": ["grunge-abstract", "kaleidoscope", "nature"]
+      "tags": [
+        "grunge-abstract",
+        "kaleidoscope",
+        "nature"
+      ],
+      "chapters": [
+        {
+          "name": "animation",
+          "start": 12.88737,
+          "end": 98.732065
+        }
+      ],
+      "defaultChapter": "animation"
     },
     {
       "file": "04_grainy-bw-amsterdam.ogv",
       "title": "Beautiful Amsterdam (B/W)",
       "source": "archive.org:antonwithagen_gmail_BA",
       "license": "Public Domain Mark",
-      "tags": ["urban-grunge", "black-and-white", "grainy", "people-scenery"]
+      "tags": [
+        "urban-grunge",
+        "black-and-white",
+        "grainy",
+        "people-scenery"
+      ]
     },
     {
       "file": "05_fantasmagorie-1908.mp4",
       "title": "Fantasmagorie (1908) — Émile Cohl, earliest fully-animated cartoon; hand-drawn morphing figures",
       "source": "archive.org:fantasmagorie-1908_202605",
       "license": "Public Domain Mark",
-      "tags": ["animation-weird", "black-and-white", "grainy"],
-      "durationSeconds": 222,
+      "tags": [
+        "animation-weird",
+        "black-and-white",
+        "grainy"
+      ],
+      "durationSeconds": 222.0,
       "chapters": [
-        {"name": "animation", "start": 51, "end": 151}
-      ]
+        {
+          "name": "animation",
+          "start": 51.0,
+          "end": 151.0
+        }
+      ],
+      "defaultChapter": "animation"
     },
     {
       "file": "06_sand-portrait.mp4",
       "title": "A Sand Portrait (2015)",
       "source": "archive.org:jorgemariozuletaSand",
       "license": "Public Domain Mark",
-      "tags": ["grunge-abstract", "animation-weird"]
+      "tags": [
+        "grunge-abstract",
+        "animation-weird"
+      ],
+      "chapters": [
+        {
+          "name": "animation",
+          "start": 8.0,
+          "end": 59.0
+        }
+      ],
+      "defaultChapter": "animation"
     },
     {
       "file": "07_kaleidoscope-song.mp4",
       "title": "Color Kaleidoscope Song",
       "source": "archive.org:color-kaleidoscope-song",
       "license": "Public Domain Mark",
-      "tags": ["grunge-abstract", "kaleidoscope"]
+      "tags": [
+        "grunge-abstract",
+        "kaleidoscope"
+      ],
+      "chapters": [
+        {
+          "name": "main",
+          "start": 8.877087,
+          "end": 170.340508
+        }
+      ],
+      "defaultChapter": "main"
     },
     {
       "file": "08_city-urban-blight-1939.mp4",
       "title": "The City (Part II), 1939 — planning documentary contrasting slum tenements with planned suburbs",
       "source": "archive.org:CityTheP1939_2",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"],
-      "durationSeconds": 937,
+      "tags": [
+        "retro-psa-cold-war",
+        "urban-grunge",
+        "black-and-white",
+        "grainy"
+      ],
+      "durationSeconds": 937.0,
       "chapters": [
-        {"name": "Introduction", "start": 0, "end": 120},
-        {"name": "Tenement Slums", "start": 120, "end": 420},
-        {"name": "Planned Suburbs", "start": 420, "end": 750},
-        {"name": "Conclusion", "start": 750, "end": 910}
+        {
+          "name": "Introduction",
+          "start": 0.0,
+          "end": 120.0
+        },
+        {
+          "name": "Tenement Slums",
+          "start": 120.0,
+          "end": 420.0
+        },
+        {
+          "name": "Planned Suburbs",
+          "start": 420.0,
+          "end": 750.0
+        },
+        {
+          "name": "Conclusion",
+          "start": 750.0,
+          "end": 910.0
+        }
       ]
     },
     {
@@ -86,13 +163,34 @@
       "title": "Valley Town, 1940 — industrial decline documentary, gritty mill-town footage",
       "source": "archive.org:ValleyTo1940",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "urban-grunge", "black-and-white", "grainy"],
-      "durationSeconds": 1472,
+      "tags": [
+        "retro-psa-cold-war",
+        "urban-grunge",
+        "black-and-white",
+        "grainy"
+      ],
+      "durationSeconds": 1472.0,
       "chapters": [
-        {"name": "Opening", "start": 0, "end": 180},
-        {"name": "Mill Town Life", "start": 180, "end": 600},
-        {"name": "Industrial Decline", "start": 600, "end": 1100},
-        {"name": "Closing", "start": 1100, "end": 1450}
+        {
+          "name": "Opening",
+          "start": 0.0,
+          "end": 180.0
+        },
+        {
+          "name": "Mill Town Life",
+          "start": 180.0,
+          "end": 600.0
+        },
+        {
+          "name": "Industrial Decline",
+          "start": 600.0,
+          "end": 1100.0
+        },
+        {
+          "name": "Closing",
+          "start": 1100.0,
+          "end": 1450.0
+        }
       ]
     },
     {
@@ -100,700 +198,1065 @@
       "title": "Desert Venture (Part I), 1958",
       "source": "archive.org:DesertVe1958",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "nature", "black-and-white", "grainy", "desert"]
+      "tags": [
+        "retro-psa-cold-war",
+        "nature",
+        "black-and-white",
+        "grainy",
+        "desert"
+      ]
     },
     {
       "file": "12_duck-and-cover-1951.mp4",
       "title": "Duck and Cover (1951) — Bert the Turtle civil-defense PSA, the classic Boards-of-Canada-sampled short",
       "source": "archive.org:DuckandC1951",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "nuclear", "black-and-white", "grainy"]
+      "tags": [
+        "retro-psa-cold-war",
+        "nuclear",
+        "black-and-white",
+        "grainy"
+      ]
     },
     {
       "file": "13_about-fallout-1963.mp4",
       "title": "About Fallout (1963) — civil-defense/nuclear-fallout educational film",
       "source": "archive.org:AboutFal1963",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "nuclear", "grainy"]
+      "tags": [
+        "retro-psa-cold-war",
+        "nuclear",
+        "grainy"
+      ]
     },
     {
       "file": "14_atomic-alert-1951.mp4",
       "title": "Atomic Alert (Elementary version), 1951 — school civil-defense film",
       "source": "archive.org:AtomicAl1951",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "nuclear", "black-and-white", "grainy"]
+      "tags": [
+        "retro-psa-cold-war",
+        "nuclear",
+        "black-and-white",
+        "grainy"
+      ],
+      "chapters": [
+        {
+          "name": "main",
+          "start": 33.545372,
+          "end": 632.523624
+        }
+      ],
+      "defaultChapter": "main"
     },
     {
       "file": "15_saturn-v-apollo14-launch.mp4",
       "title": "Apollo 14 16mm launch footage, official NASA collection",
       "source": "archive.org:APOLLO16MMLAUNCHVIEWS",
       "license": "US Govt work (public domain by default; no explicit licenseurl set on this NASA-collection item)",
-      "tags": ["retro-psa-cold-war", "space", "launch", "nasa"]
+      "tags": [
+        "retro-psa-cold-war",
+        "space",
+        "launch",
+        "nasa"
+      ]
     },
     {
       "file": "16_bikini-atoll-atomic-test.mp4",
       "title": "Explosion, atomic weapon test, Operation Crossroads, Bikini Atoll (1946)",
       "source": "archive.org:explosion-atomic-weapon-test-operation-crossroads-bikini-atoll",
       "license": "Public Domain Mark",
-      "tags": ["retro-psa-cold-war", "nuclear", "black-and-white", "grainy"]
+      "tags": [
+        "retro-psa-cold-war",
+        "nuclear",
+        "black-and-white",
+        "grainy"
+      ]
     },
     {
       "file": "1003-142621162_medium.mp4",
       "title": "Subway train doors, motion blur (B/W)",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "transit", "black-and-white", "motion-blur"]
+      "tags": [
+        "urban-grunge",
+        "transit",
+        "black-and-white",
+        "motion-blur"
+      ]
     },
     {
       "file": "1049-142623920_medium.mp4",
       "title": "Person sitting on riverbank, back view",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["people-scenery", "nature"]
+      "tags": [
+        "people-scenery",
+        "nature"
+      ]
     },
     {
       "file": "125900-735656336_medium.mp4",
       "title": "Bare feet walking on wet sand",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["people-scenery", "nature"]
+      "tags": [
+        "people-scenery",
+        "nature"
+      ]
     },
     {
       "file": "131625-750753093_medium.mp4",
       "title": "Couple silhouetted at sunset with drinks",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["people-scenery", "nature"]
+      "tags": [
+        "people-scenery",
+        "nature"
+      ]
     },
     {
       "file": "134112-758552431_medium.mp4",
       "title": "Aerial view of illuminated skyscrapers at night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "aerial", "night"]
+      "tags": [
+        "urban-grunge",
+        "aerial",
+        "night"
+      ]
     },
     {
       "file": "144267-784384538_medium.mp4",
       "title": "Two people walking on beach at sunset, silhouette",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["people-scenery", "nature", "ocean"]
+      "tags": [
+        "people-scenery",
+        "nature",
+        "ocean"
+      ]
     },
     {
       "file": "165065-831695780_medium.mp4",
       "title": "Macro red flower with bee",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "macro"]
+      "tags": [
+        "nature",
+        "macro"
+      ]
     },
     {
       "file": "176935-856259161_medium.mp4",
       "title": "Sparkling sunlit water surface",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "grunge-abstract", "ocean"]
+      "tags": [
+        "nature",
+        "grunge-abstract",
+        "ocean"
+      ]
     },
     {
       "file": "177347-857376739_medium.mp4",
       "title": "City skyline at night with neon signage",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "night"]
+      "tags": [
+        "urban-grunge",
+        "night"
+      ]
     },
     {
       "file": "180386-864121573_medium.mp4",
       "title": "Aerial view of night traffic intersection",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "traffic", "aerial", "night"]
+      "tags": [
+        "urban-grunge",
+        "traffic",
+        "aerial",
+        "night"
+      ]
     },
     {
       "file": "21116-315137080_medium.mp4",
       "title": "City street at night with traffic light trails",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "traffic", "night"]
+      "tags": [
+        "urban-grunge",
+        "traffic",
+        "night"
+      ]
     },
     {
       "file": "2-135653517_medium.mp4",
       "title": "Earth from space, night side with city lights",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["space", "night"]
+      "tags": [
+        "space",
+        "night"
+      ]
     },
     {
       "file": "21536-318978190_medium.mp4",
       "title": "Red/pink ink bloom diffusing in dark water",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["grunge-abstract"]
+      "tags": [
+        "grunge-abstract"
+      ]
     },
     {
       "file": "21985-323496013_medium.mp4",
       "title": "Aerial cityscape at night with traffic",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "traffic", "aerial", "night"]
+      "tags": [
+        "urban-grunge",
+        "traffic",
+        "aerial",
+        "night"
+      ]
     },
     {
       "file": "2299-157183618_medium.mp4",
       "title": "Subway/metro train, black and white",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "transit", "black-and-white"]
+      "tags": [
+        "urban-grunge",
+        "transit",
+        "black-and-white"
+      ]
     },
     {
       "file": "230060_medium.mp4",
       "title": "Sparrow perched on a ledge",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife"]
+      "tags": [
+        "nature",
+        "wildlife"
+      ]
     },
     {
       "file": "23258-334228230_medium.mp4",
       "title": "Busy neon-lit shopping street crowd, night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "crowd", "night"]
+      "tags": [
+        "urban-grunge",
+        "crowd",
+        "night"
+      ]
     },
     {
       "file": "3627-172488393_medium.mp4",
       "title": "Feet of crowd walking, street-level",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "crowd"]
+      "tags": [
+        "urban-grunge",
+        "crowd"
+      ]
     },
     {
       "file": "44289-438661771_medium.mp4",
       "title": "Ocean beach at sunset",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean"]
+      "tags": [
+        "nature",
+        "ocean"
+      ]
     },
     {
       "file": "80310-572838324_medium.mp4",
       "title": "Orange embers/particles drifting in the dark",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["grunge-abstract"]
+      "tags": [
+        "grunge-abstract"
+      ]
     },
     {
       "file": "85745-590014808_medium.mp4",
       "title": "Wolf in green foliage",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife"]
+      "tags": [
+        "nature",
+        "wildlife"
+      ]
     },
     {
       "file": "9005-216332135_medium.mp4",
       "title": "Subway tunnel, first-person motion blur",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "transit", "motion-blur"]
+      "tags": [
+        "urban-grunge",
+        "transit",
+        "motion-blur"
+      ]
     },
     {
       "file": "110734-688648666_medium.mp4",
       "title": "Aerial view of a surfer riding a big wave",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean", "aerial"]
+      "tags": [
+        "nature",
+        "ocean",
+        "aerial"
+      ]
     },
     {
       "file": "119818-719443755_medium.mp4",
       "title": "Decayed, colourfully painted abandoned carousel (Chernobyl exclusion zone)",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay", "carnival", "grunge-abstract"]
+      "tags": [
+        "urban-decay",
+        "carnival",
+        "grunge-abstract"
+      ]
     },
     {
       "file": "127603-739144640_medium.mp4",
       "title": "Abandoned indoor swimming pool, decayed",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay"]
+      "tags": [
+        "urban-decay"
+      ]
     },
     {
       "file": "137272-766338243_medium.mp4",
       "title": "Weathered old sign board in forest, faded text",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay", "nature"]
+      "tags": [
+        "urban-decay",
+        "nature"
+      ]
     },
     {
       "file": "13772-251867974_medium.mp4",
       "title": "Aerial view of surfers waiting in the ocean",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean", "aerial"]
+      "tags": [
+        "nature",
+        "ocean",
+        "aerial"
+      ]
     },
     {
       "file": "138143-768338753_medium.mp4",
       "title": "Abandoned building corridor, numbered door",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay"]
+      "tags": [
+        "urban-decay"
+      ]
     },
     {
       "file": "138147-768352340_medium.mp4",
       "title": "Railway track through autumn forest, dog walking away",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "urban-decay"]
+      "tags": [
+        "nature",
+        "urban-decay"
+      ]
     },
     {
       "file": "138156-768820139_medium.mp4",
       "title": "Mural/graffiti portrait on industrial concrete pillar",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay", "grunge-abstract"]
+      "tags": [
+        "urban-decay",
+        "grunge-abstract"
+      ]
     },
     {
       "file": "139027-771365651_medium.mp4",
       "title": "Duga over-the-horizon radar array (Chernobyl exclusion zone)",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay", "retro-psa-cold-war"]
+      "tags": [
+        "urban-decay",
+        "retro-psa-cold-war"
+      ]
     },
     {
       "file": "139030-771365664_medium.mp4",
       "title": "Abandoned teddy bear toy hanging outdoors, eerie",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay"]
+      "tags": [
+        "urban-decay"
+      ]
     },
     {
       "file": "139032-771365671_medium.mp4",
       "title": "Dark abandoned corridor/tunnel with light at the far end",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay"]
+      "tags": [
+        "urban-decay"
+      ]
     },
     {
       "file": "14037-254146876_medium.mp4",
       "title": "Driving POV through a dark tunnel/underpass at night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "transit", "motion-blur", "night"]
+      "tags": [
+        "urban-grunge",
+        "transit",
+        "motion-blur",
+        "night"
+      ]
     },
     {
       "file": "142146-779482345_medium.mp4",
       "title": "Ferris wheel silhouette at dusk",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["carnival", "night"]
+      "tags": [
+        "carnival",
+        "night"
+      ]
     },
     {
       "file": "167782-837438539_medium.mp4",
       "title": "Retro VCR deck-control UI screen (\"DECK 1 / DECK 2 TV VIEW\")",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "169259-840702572_medium.mp4",
       "title": "Old dusty CRT television showing static",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "2141-155244186_medium.mp4",
       "title": "Circular SMPTE colour-bar test pattern",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "261503_medium.mp4",
       "title": "VHS static noise with \"PLAY\" timecode overlay",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "269084_medium.mp4",
       "title": "Snowy field with distant mountains",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature"]
+      "tags": [
+        "nature"
+      ]
     },
     {
       "file": "27706-365890968_medium.mp4",
       "title": "Scrolling green terminal/code text, hacker aesthetic",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "29730-377510641_medium.mp4",
       "title": "Ornate carousel lit up at night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["carnival", "night"]
+      "tags": [
+        "carnival",
+        "night"
+      ]
     },
     {
       "file": "312081_medium.mp4",
       "title": "Surreal double-exposure: old TV floating over a pink/orange sunset seascape",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch", "grunge-abstract"]
+      "tags": [
+        "vhs-glitch",
+        "grunge-abstract"
+      ]
     },
     {
       "file": "312094_medium.mp4",
       "title": "Retro TV screen showing sunset clouds, double-exposure art",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch", "grunge-abstract"]
+      "tags": [
+        "vhs-glitch",
+        "grunge-abstract"
+      ]
     },
     {
       "file": "315001_medium.mp4",
       "title": "VHS static noise with \"PLAY\" timecode overlay",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "316742_medium.mp4",
       "title": "Motion-blurred countryside seen through a train window",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "transit", "motion-blur"]
+      "tags": [
+        "nature",
+        "transit",
+        "motion-blur"
+      ]
     },
     {
       "file": "317072_medium.mp4",
       "title": "Classic SMPTE colour-bar test pattern",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch"]
+      "tags": [
+        "vhs-glitch"
+      ]
     },
     {
       "file": "330880_medium.mp4",
       "title": "Horse running in a golden field at sunset",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife"]
+      "tags": [
+        "nature",
+        "wildlife"
+      ]
     },
     {
       "file": "344453_medium.mp4",
       "title": "Horse silhouette running at sunset, dusty ground",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife"]
+      "tags": [
+        "nature",
+        "wildlife"
+      ]
     },
     {
       "file": "361134_medium.mp4",
       "title": "Horse running across Icelandic landscape with glacier",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife"]
+      "tags": [
+        "nature",
+        "wildlife"
+      ]
     },
     {
       "file": "3639-172561652_medium.mp4",
       "title": "Railway track through forest, POV",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "transit"]
+      "tags": [
+        "nature",
+        "transit"
+      ]
     },
     {
       "file": "36609-411342371_medium.mp4",
       "title": "Aerial view of paddleboarders/surfers in turquoise water",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean", "aerial"]
+      "tags": [
+        "nature",
+        "ocean",
+        "aerial"
+      ]
     },
     {
       "file": "45245-442557060_medium.mp4",
       "title": "VHS static/scanline glitch texture, black and white",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch", "black-and-white"]
+      "tags": [
+        "vhs-glitch",
+        "black-and-white"
+      ]
     },
     {
       "file": "45246-442509411_medium.mp4",
       "title": "Collapsed, smoking building — disaster aesthetic",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay", "disaster"]
+      "tags": [
+        "urban-decay",
+        "disaster"
+      ]
     },
     {
       "file": "45247-442509420_medium.mp4",
       "title": "Brutalist concrete apartment architecture, moody",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-decay"]
+      "tags": [
+        "urban-decay"
+      ]
     },
     {
       "file": "45249-442509432_medium.mp4",
       "title": "VHS static/scanline glitch texture, black and white",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch", "black-and-white"]
+      "tags": [
+        "vhs-glitch",
+        "black-and-white"
+      ]
     },
     {
       "file": "49471-459502277_medium.mp4",
       "title": "VHS static/scanline glitch texture, black and white",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["vhs-glitch", "black-and-white"]
+      "tags": [
+        "vhs-glitch",
+        "black-and-white"
+      ]
     },
     {
       "file": "79087-568265389_medium.mp4",
       "title": "Aerial view of a herd of horses running (Iceland)",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife", "aerial"]
+      "tags": [
+        "nature",
+        "wildlife",
+        "aerial"
+      ]
     },
     {
       "file": "8131-207209033_medium.mp4",
       "title": "Chair-swing carnival ride against the sky",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["carnival"]
+      "tags": [
+        "carnival"
+      ]
     },
     {
       "file": "920-141890454_medium.mp4",
       "title": "Crowd of people walking in hazy, yellow-tinted light",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "crowd"]
+      "tags": [
+        "urban-grunge",
+        "crowd"
+      ]
     },
     {
       "file": "10227529-uhd_3840_2160_30fps.mp4",
       "title": "Aerial drone shot of oil pumpjacks in a desert oilfield",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "desert", "aerial", "oil-industry"]
+      "tags": [
+        "nature",
+        "desert",
+        "aerial",
+        "oil-industry"
+      ]
     },
     {
       "file": "10396407-hd_3840_2160_30fps.mp4",
       "title": "Illuminated oil refinery at night",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "industrial", "night"]
+      "tags": [
+        "urban-grunge",
+        "industrial",
+        "night"
+      ]
     },
     {
       "file": "11975494_1920_1080_30fps.mp4",
       "title": "Osprey perched on a balcony railing, sea view",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["wildlife", "nature"]
+      "tags": [
+        "wildlife",
+        "nature"
+      ]
     },
     {
       "file": "11996993_3840_2160_30fps.mp4",
       "title": "Gas flare and refinery seen from a moving car in the desert",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "desert", "industrial", "motion-blur"]
+      "tags": [
+        "nature",
+        "desert",
+        "industrial",
+        "motion-blur"
+      ]
     },
     {
       "file": "12104811_4096_2160_30fps.mp4",
       "title": "Bird flying low over coastal sand dunes",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "wildlife", "ocean"]
+      "tags": [
+        "nature",
+        "wildlife",
+        "ocean"
+      ]
     },
     {
       "file": "12221294_1920_1080_24fps.mp4",
       "title": "Bird of prey soaring against a clear sky",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["wildlife", "nature"]
+      "tags": [
+        "wildlife",
+        "nature"
+      ]
     },
     {
       "file": "12920020_3840_2160_30fps.mp4",
       "title": "Seabirds flying low over dark, rippling water (B/W)",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["wildlife", "black-and-white", "grunge-abstract"]
+      "tags": [
+        "wildlife",
+        "black-and-white",
+        "grunge-abstract"
+      ]
     },
     {
       "file": "13393607_1920_1080_24fps.mp4",
       "title": "Vintage 8mm footage of a 1960s gas station",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "urban-grunge", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "urban-grunge",
+        "grainy"
+      ]
     },
     {
       "file": "13498750_1920_1080_30fps.mp4",
       "title": "Vintage 8mm footage of a card game",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "grainy"
+      ]
     },
     {
       "file": "13544369_1920_1080_30fps.mp4",
       "title": "Vintage 8mm home movie: children by a garden bird bath",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "nature", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "nature",
+        "grainy"
+      ]
     },
     {
       "file": "13544384_1920_1080_30fps.mp4",
       "title": "Vintage 8mm home movie: child running across a field",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "nature", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "nature",
+        "grainy"
+      ]
     },
     {
       "file": "13553127_1920_1080_30fps.mp4",
       "title": "Vintage 8mm home movie: man walking a toddler up a garden path (B/W)",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "black-and-white", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "black-and-white",
+        "grainy"
+      ]
     },
     {
       "file": "13582310_1920_1080_30fps.mp4",
       "title": "Vintage 8mm home movie: backyard badminton in the suburbs",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "grainy"
+      ]
     },
     {
       "file": "13604904_1920_1080_30fps.mp4",
       "title": "Vintage 8mm footage of a small-town main street",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "urban-grunge", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "urban-grunge",
+        "grainy"
+      ]
     },
     {
       "file": "13651885_1920_1080_30fps.mp4",
       "title": "Vintage 8mm home movie: towing a car in the snow",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "grainy"
+      ]
     },
     {
       "file": "13774711_1920_1080_30fps.mp4",
       "title": "Retro-filtered footage of a man in a mid-century kitchen",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vhs-glitch", "people-scenery", "grainy"]
+      "tags": [
+        "vhs-glitch",
+        "people-scenery",
+        "grainy"
+      ]
     },
     {
       "file": "15159933_3840_2160_60fps.mp4",
       "title": "Aerial B/W view of a coastal industrial harbor at dusk",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "black-and-white", "industrial", "aerial", "night"]
+      "tags": [
+        "urban-grunge",
+        "black-and-white",
+        "industrial",
+        "aerial",
+        "night"
+      ]
     },
     {
       "file": "17469008-uhd_3840_2160_30fps.mp4",
       "title": "Aerial dusk view of an oil refinery flare stack",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "industrial", "night", "aerial"]
+      "tags": [
+        "urban-grunge",
+        "industrial",
+        "night",
+        "aerial"
+      ]
     },
     {
       "file": "18281059-hd_1920_1080_30fps.mp4",
       "title": "Flock of seagulls flying against a blue sky",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["wildlife", "nature"]
+      "tags": [
+        "wildlife",
+        "nature"
+      ]
     },
     {
       "file": "18692266-hd_1920_1080_24fps.mp4",
       "title": "Aerial night view of an industrial plant with a flare stack",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "industrial", "night", "aerial"]
+      "tags": [
+        "urban-grunge",
+        "industrial",
+        "night",
+        "aerial"
+      ]
     },
     {
       "file": "2082027-uhd_3840_2160_15fps.mp4",
       "title": "Vintage-filtered footage of a tropical beach with a sailboat",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "people-scenery", "ocean", "grainy"]
+      "tags": [
+        "nature",
+        "people-scenery",
+        "ocean",
+        "grainy"
+      ]
     },
     {
       "file": "3588881-hd_1920_1080_18fps.mp4",
       "title": "Grainy B/W footage of a photographer's reflection in a car mirror",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "black-and-white", "grainy", "people-scenery"]
+      "tags": [
+        "vintage-8mm",
+        "black-and-white",
+        "grainy",
+        "people-scenery"
+      ]
     },
     {
       "file": "3588895-hd_1920_1080_18fps.mp4",
       "title": "Vintage B/W footage looking out through a barn doorway to a field",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "nature", "black-and-white", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "nature",
+        "black-and-white",
+        "grainy"
+      ]
     },
     {
       "file": "3698056-uhd_3840_2160_15fps.mp4",
       "title": "Retro-filtered close-up of hands playing piano",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "people-scenery",
+        "grainy"
+      ]
     },
     {
       "file": "4409226-hd_1920_1080_18fps.mp4",
       "title": "Film-burn light-leak transition (short clip)",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vhs-glitch", "grunge-abstract", "grainy"]
+      "tags": [
+        "vhs-glitch",
+        "grunge-abstract",
+        "grainy"
+      ]
     },
     {
       "file": "4988407-hd_1920_1080_30fps.mp4",
       "title": "Aerial night view of a coastal city from an airplane",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "night", "aerial"]
+      "tags": [
+        "urban-grunge",
+        "night",
+        "aerial"
+      ]
     },
     {
       "file": "5007180-hd_1080_1920_30fps.mp4",
       "title": "Aerial night view of a city street grid (portrait)",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "night", "aerial"]
+      "tags": [
+        "urban-grunge",
+        "night",
+        "aerial"
+      ]
     },
     {
       "file": "5077343-hd_1920_1080_30fps.mp4",
       "title": "Aerial night view over a rail yard and city lights",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "night", "industrial", "aerial"]
+      "tags": [
+        "urban-grunge",
+        "night",
+        "industrial",
+        "aerial"
+      ]
     },
     {
       "file": "5223375-hd_1920_932_30fps.mp4",
       "title": "Towering storm cloud seen from above, aerial airplane view",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "aerial"]
+      "tags": [
+        "nature",
+        "aerial"
+      ]
     },
     {
       "file": "5510668-hd_1920_1080_18fps.mp4",
       "title": "Vintage 8mm home movie: sunset over a rural field",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "nature", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "nature",
+        "grainy"
+      ]
     },
     {
       "file": "6742348-hd_1920_1080_30fps.mp4",
       "title": "Young eagle perched on a bare branch",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["wildlife", "nature"]
+      "tags": [
+        "wildlife",
+        "nature"
+      ]
     },
     {
       "file": "7188464-uhd_2560_1440_30fps.mp4",
       "title": "Saguaro cactus in the Arizona desert",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "desert"]
+      "tags": [
+        "nature",
+        "desert"
+      ]
     },
     {
       "file": "7276307-hd_1920_1080_18fps.mp4",
       "title": "Vintage 8mm home movie: sunset over a pond",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["vintage-8mm", "nature", "grainy"]
+      "tags": [
+        "vintage-8mm",
+        "nature",
+        "grainy"
+      ]
     },
     {
       "file": "9011093-uhd_3840_2160_30fps.mp4",
       "title": "Joshua Tree desert landscape with boulders",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature", "desert"]
+      "tags": [
+        "nature",
+        "desert"
+      ]
     }
   ]
 }

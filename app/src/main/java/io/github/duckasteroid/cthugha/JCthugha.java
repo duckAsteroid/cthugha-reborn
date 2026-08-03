@@ -132,7 +132,6 @@ public class JCthugha extends ParamNode implements Closeable {
 		System.out.println(currentWorkingDir.normalize().toString());
 		Path maps = Paths.get("maps");
 		reader = new MapFileReader(maps);
-		reader.refreshPreviews();
 		paletteMap = reader.first();
 	}
 

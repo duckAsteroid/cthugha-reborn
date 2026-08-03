@@ -9,6 +9,7 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,14 +18,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Reads the colour palette data from a MAP file
  */
 public class MapFileReader {
-  private static final Logger LOG = LoggerFactory.getLogger(MapFileReader.class);
 
   /** Height (px) of a generated palette preview PNG; width is always 256 (one column per entry). */
   public static final int PREVIEW_HEIGHT = 32;
@@ -114,41 +112,52 @@ public class MapFileReader {
   }
 
   /**
-   * Regenerates any preview PNG that is missing or stale relative to its {@code .MAP} source,
-   * leaving already-accurate previews (and their mtimes, which back the remote UI's HTTP cache
-   * headers) untouched. Preview PNGs aren't committed to git — this is what makes them exist,
-   * called once at startup so the whole library is ready before the remote UI is served. A
-   * single unreadable/malformed {@code .MAP} file is logged and skipped rather than aborting
-   * the rest of the library.
+   * Reads every non-blank "R G B" line in the file as one palette entry — any count ≥ 1, not
+   * just the historical fixed 256 (the render pipeline sizes its palette LUT texture off
+   * {@link PaletteMap#size()}, so it was never actually limited to 256; only this parser was).
    */
-  public void refreshPreviews() throws IOException {
-    for (Path f : paletteFiles()) {
-      try {
-        if (!previewMatches(f)) {
-          writePreview(f);
-        }
-      } catch (IOException | RuntimeException e) {
-        LOG.warn("Failed to refresh preview for {}", f, e);
-      }
-    }
-  }
-
   private int[] loadData(Reader reader) throws IOException {
-    int[] result = new int[256];
+    List<Integer> result = new ArrayList<>();
     try (BufferedReader br = new BufferedReader(reader)) {
-      for(int i = 0; i < result.length; i++) {
-        final String line = br.readLine();
-        if (line == null) throw new IllegalArgumentException("Input not long enough");
+      String line;
+      int i = 0;
+      while ((line = br.readLine()) != null) {
+        if (line.isBlank()) continue;
         Matcher matcher = pattern.matcher(line);
         if (!matcher.find()) throw new IllegalArgumentException("Bad line["+i+"]: "+line);
         int r = Integer.parseInt(matcher.group(1));
         int g = Integer.parseInt(matcher.group(2));
         int b = Integer.parseInt(matcher.group(3));
-        Color color = new Color(r,g,b);
-        result[i] = color.getRGB();
+        result.add(new Color(r, g, b).getRGB());
+        i++;
       }
     }
-    return result;
+    if (result.isEmpty()) throw new IllegalArgumentException("Palette file has no colour entries");
+    return result.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  /**
+   * Writes {@code colors} (packed {@code 0xRRGGBB} ints) as {@code <name>.MAP} under the palette
+   * directory, one "R G B" line per entry, overwriting any existing file of that name and
+   * invalidating its cache entry. {@code name} must be a bare filename stem (no path separators
+   * or {@code .MAP} extension). Returns the path written.
+   */
+  public Path write(String name, int[] colors) throws IOException {
+    if (name.isBlank() || !name.equals(Paths.get(name).getFileName().toString())) {
+      throw new IllegalArgumentException("Invalid palette name: " + name);
+    }
+    if (colors.length == 0) {
+      throw new IllegalArgumentException("Palette must have at least one colour");
+    }
+    Path file = paletteDir.resolve(name + ".MAP");
+    StringBuilder sb = new StringBuilder();
+    for (int packed : colors) {
+      Color c = new Color(packed);
+      sb.append(c.getRed()).append(' ').append(c.getGreen()).append(' ').append(c.getBlue()).append('\n');
+    }
+    Files.writeString(file, sb.toString());
+    cache.remove(file);
+    return file;
   }
 
   /**
