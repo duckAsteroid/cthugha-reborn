@@ -46,7 +46,8 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
         OSCILLOSCOPE(OscilloscopeModel.DEFAULT_NAME),
         RADIAL_WAVE(RadialWaveModel.DEFAULT_NAME),
         SPECTRUM(SpectrumModel.DEFAULT_NAME),
-        RADIAL_SPECTRUM(RadialSpectrumModel.DEFAULT_NAME);
+        RADIAL_SPECTRUM(RadialSpectrumModel.DEFAULT_NAME),
+        RADIAL_CLOCK(RadialClockModel.DEFAULT_NAME);
 
         private final String label;
 
@@ -64,6 +65,7 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
                 case RADIAL_WAVE -> new RadialWaveModel(name);
                 case SPECTRUM -> new SpectrumModel(name);
                 case RADIAL_SPECTRUM -> new RadialSpectrumModel(name);
+                case RADIAL_CLOCK -> new RadialClockModel(name);
             };
         }
 
@@ -72,6 +74,7 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
             if (model instanceof RadialWaveModel) return RADIAL_WAVE;
             if (model instanceof SpectrumModel) return SPECTRUM;
             if (model instanceof RadialSpectrumModel) return RADIAL_SPECTRUM;
+            if (model instanceof RadialClockModel) return RADIAL_CLOCK;
             throw new IllegalArgumentException("Not a known wave model type: " + model.getClass());
         }
     }

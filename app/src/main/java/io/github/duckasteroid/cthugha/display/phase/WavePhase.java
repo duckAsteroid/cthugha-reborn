@@ -9,6 +9,8 @@ import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.display.AudioPipeline;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
+import io.github.duckasteroid.cthugha.display.wave.RadialClockAnalyser;
+import io.github.duckasteroid.cthugha.display.wave.RadialClockModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
@@ -152,6 +154,7 @@ public class WavePhase implements RenderPhase {
             if (model instanceof RadialWaveModel rm) return new RadialWaveEntry(rm);
             if (model instanceof SpectrumModel sm) return new SpectrumEntry(sm);
             if (model instanceof RadialSpectrumModel rsm) return new RadialSpectrumEntry(rsm);
+            if (model instanceof RadialClockModel rcm) return new RadialClockEntry(rcm);
             throw new IllegalArgumentException("Unknown wave model type: " + model.getClass());
         } catch (IOException e) {
             throw new UncheckedIOException(
@@ -331,6 +334,66 @@ public class WavePhase implements RenderPhase {
             if (colourDirty) reinit(ctx);
             if (!model.enabled.value) return;
             analyser.withRepeats(model.repeats.value);
+            analyser.setTransform(model.transform.applyTo(new Matrix4f()));
+            analyser.doRender(ctx);
+        }
+
+        @Override
+        public void dispose() {
+            audioPipeline.getFreqProc().removeSink(analyser);
+            analyser.dispose();
+        }
+    }
+
+    private final class RadialClockEntry implements WaveEntry {
+        private final RadialClockModel model;
+        private RadialClockAnalyser analyser;
+        private volatile boolean dirty = false;
+
+        RadialClockEntry(RadialClockModel model) throws IOException {
+            this.model = model;
+            analyser = build();
+            audioPipeline.getFreqProc().addSink(analyser);
+            analyser.init(initCtx);
+            Runnable mark = () -> dirty = true;
+            model.innerColor.addChangeListener(mark);
+            model.baseColor.addChangeListener(mark);
+            model.outerColor.addChangeListener(mark);
+            model.baseRadius.addChangeListener(mark);
+            model.outerHeight.addChangeListener(mark);
+            model.innerDepth.addChangeListener(mark);
+        }
+
+        private RadialClockAnalyser build() {
+            RadialClockAnalyser rca = new RadialClockAnalyser(audioPipeline.getFreqProc(),
+                    (float) model.baseRadius.value, (float) model.outerHeight.value, (float) model.innerDepth.value)
+                    .withColors(model.innerColorVec(), model.baseColorVec(), model.outerColorVec());
+            rca.setClearBeforeRender(false);
+            return rca;
+        }
+
+        /** GL thread only: disposes and rebuilds the analyser with current colour/geometry params. */
+        private void reinit(RenderContext ctx) {
+            dirty = false;
+            audioPipeline.getFreqProc().removeSink(analyser);
+            analyser.dispose();
+            analyser = build();
+            audioPipeline.getFreqProc().addSink(analyser);
+            try {
+                analyser.init(ctx);
+            } catch (IOException e) {
+                LOG.error("Failed to reinitialise radial clock analyser after a colour/geometry change", e);
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        @Override
+        public void render(RenderContext ctx) {
+            if (dirty) reinit(ctx);
+            if (!model.enabled.value) return;
+            analyser.withGrowthMode(model.growthMode.getEnumeration());
+            analyser.withRepeats(model.repeats.value);
+            analyser.withWidthFraction((float) model.widthFraction.value);
             analyser.setTransform(model.transform.applyTo(new Matrix4f()));
             analyser.doRender(ctx);
         }
