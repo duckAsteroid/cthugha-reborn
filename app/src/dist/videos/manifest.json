@@ -82,7 +82,7 @@
       "title": "Desert Venture (Part I), 1958",
       "source": "archive.org:DesertVe1958",
       "license": "Public Domain",
-      "tags": ["retro-psa-cold-war", "nature", "black-and-white", "grainy"]
+      "tags": ["retro-psa-cold-war", "nature", "black-and-white", "grainy", "desert"]
     },
     {
       "file": "12_duck-and-cover-1951.mp4",
@@ -152,14 +152,14 @@
       "title": "Aerial view of illuminated skyscrapers at night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge"]
+      "tags": ["urban-grunge", "aerial", "night"]
     },
     {
       "file": "144267-784384538_medium.mp4",
       "title": "Two people walking on beach at sunset, silhouette",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["people-scenery", "nature"]
+      "tags": ["people-scenery", "nature", "ocean"]
     },
     {
       "file": "165065-831695780_medium.mp4",
@@ -173,35 +173,35 @@
       "title": "Sparkling sunlit water surface",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "grunge-abstract"]
+      "tags": ["nature", "grunge-abstract", "ocean"]
     },
     {
       "file": "177347-857376739_medium.mp4",
       "title": "City skyline at night with neon signage",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge"]
+      "tags": ["urban-grunge", "night"]
     },
     {
       "file": "180386-864121573_medium.mp4",
       "title": "Aerial view of night traffic intersection",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "traffic"]
+      "tags": ["urban-grunge", "traffic", "aerial", "night"]
     },
     {
       "file": "21116-315137080_medium.mp4",
       "title": "City street at night with traffic light trails",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "traffic"]
+      "tags": ["urban-grunge", "traffic", "night"]
     },
     {
       "file": "2-135653517_medium.mp4",
       "title": "Earth from space, night side with city lights",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["space"]
+      "tags": ["space", "night"]
     },
     {
       "file": "21536-318978190_medium.mp4",
@@ -215,7 +215,7 @@
       "title": "Aerial cityscape at night with traffic",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "traffic"]
+      "tags": ["urban-grunge", "traffic", "aerial", "night"]
     },
     {
       "file": "2299-157183618_medium.mp4",
@@ -236,7 +236,7 @@
       "title": "Busy neon-lit shopping street crowd, night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "crowd"]
+      "tags": ["urban-grunge", "crowd", "night"]
     },
     {
       "file": "3627-172488393_medium.mp4",
@@ -250,7 +250,7 @@
       "title": "Ocean beach at sunset",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature"]
+      "tags": ["nature", "ocean"]
     },
     {
       "file": "80310-572838324_medium.mp4",
@@ -278,7 +278,7 @@
       "title": "Aerial view of a surfer riding a big wave",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean"]
+      "tags": ["nature", "ocean", "aerial"]
     },
     {
       "file": "119818-719443755_medium.mp4",
@@ -306,7 +306,7 @@
       "title": "Aerial view of surfers waiting in the ocean",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean"]
+      "tags": ["nature", "ocean", "aerial"]
     },
     {
       "file": "138143-768338753_medium.mp4",
@@ -355,14 +355,14 @@
       "title": "Driving POV through a dark tunnel/underpass at night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["urban-grunge", "transit", "motion-blur"]
+      "tags": ["urban-grunge", "transit", "motion-blur", "night"]
     },
     {
       "file": "142146-779482345_medium.mp4",
       "title": "Ferris wheel silhouette at dusk",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["carnival"]
+      "tags": ["carnival", "night"]
     },
     {
       "file": "167782-837438539_medium.mp4",
@@ -411,7 +411,7 @@
       "title": "Ornate carousel lit up at night",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["carnival"]
+      "tags": ["carnival", "night"]
     },
     {
       "file": "312081_medium.mp4",
@@ -481,7 +481,7 @@
       "title": "Aerial view of paddleboarders/surfers in turquoise water",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "ocean"]
+      "tags": ["nature", "ocean", "aerial"]
     },
     {
       "file": "45245-442557060_medium.mp4",
@@ -523,7 +523,7 @@
       "title": "Aerial view of a herd of horses running (Iceland)",
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
-      "tags": ["nature", "wildlife"]
+      "tags": ["nature", "wildlife", "aerial"]
     },
     {
       "file": "8131-207209033_medium.mp4",
@@ -656,14 +656,14 @@
       "title": "Aerial B/W view of a coastal industrial harbor at dusk",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "black-and-white", "industrial"]
+      "tags": ["urban-grunge", "black-and-white", "industrial", "aerial", "night"]
     },
     {
       "file": "17469008-uhd_3840_2160_30fps.mp4",
       "title": "Aerial dusk view of an oil refinery flare stack",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "industrial", "night"]
+      "tags": ["urban-grunge", "industrial", "night", "aerial"]
     },
     {
       "file": "18281059-hd_1920_1080_30fps.mp4",
@@ -677,7 +677,7 @@
       "title": "Aerial night view of an industrial plant with a flare stack",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "industrial", "night"]
+      "tags": ["urban-grunge", "industrial", "night", "aerial"]
     },
     {
       "file": "2082027-uhd_3840_2160_15fps.mp4",
@@ -719,28 +719,28 @@
       "title": "Aerial night view of a coastal city from an airplane",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "night"]
+      "tags": ["urban-grunge", "night", "aerial"]
     },
     {
       "file": "5007180-hd_1080_1920_30fps.mp4",
       "title": "Aerial night view of a city street grid (portrait)",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "night"]
+      "tags": ["urban-grunge", "night", "aerial"]
     },
     {
       "file": "5077343-hd_1920_1080_30fps.mp4",
       "title": "Aerial night view over a rail yard and city lights",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["urban-grunge", "night", "industrial"]
+      "tags": ["urban-grunge", "night", "industrial", "aerial"]
     },
     {
       "file": "5223375-hd_1920_932_30fps.mp4",
       "title": "Towering storm cloud seen from above, aerial airplane view",
       "source": "pixabay",
       "license": "Pixabay Content License (free, no attribution required)",
-      "tags": ["nature"]
+      "tags": ["nature", "aerial"]
     },
     {
       "file": "5510668-hd_1920_1080_18fps.mp4",
