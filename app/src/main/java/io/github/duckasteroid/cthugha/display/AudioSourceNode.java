@@ -50,9 +50,13 @@ public class AudioSourceNode extends ParamNode {
         selector.withNoAnimate();
         // Environment-specific (depends on what hardware is plugged into this machine), not
         // part of the visual configuration, so it's excluded from screen-config snapshots.
+        // Instead it auto-persists to state.ini below, the same as Fullscreen/Notifications.
         selector.withNoPersist();
         selector.addChangeListener(() -> {
-            if (syncing || onSourceSelected == null) return;
+            if (syncing) return;
+            Config.state().setConfig(AudioPipeline.CONFIG_SECTION, AudioPipeline.PREFERRED_DEVICE_KEY,
+                selector.getEnumeration());
+            if (onSourceSelected == null) return;
             onSourceSelected.accept(selector.getEnumeration());
         });
 
@@ -61,15 +65,8 @@ public class AudioSourceNode extends ParamNode {
         random.withUiHint(UiHint.ICON, "shuffle");
         random.withDescription("Switches to a random audio capture device from the list.");
 
-        AbstractAction saveDefault = new AbstractAction("Save as Default", ctx ->
-            Config.singleton().setConfig(AudioPipeline.CONFIG_SECTION, AudioPipeline.PREFERRED_DEVICE_KEY,
-                selector.getEnumeration()));
-        saveDefault.withUiHint(UiHint.ICON, "save");
-        saveDefault.withDescription("Remembers the current device as the one Cthugha selects on its next startup.");
-
         addChild(selector);
         addChild(random);
-        addChild(saveDefault);
     }
 
     /** Registers the callback invoked when the user picks a different source by name. */

@@ -31,7 +31,7 @@ public class AudioPipeline {
     private static final int MAX_RESTARTS_PER_WINDOW = 5;
     private static final long RESTART_WINDOW_MS = 10_000;
 
-    private static final Config CFG = Config.singleton();
+    private static final Config CFG = Config.state();
 
     private final AudioSources audioSources = new AudioSources();
     private int selectedIndex = 0;
