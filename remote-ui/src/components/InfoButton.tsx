@@ -21,7 +21,7 @@ export function InfoButton({ open, onToggle, className = '' }: InfoButtonProps) 
       aria-label="Parameter description"
       aria-expanded={open}
       className={`p-0.5 rounded transition-colors shrink-0 ${className} ${
-        open ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
+        open ? 'text-phosphor' : 'text-neutral-500 hover:text-neutral-300'
       }`}
     >
       <Info className="w-3.5 h-3.5" />

@@ -31,7 +31,7 @@ export function BindingCreatorPanel({
 }: BindingCreatorPanelProps) {
   if (menuOpen) {
     return (
-      <div className="flex gap-2 pl-2 border-l-2 border-indigo-500/40">
+      <div className="flex gap-2 pl-2 border-l-2 border-phosphor/40">
         <button
           onClick={chooseAnimation}
           className="px-3 py-1 text-xs rounded border border-neutral-600 text-neutral-300 hover:bg-neutral-700"
@@ -51,7 +51,7 @@ export function BindingCreatorPanel({
   if (draftKind === null) return null;
 
   return (
-    <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-indigo-500/40">
+    <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-phosphor/40">
       <div className="flex items-center justify-between">
         <span className="text-xs text-neutral-500 uppercase tracking-wide font-semibold">
           {draftKind === 'animation' ? 'Animation' : 'Trigger'}
@@ -60,7 +60,7 @@ export function BindingCreatorPanel({
           onClick={() => setShowHelp((v) => !v)}
           aria-label="Script reference"
           className={`p-0.5 rounded transition-colors ${
-            showHelp ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
+            showHelp ? 'text-phosphor' : 'text-neutral-500 hover:text-neutral-300'
           }`}
         >
           <HelpCircle className="w-3.5 h-3.5" />
@@ -73,7 +73,7 @@ export function BindingCreatorPanel({
         spellCheck={false}
         placeholder={draftKind === 'animation' ? 'e.g. sine(0.05)' : 'e.g. bass() > 0.7'}
         autoFocus
-        className="w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y border border-neutral-600"
+        className="w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-phosphor resize-y border border-neutral-600"
       />
       {showHelp && (
         <div className="rounded border border-neutral-700 bg-neutral-800/80 px-3 py-2.5 text-xs space-y-2.5">
@@ -85,7 +85,7 @@ export function BindingCreatorPanel({
               <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-0.5">
                 {items.map(({ name, desc }) => (
                   <Fragment key={name}>
-                    <code className="text-indigo-300 font-mono">{name}</code>
+                    <code className="text-phosphor font-mono">{name}</code>
                     <span className="text-neutral-400">{desc}</span>
                   </Fragment>
                 ))}
@@ -104,7 +104,7 @@ export function BindingCreatorPanel({
         <button
           onClick={confirmDraft}
           disabled={draftValue.trim() === ''}
-          className="px-3 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1 text-xs rounded bg-phosphor text-void hover:bg-phosphor/90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Add
         </button>

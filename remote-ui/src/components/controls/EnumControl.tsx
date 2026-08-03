@@ -21,7 +21,7 @@ export function EnumControl({ value, options, disabled, onChange }: EnumControlP
     <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
       <Select.Root value={String(value)} onValueChange={handleChange} disabled={disabled}>
         <Select.Trigger
-          className="inline-flex items-center justify-between gap-2 px-3 py-1.5 bg-neutral-800 border border-neutral-600 rounded text-neutral-200 text-sm min-w-24 hover:border-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 data-[disabled]:opacity-40"
+          className="inline-flex items-center justify-between gap-2 px-3 py-1.5 bg-neutral-800 border border-neutral-600 rounded text-neutral-200 text-sm min-w-24 hover:border-neutral-500 focus:outline-none focus:ring-2 focus:ring-phosphor data-[disabled]:opacity-40"
           aria-label="Select option"
         >
           <span className="truncate min-w-0 flex-1 text-left">
@@ -42,7 +42,7 @@ export function EnumControl({ value, options, disabled, onChange }: EnumControlP
                 <Select.Item
                   key={idx}
                   value={String(idx)}
-                  className="flex items-center px-3 py-1.5 text-sm text-neutral-200 rounded cursor-pointer hover:bg-indigo-600 focus:bg-indigo-600 focus:outline-none data-[state=checked]:text-indigo-300"
+                  className="flex items-center px-3 py-1.5 text-sm text-neutral-200 rounded cursor-pointer hover:bg-phosphor/20 focus:bg-phosphor/20 focus:outline-none data-[state=checked]:text-phosphor"
                 >
                   <Select.ItemText>{opt.label}</Select.ItemText>
                 </Select.Item>

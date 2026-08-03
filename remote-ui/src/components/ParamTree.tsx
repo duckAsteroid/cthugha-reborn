@@ -36,7 +36,7 @@ export function ParamTree() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-phosphor animate-spin" />
       </div>
     );
   }

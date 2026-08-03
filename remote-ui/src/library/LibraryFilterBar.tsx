@@ -38,7 +38,7 @@ export function LibraryFilterBar({
           title={sortDir === 'none' ? 'Sort A→Z' : sortDir === 'asc' ? 'Sort Z→A' : 'Clear sort'}
           className={`shrink-0 p-1.5 rounded border transition-colors ${
             sortDir !== 'none'
-              ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+              ? 'border-phosphor bg-phosphor/10 text-phosphor'
               : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
           }`}
         >
@@ -56,7 +56,7 @@ export function LibraryFilterBar({
                 onClick={() => onToggleTag(tag)}
                 className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
                   active
-                    ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+                    ? 'border-phosphor bg-phosphor/10 text-phosphor'
                     : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
                 }`}
               >

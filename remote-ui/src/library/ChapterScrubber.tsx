@@ -91,7 +91,7 @@ export function ChapterScrubber({ video, onChange }: { video: VideoEntry; onChan
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Chapter name"
-          className="flex-1 min-w-[8rem] px-2 py-1 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+          className="flex-1 min-w-[8rem] px-2 py-1 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
         />
         <button
           type="button"
@@ -134,7 +134,7 @@ export function ChapterScrubber({ video, onChange }: { video: VideoEntry; onChan
                 type="button"
                 onClick={() => seekTo(c.start)}
                 aria-label={`Play from ${c.name}`}
-                className="text-neutral-400 hover:text-indigo-300"
+                className="text-neutral-400 hover:text-phosphor"
               >
                 <Play className="w-3.5 h-3.5" />
               </button>

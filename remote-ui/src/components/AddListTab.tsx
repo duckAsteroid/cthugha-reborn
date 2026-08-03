@@ -74,7 +74,7 @@ export function AddListTab({ node, path }: AddListTabProps) {
             <button
               onClick={handleAdd}
               disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-phosphor text-void hover:bg-phosphor/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {busy && <Loader2 className="w-3 h-3 animate-spin" />}
               {action.name}

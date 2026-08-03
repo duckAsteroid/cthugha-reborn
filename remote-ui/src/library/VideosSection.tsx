@@ -53,7 +53,7 @@ export function VideosSection() {
           <button
             key={v.file}
             onClick={() => setEditing(v)}
-            className="text-left rounded-lg overflow-hidden border border-neutral-800 bg-neutral-900 hover:border-indigo-500 transition-colors"
+            className="text-left rounded-lg overflow-hidden border border-line bg-neutral-900 hover:border-phosphor transition-colors"
           >
             <div className="aspect-video bg-neutral-950">
               <img
@@ -131,8 +131,8 @@ function VideoEditPanel({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-[#1a1a1a] rounded-2xl border border-neutral-800">
-        <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-[#1a1a1a]">
+      <div className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-panel rounded-2xl border border-line">
+        <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-line bg-panel">
           <h2 className="font-semibold text-neutral-200">Edit video</h2>
           <button onClick={onClose} aria-label="Close" className="p-1 rounded hover:bg-neutral-800 text-neutral-400">
             <X className="w-4 h-4" />
@@ -145,7 +145,7 @@ function VideoEditPanel({
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
             />
           </label>
 
@@ -154,7 +154,7 @@ function VideoEditPanel({
             <input
               value={filename}
               onChange={(e) => setFilename(e.target.value)}
-              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
             />
           </label>
 
@@ -168,7 +168,7 @@ function VideoEditPanel({
             <input
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
             />
           </label>
 
@@ -177,14 +177,14 @@ function VideoEditPanel({
             <input
               value={license}
               onChange={(e) => setLicense(e.target.value)}
-              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+              className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
             />
           </label>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-neutral-800">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-line">
           <button
             onClick={onClose}
             className="px-3 py-1.5 rounded text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800"
@@ -194,7 +194,7 @@ function VideoEditPanel({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-3 py-1.5 rounded text-sm bg-indigo-500 text-white hover:bg-indigo-400 disabled:opacity-50"
+            className="px-3 py-1.5 rounded text-sm bg-phosphor text-void hover:bg-phosphor/90 disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>

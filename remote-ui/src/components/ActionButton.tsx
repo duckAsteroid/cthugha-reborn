@@ -37,7 +37,7 @@ export function ActionButton({ path, node }: ActionButtonProps) {
         <button
           onClick={handleClick}
           disabled={busy}
-          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-phosphor hover:bg-phosphor/90 disabled:opacity-50 disabled:cursor-not-allowed text-void text-sm font-medium rounded-md transition-colors"
         >
           {busy ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -54,7 +54,7 @@ export function ActionButton({ path, node }: ActionButtonProps) {
             <button
               onClick={binding.handleAddClick}
               aria-label="Add trigger"
-              className="p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
+              className="p-0.5 rounded text-neutral-500 hover:text-phosphor transition-colors shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>

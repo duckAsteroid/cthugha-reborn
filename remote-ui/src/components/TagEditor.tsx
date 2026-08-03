@@ -26,7 +26,7 @@ export function TagEditor({ tags, onChange, disabled }: TagEditorProps) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-phosphor/15 text-phosphor text-xs"
         >
           {tag}
           {!disabled && (
@@ -34,7 +34,7 @@ export function TagEditor({ tags, onChange, disabled }: TagEditorProps) {
               type="button"
               onClick={() => removeTag(tag)}
               aria-label={`Remove tag ${tag}`}
-              className="hover:text-indigo-100"
+              className="hover:text-phosphor"
             >
               <X className="w-3 h-3" />
             </button>

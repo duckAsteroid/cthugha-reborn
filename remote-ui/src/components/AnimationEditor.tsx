@@ -48,7 +48,7 @@ export function AnimationEditor({ path, animation }: AnimationEditorProps) {
   };
 
   return (
-    <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-indigo-500/40">
+    <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-phosphor/40">
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-neutral-500 uppercase tracking-wide font-semibold">Animation</span>
         <ToggleControl value={animation.enabled} disabled={false} onChange={setEnabled} />
@@ -56,7 +56,7 @@ export function AnimationEditor({ path, animation }: AnimationEditorProps) {
           onClick={() => setShowHelp((v) => !v)}
           aria-label="Script reference"
           className={`p-0.5 rounded transition-colors ${
-            showHelp ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
+            showHelp ? 'text-phosphor' : 'text-neutral-500 hover:text-neutral-300'
           }`}
         >
           <HelpCircle className="w-3.5 h-3.5" />
@@ -82,7 +82,7 @@ export function AnimationEditor({ path, animation }: AnimationEditorProps) {
         className={`w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 resize-y border ${
           isDirty
             ? 'border-orange-500 focus:ring-orange-500'
-            : 'border-neutral-600 focus:ring-indigo-500'
+            : 'border-neutral-600 focus:ring-phosphor'
         }`}
       />
 
@@ -96,7 +96,7 @@ export function AnimationEditor({ path, animation }: AnimationEditorProps) {
               <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-0.5">
                 {items.map(({ name, desc }) => (
                   <Fragment key={name}>
-                    <code className="text-indigo-300 font-mono">{name}</code>
+                    <code className="text-phosphor font-mono">{name}</code>
                     <span className="text-neutral-400">{desc}</span>
                   </Fragment>
                 ))}
@@ -117,7 +117,7 @@ export function AnimationEditor({ path, animation }: AnimationEditorProps) {
         <button
           onClick={commit}
           disabled={!isDirty}
-          className="px-3 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1 text-xs rounded bg-phosphor text-void hover:bg-phosphor/90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Update
         </button>

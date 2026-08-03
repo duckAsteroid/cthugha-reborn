@@ -144,7 +144,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
             <button
               onClick={binding.handleAddClick}
               aria-label="Add animation or trigger"
-              className="p-0.5 rounded text-neutral-500 hover:text-indigo-400 transition-colors shrink-0"
+              className="p-0.5 rounded text-neutral-500 hover:text-phosphor transition-colors shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>

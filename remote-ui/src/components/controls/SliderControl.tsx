@@ -105,7 +105,7 @@ export function SliderControl({ value, min, max, disabled, onChange, scale, inte
               if (e.key === 'Enter') commitEdit();
               if (e.key === 'Escape') cancelEdit();
             }}
-            className="flex-1 min-w-0 bg-neutral-800 border border-indigo-500 rounded px-2 py-1 text-sm text-neutral-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 min-w-0 bg-neutral-800 border border-phosphor rounded px-2 py-1 text-sm font-mono text-neutral-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-phosphor"
           />
           <button
             onClick={commitEdit}
@@ -135,15 +135,15 @@ export function SliderControl({ value, min, max, disabled, onChange, scale, inte
             aria-label="Parameter value"
           >
             <RadixSlider.Track className="bg-neutral-700 relative grow rounded-full h-1">
-              <RadixSlider.Range className="absolute bg-indigo-500 rounded-full h-full" />
+              <RadixSlider.Range className="absolute bg-phosphor shadow-[0_0_8px_rgba(61,255,122,0.4)] rounded-full h-full" />
             </RadixSlider.Track>
-            <RadixSlider.Thumb className="block w-4 h-4 bg-indigo-400 rounded-full shadow-md hover:bg-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <RadixSlider.Thumb className="block w-4 h-4 bg-white rounded-full shadow-[0_0_0_2px_var(--color-phosphor),0_0_10px_rgba(61,255,122,0.5)] hover:shadow-[0_0_0_2px_var(--color-phosphor),0_0_14px_rgba(61,255,122,0.7)] focus:outline-none" />
           </RadixSlider.Root>
           <button
             onClick={startEdit}
             disabled={disabled}
             aria-label="Enter exact value"
-            className="text-neutral-400 text-xs w-16 text-right tabular-nums shrink-0 hover:text-neutral-200 focus:outline-none focus:text-indigo-300"
+            className="font-mono text-neutral-400 text-xs w-16 text-right tabular-nums shrink-0 hover:text-neutral-200 focus:outline-none focus:text-phosphor"
           >
             {displayValue}
           </button>

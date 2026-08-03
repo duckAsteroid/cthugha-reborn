@@ -85,8 +85,8 @@ export function XYPadControl({ x, y, minX, maxX, minY, maxY, disabled, onChange 
       >
         <div className="absolute inset-0 border border-neutral-700/50 m-[25%]" aria-hidden="true" />
         <div
-          className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-indigo-400 shadow-md
-                     ring-2 ring-indigo-400/30"
+          className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-phosphor shadow-md
+                     ring-2 ring-phosphor/30"
           style={{ left: `${tx}%`, top: `${ty}%` }}
           aria-hidden="true"
         />

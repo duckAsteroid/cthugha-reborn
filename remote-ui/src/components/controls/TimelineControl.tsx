@@ -51,7 +51,7 @@ export function TimelineControl({ chapters, duration, position, chapterControl }
               title={ch.name}
               className={`absolute top-0 h-6 rounded px-1 flex items-center justify-center overflow-hidden text-[10px] leading-none font-medium transition-colors ${
                 selected
-                  ? 'bg-indigo-500 text-white'
+                  ? 'bg-phosphor text-void'
                   : 'bg-neutral-700/70 text-neutral-300 hover:bg-neutral-600'
               }`}
               style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
@@ -70,7 +70,7 @@ export function TimelineControl({ chapters, duration, position, chapterControl }
       {chapterControl.index >= 0 && (
         <button
           onClick={reset}
-          className="self-end text-[10px] text-neutral-500 hover:text-indigo-300 transition-colors"
+          className="self-end text-[10px] text-neutral-500 hover:text-phosphor transition-colors"
         >
           Whole video
         </button>

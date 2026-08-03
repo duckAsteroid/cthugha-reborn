@@ -52,7 +52,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
               onClick={() => setShowHelp(v => !v)}
               aria-label="Script reference"
               className={`p-0.5 rounded transition-colors ${
-                showHelp ? 'text-indigo-400' : 'text-neutral-500 hover:text-neutral-300'
+                showHelp ? 'text-phosphor' : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
               <HelpCircle className="w-3.5 h-3.5" />
@@ -78,7 +78,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
           className={`w-full bg-neutral-800 rounded px-2 py-1.5 text-sm font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 resize-y border ${
             isDirty
               ? 'border-orange-500 focus:ring-orange-500'
-              : 'border-neutral-600 focus:ring-indigo-500'
+              : 'border-neutral-600 focus:ring-phosphor'
           }`}
         />
 
@@ -93,7 +93,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
                 <div className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-0.5">
                   {items.map(({ name, desc }) => (
                     <Fragment key={name}>
-                      <code className="text-indigo-300 font-mono">{name}</code>
+                      <code className="text-phosphor font-mono">{name}</code>
                       <span className="text-neutral-400">{desc}</span>
                     </Fragment>
                   ))}
@@ -115,7 +115,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
           <button
             onClick={() => commit(localValue)}
             disabled={!isDirty}
-            className="px-3 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1 text-xs rounded bg-phosphor text-void hover:bg-phosphor/90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Update
           </button>
@@ -150,7 +150,7 @@ export function StringLeaf({ path, node }: StringLeafProps) {
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={() => commit(localValue)}
         onKeyDown={(e) => { if (e.key === 'Enter') commit(localValue); }}
-        className="w-full bg-neutral-800 border border-neutral-600 rounded px-2 py-1 text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="w-full bg-neutral-800 border border-neutral-600 rounded px-2 py-1 text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-phosphor"
       />
     </div>
   );

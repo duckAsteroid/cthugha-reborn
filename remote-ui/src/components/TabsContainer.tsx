@@ -125,7 +125,7 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
     <div className="flex flex-col gap-2">
       <RadixTabs.Root value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-1">
         <RadixTabs.List
-          className="flex flex-nowrap gap-1 overflow-x-auto border-b border-neutral-700 pb-2
+          className="flex flex-nowrap gap-1 overflow-x-auto border-b border-line pb-2
                      [scrollbar-width:none] [-ms-overflow-style:none]
                      [&::-webkit-scrollbar]:hidden"
         >
@@ -135,10 +135,10 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
               <RadixTabs.Trigger
                 key={tab.name}
                 value={tab.name}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-neutral-400 rounded-t
-                           hover:text-neutral-200 hover:bg-neutral-800 transition-colors
-                           data-[state=active]:text-indigo-300 data-[state=active]:bg-neutral-800
-                           data-[state=active]:border-b-2 data-[state=active]:border-indigo-400"
+                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-neutral-400 rounded
+                           hover:text-neutral-200 hover:bg-panel-hi transition-colors
+                           data-[state=active]:text-void data-[state=active]:bg-phosphor
+                           data-[state=active]:font-bold data-[state=active]:shadow-[0_0_16px_rgba(61,255,122,0.35)]"
               >
                 {icon && <NodeIcon name={icon} className="w-3.5 h-3.5 shrink-0" />}
                 {tab.name}

@@ -32,7 +32,7 @@ export default function LibraryApp() {
 
   if (!hasToken) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-void flex items-center justify-center p-6">
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-neutral-200">Cthugha Library</h1>
           <p className="text-neutral-400">
@@ -45,18 +45,24 @@ export default function LibraryApp() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-neutral-200">
-      <header className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-neutral-800 px-4 py-3 flex items-center gap-3">
-        <h1 className="text-lg font-bold text-indigo-400 tracking-tight">Cthugha Library</h1>
-        <nav className="ml-6 flex items-center gap-1">
+    <div className="min-h-screen bg-void text-neutral-200">
+      <header className="sticky top-0 z-10 bg-panel border-b border-line px-3.5 py-2.5 flex items-center gap-3">
+        <img src="/cthugha-icon.png" alt="" className="w-7 h-7 rounded-md shrink-0" />
+        <div className="flex flex-col leading-tight">
+          <h1 className="font-mono font-bold text-base tracking-wide text-phosphor text-glow">CTHUGHA</h1>
+          <span className="hidden min-[400px]:block font-mono text-[9px] tracking-[0.2em] text-neutral-600">
+            LIBRARY&nbsp;MANAGER
+          </span>
+        </div>
+        <nav className="ml-4 flex items-center gap-1">
           {SECTIONS.map((s) => (
             <button
               key={s.id}
               onClick={() => setSection(s.id)}
-              className={`px-3 py-1.5 rounded text-sm transition-colors ${
+              className={`font-mono uppercase tracking-wide px-3 py-1.5 rounded text-xs transition-colors ${
                 section === s.id
-                  ? 'bg-indigo-500/20 text-indigo-300'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
+                  ? 'bg-phosphor text-void font-bold shadow-[0_0_16px_rgba(61,255,122,0.35)]'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-panel-hi'
               }`}
             >
               {s.label}

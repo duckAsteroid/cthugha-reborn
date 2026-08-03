@@ -114,7 +114,7 @@ export function PaletteGradientEditor() {
             onClick={(e) => e.stopPropagation()}
             aria-label={`Stop at ${(s.position * 100).toFixed(0)}%`}
             className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 shadow ${
-              s.id === selectedId ? 'border-indigo-400 z-10' : 'border-white'
+              s.id === selectedId ? 'border-phosphor z-10' : 'border-white'
             }`}
             style={{ left: `${s.position * 100}%`, backgroundColor: s.color }}
           />
@@ -141,7 +141,7 @@ export function PaletteGradientEditor() {
               max={100}
               value={Math.round(selected.position * 100)}
               onChange={(e) => updateStop(selected.id, { position: Math.min(1, Math.max(0, Number(e.target.value) / 100)) })}
-              className="w-20 px-2 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+              className="w-20 px-2 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
             />
           </label>
 
@@ -151,7 +151,7 @@ export function PaletteGradientEditor() {
               <select
                 value={selected.curve}
                 onChange={(e) => updateStop(selected.id, { curve: e.target.value as Curve })}
-                className="px-2 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+                className="px-2 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
               >
                 {CURVES.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -183,7 +183,7 @@ export function PaletteGradientEditor() {
             max={4096}
             value={sampleCount}
             onChange={(e) => setSampleCount(Math.min(4096, Math.max(2, Number(e.target.value))))}
-            className="w-24 px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+            className="w-24 px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
           />
         </label>
 
@@ -193,7 +193,7 @@ export function PaletteGradientEditor() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Palette name"
-            className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-indigo-500"
+            className="w-full px-2 py-1.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-200 text-sm outline-none focus:border-phosphor"
           />
         </label>
 
@@ -201,7 +201,7 @@ export function PaletteGradientEditor() {
           type="button"
           disabled={saving || !name.trim()}
           onClick={handleSave}
-          className="px-3 py-1.5 rounded text-sm bg-indigo-500 text-white hover:bg-indigo-400 disabled:opacity-50"
+          className="px-3 py-1.5 rounded text-sm bg-phosphor text-void hover:bg-phosphor/90 disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save Palette'}
         </button>

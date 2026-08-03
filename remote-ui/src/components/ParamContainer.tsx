@@ -120,7 +120,7 @@ export function ParamContainer({ node, path, defaultOpen, currentPreview }: Para
                     <button
                       key={tag}
                       onClick={() => dispatchSelectTag(currentPreview.siblingPath, tag)}
-                      className="px-2 py-0.5 rounded-full text-xs border border-neutral-600 text-neutral-400 hover:border-indigo-400 hover:text-indigo-300 transition-colors"
+                      className="px-2 py-0.5 rounded-full text-xs border border-neutral-600 text-neutral-400 hover:border-phosphor hover:text-phosphor transition-colors"
                     >
                       {tag}
                     </button>

@@ -151,7 +151,7 @@ export function GridControl({ value, options, disabled, onChange, previewStyle, 
           }
           className={`shrink-0 p-1.5 rounded border transition-colors ${
             sortDir !== 'none'
-              ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+              ? 'border-phosphor bg-phosphor/10 text-phosphor'
               : 'border-neutral-600 text-neutral-400 hover:bg-neutral-800'
           }`}
         >
@@ -180,7 +180,7 @@ export function GridControl({ value, options, disabled, onChange, previewStyle, 
                 onClick={() => toggleTag(tag)}
                 className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
                   active
-                    ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
+                    ? 'border-phosphor bg-phosphor/10 text-phosphor'
                     : 'border-neutral-600 text-neutral-400 hover:bg-neutral-800'
                 }`}
               >
@@ -198,7 +198,7 @@ export function GridControl({ value, options, disabled, onChange, previewStyle, 
             onClick={() => onChange(idx)}
             className={`flex flex-col gap-1 p-1 rounded-lg border transition-colors ${
               idx === value
-                ? 'border-indigo-400 bg-indigo-950/40'
+                ? 'border-phosphor bg-phosphor/10'
                 : 'border-transparent hover:bg-neutral-800'
             }`}
           >
