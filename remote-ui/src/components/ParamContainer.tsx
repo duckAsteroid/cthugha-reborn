@@ -29,8 +29,8 @@ interface ParamContainerProps {
   currentPreview?: CurrentPreview;
 }
 
-export function ParamContainer({ node, path, defaultOpen = false, currentPreview }: ParamContainerProps) {
-  const [open, setOpen] = useState(defaultOpen);
+export function ParamContainer({ node, path, defaultOpen, currentPreview }: ParamContainerProps) {
+  const [open, setOpen] = useState(defaultOpen ?? node.uiHints?.['default-open'] === 'true');
   const iconName = node.uiHints?.['icon'];
 
   const visibleChildren = node.children.filter(isRenderable);

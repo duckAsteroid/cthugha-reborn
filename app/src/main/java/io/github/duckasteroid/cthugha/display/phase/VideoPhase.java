@@ -121,6 +121,12 @@ public class VideoPhase implements RenderPhase {
     // of truth VideosLibraryNode reads to sync its picker's initial selection.
     private volatile VideoEntry currentEntry =
             videoLibrary.entries().isEmpty() ? null : videoLibrary.random();
+    {
+        // Seed the initial chapter selection from currentEntry's own defaultChapter (if any) —
+        // this instance initializer runs after both `chapter` and `currentEntry` above are set,
+        // mirroring what loadVideo does on every later switch.
+        chapter.setValue(resolveDefaultChapterIndex(currentEntry));
+    }
 
     private RenderActionQueue renderActions;
 
@@ -338,10 +344,11 @@ public class VideoPhase implements RenderPhase {
         int newHeight = newGrabber.getImageHeight();
         grabber = newGrabber;
         currentEntry = entry;
-        // Chapter indices are only meaningful against the video they were selected for — the new
-        // video's chapters (if any) start from "Whole Video" rather than silently keeping a
-        // now-mismatched index (or one that happens to coincide with an unrelated chapter).
-        chapter.setValue(-1);
+        // Chapter indices are only meaningful against the video they were selected for — jump to
+        // the new video's own named defaultChapter (if it has one), else "Whole Video", rather
+        // than silently keeping a now-mismatched index (or one that happens to coincide with an
+        // unrelated chapter).
+        chapter.setValue(resolveDefaultChapterIndex(entry));
         LOG.info("Loading video overlay: {}", entry.file());
 
         renderActions.enqueue("loadVideo", ctx -> {
@@ -500,6 +507,19 @@ public class VideoPhase implements RenderPhase {
         return index < chapters.size() ? chapters.get(index) : null;
     }
 
+    /**
+     * Index of {@code entry}'s named {@code defaultChapter} within its own chapter list, or -1
+     * (whole video) if the entry has none, or names one that doesn't match any chapter.
+     */
+    private static int resolveDefaultChapterIndex(VideoEntry entry) {
+        if (entry == null || entry.defaultChapter() == null) return -1;
+        List<VideoEntry.Chapter> chapters = entry.chapters();
+        for (int i = 0; i < chapters.size(); i++) {
+            if (chapters.get(i).name().equals(entry.defaultChapter())) return i;
+        }
+        return -1;
+    }
+
     /** Seeks the grabber to {@code seconds}; falls back to a full restart if the seek itself fails. */
     private void seekTo(double seconds) {
         try {
@@ -590,6 +610,7 @@ public class VideoPhase implements RenderPhase {
         // path resolution (Videos/Video/... always found the picker, never this group).
         ContainerNode videoGroup = new ContainerNode("Playback");
         videoGroup.withDescription("Alpha-blended full-screen video overlay, playing on loop for the whole session.");
+        videoGroup.withUiHint(UiHint.DEFAULT_OPEN, "true");
         // Mirrors the "Video" picker's current thumbnail (see VideosLibraryNode) so the
         // currently-loaded video is visible from this panel too, without switching tabs.
         videoGroup.withUiHint(UiHint.PREVIEW_OF, "Video");

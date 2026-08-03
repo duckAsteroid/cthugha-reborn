@@ -23,6 +23,14 @@ public final class UiHint {
      */
     public static final String ICON = "icon";
 
+    /**
+     * Key: when {@code "true"}, a collapsible {@code ContainerNode} (rendered as an expander —
+     * see {@link #EXPANDER}, or nested plainly under a non-tab parent) starts expanded instead of
+     * collapsed. Only affects the remote UI's initial render state; the root container is always
+     * expanded regardless of this hint, and the user can still collapse/re-expand freely afterwards.
+     */
+    public static final String DEFAULT_OPEN = "default-open";
+
     // ---- control-type values ----
 
     /** Horizontal slider with numeric readout. Default for numeric params. */
