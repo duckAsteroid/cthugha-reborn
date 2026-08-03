@@ -14,8 +14,12 @@ import io.github.duckasteroid.cthugha.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
+
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 public class AudioPipeline {
 
@@ -43,10 +47,30 @@ public class AudioPipeline {
     private int restartCount = 0;
     private long restartWindowStart = 0;
 
+    /**
+     * Set by a beat-detector settings change (band/threshold/sensitivity/decay/history slider),
+     * possibly from a non-render thread (e.g. a remote-UI HTTP request). {@link FrequencyProcessor
+     * #addSink}/{@code removeSink} are render-thread-only, so the actual rebuild+swap is deferred
+     * to the next {@link #update()} call rather than mutating the sink list off-thread.
+     */
+    private final AtomicReference<PendingBeatConfig> pendingBeatConfig = new AtomicReference<>();
+    private record PendingBeatConfig(List<FrequencyBand> bands, BeatDetectorConfig.Tuning tuning) {}
+
+    /** Notified (on the render thread) with the new instance whenever the beat detector is rebuilt. */
+    private Consumer<BeatDetector> onBeatDetectorRebuilt;
+
     public void init(RenderContext ctx) throws IOException {
         pboSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
-        freqProc = new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
-        beatDetector = new BeatDetector(freqProc);
+        // 4096 (not 1024): at 48kHz, 1024 gives only ~46.9Hz/raw-FFT-bin, so the 128 log-spaced
+        // output bars below ~250Hz collapse onto a handful of raw bins (the whole "bass" beat
+        // band was riding on just 5 of them, dominated by the single lowest bin near mic
+        // self-noise/room rumble — reads as a "stuck at max" bass band). 4096 gives ~11.7Hz/bin,
+        // spreading bass across ~18 raw bins, at the cost of going from ~21ms to ~85ms of FFT
+        // window latency (still tight enough to feel responsive).
+        freqProc = new FrequencyProcessor(4096, 128, 48_000f, 20f, 20_000f, -80f, 0f);
+        BeatDetectorConfig.Tuning tuning = BeatDetectorConfig.loadTuning();
+        beatDetector = new BeatDetector(BeatDetectorConfig.load(), freqProc.getFftSize(), freqProc.getSampleRate(),
+                tuning.historyLength(), tuning.threshold(), tuning.sensitivity(), tuning.decayPerFrame());
         freqProc.addSink(beatDetector);
 
         // Always-available fallback so capture works even with no usable hardware line.
@@ -95,8 +119,37 @@ public class AudioPipeline {
     }
 
     public void update() {
+        PendingBeatConfig pending = pendingBeatConfig.getAndSet(null);
+        if (pending != null) {
+            rebuildBeatDetector(pending);
+        }
         pboSink.upload();
         freqProc.process();
+    }
+
+    private void rebuildBeatDetector(PendingBeatConfig pending) {
+        BeatDetector next = new BeatDetector(pending.bands(), freqProc.getFftSize(), freqProc.getSampleRate(),
+                pending.tuning().historyLength(), pending.tuning().threshold(),
+                pending.tuning().sensitivity(), pending.tuning().decayPerFrame());
+        freqProc.removeSink(beatDetector);
+        freqProc.addSink(next);
+        beatDetector = next;
+        if (onBeatDetectorRebuilt != null) onBeatDetectorRebuilt.accept(next);
+    }
+
+    /**
+     * Requests that the beat detector be rebuilt with new bands/tuning. Safe to call from any
+     * thread — the actual rebuild happens on the next {@link #update()} (render thread), since
+     * {@code FrequencyProcessor}'s sink list is not thread-safe. Multiple calls before the next
+     * frame coalesce into a single rebuild.
+     */
+    public void requestBeatDetectorReload(List<FrequencyBand> bands, BeatDetectorConfig.Tuning tuning) {
+        pendingBeatConfig.set(new PendingBeatConfig(bands, tuning));
+    }
+
+    /** Registers a callback invoked (on the render thread) with the new instance after a rebuild. */
+    public void setOnBeatDetectorRebuilt(Consumer<BeatDetector> callback) {
+        this.onBeatDetectorRebuilt = callback;
     }
 
     public void dispose() {

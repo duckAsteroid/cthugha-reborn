@@ -2,9 +2,11 @@ package io.github.duckasteroid.cthugha;
 
 
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
+import io.github.duckasteroid.cthugha.beatpresets.BeatPresetStore;
 import io.github.duckasteroid.cthugha.binding.BindingSystem;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.AudioSourceNode;
+import io.github.duckasteroid.cthugha.display.phase.DebugBeatsPhase;
 import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
 import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
 import io.github.duckasteroid.cthugha.display.phase.QuotePhase;
@@ -70,6 +72,8 @@ public class JCthugha extends ParamNode implements Closeable {
 	public BindingSystem bindings = new BindingSystem();
 	public AudioSourceNode audioSource = new AudioSourceNode();
 	public TabStore tabStore = new TabStore(java.nio.file.Paths.get("tabs"));
+	/** Named beat-detector tuning snapshots (e.g. "Dance", "Jazz"); separate from {@link #screenConfigStore}. */
+	public final BeatPresetStore beatPresetStore = new BeatPresetStore(Paths.get("beatpresets"));
 	public GeneratorRegistry translateSource = new GeneratorRegistry(tabStore);
 	public final ScreenConfigStore screenConfigStore;
 	/** The single, unnamed "current" state, continuously persisted and restored on launch — see issue #3. */
@@ -79,6 +83,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	public final QuotePhase quotePhase = new QuotePhase(this);
 	public final WavePhase wavePhase = new WavePhase(this);
 	public final VideoPhase videoPhase = new VideoPhase();
+	public final DebugBeatsPhase debugBeatsPhase = new DebugBeatsPhase(this);
 
 	public PaletteMap paletteMap;
 	public int bufferWidth;
@@ -293,6 +298,7 @@ public class JCthugha extends ParamNode implements Closeable {
 		list.add(videoPhase);
 		list.add(quotePhase);
 		list.add(new NotifPhase(this));
+		list.add(debugBeatsPhase);
 		return list;
 	}
 

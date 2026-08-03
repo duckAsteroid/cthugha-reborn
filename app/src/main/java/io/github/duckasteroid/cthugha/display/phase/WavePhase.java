@@ -7,6 +7,7 @@ import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
 import com.asteroid.duck.opengl.util.wave.RadialWave;
 import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
 import io.github.duckasteroid.cthugha.JCthugha;
+import io.github.duckasteroid.cthugha.binding.ScriptHelpers;
 import io.github.duckasteroid.cthugha.display.AudioPipeline;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialClockAnalyser;
@@ -78,6 +79,14 @@ public class WavePhase implements RenderPhase {
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
         cthugha.beatDetector = audioPipeline.getBeatDetector();
+        audioPipeline.setOnBeatDetectorRebuilt(bd -> {
+            cthugha.beatDetector = bd;
+            ScriptHelpers.setContext(bd, cthugha.rng);
+        });
+        cthugha.audioSource.beatDetectorSettings.setOnChanged(() ->
+            audioPipeline.requestBeatDetectorReload(
+                cthugha.audioSource.beatDetectorSettings.getBands(),
+                cthugha.audioSource.beatDetectorSettings.getTuning()));
 
         cthugha.audioSource.setOnSourceSelected(name -> {
             if (audioPipeline.selectSource(name)) {

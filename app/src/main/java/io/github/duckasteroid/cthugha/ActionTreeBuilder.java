@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha;
 
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
+import io.github.duckasteroid.cthugha.beatpresets.BeatPresetLibraryNode;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.img.ImagesLibraryNode;
 import io.github.duckasteroid.cthugha.map.PaletteActionContext;
@@ -157,6 +158,10 @@ public class ActionTreeBuilder {
 
         // ---- Configs tab: named whole-tree snapshots ("screen configs") ----
         ScreenConfigLibraryNode configsGroup = new ScreenConfigLibraryNode(cthugha.screenConfigStore, cthugha);
+
+        // ---- Audio tab: named beat-detector tuning presets ----
+        cthugha.audioSource.beatDetectorSettings.addChild(
+            new BeatPresetLibraryNode(cthugha.beatPresetStore, cthugha.audioSource.beatDetectorSettings));
 
         // ---- Images tab: flash-image picker ----
         ParamNode imagesGroup;

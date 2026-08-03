@@ -5,6 +5,7 @@ import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 
 import java.util.ArrayList;
@@ -30,6 +31,11 @@ import java.util.function.Consumer;
 public class AudioSourceNode extends ParamNode {
 
     private final EnumParameter<String> selector;
+    /** Live-editable beat-detector bands/tuning; persisted to cthugha.ini. */
+    public final BeatDetectorSettingsNode beatDetectorSettings = new BeatDetectorSettingsNode();
+    /** Shows the live beat-strength HUD overlay in the app window; auto-persisted in state.ini. */
+    public final BooleanParameter debugBeats = new BooleanParameter("Debug Beats",
+            Config.state().getConfigAs(AudioPipeline.CONFIG_SECTION, "debug_beats", "false", Boolean::parseBoolean));
     private final Random rng = new Random();
     private Consumer<String> onSourceSelected;
     private boolean syncing = false;
@@ -65,8 +71,17 @@ public class AudioSourceNode extends ParamNode {
         random.withUiHint(UiHint.ICON, "shuffle");
         random.withDescription("Switches to a random audio capture device from the list.");
 
+        debugBeats.withDescription("Shows a HUD overlay in the app window with each monitored beat "
+            + "band's live name, bar, and strength value. Toggle with the D key.");
+        debugBeats.withNoAnimate();
+        debugBeats.withNoPersist();
+        debugBeats.addChangeListener(() ->
+            Config.state().setConfig(AudioPipeline.CONFIG_SECTION, "debug_beats", String.valueOf(debugBeats.value)));
+
         addChild(selector);
         addChild(random);
+        addChild(beatDetectorSettings);
+        addChild(debugBeats);
     }
 
     /** Registers the callback invoked when the user picks a different source by name. */

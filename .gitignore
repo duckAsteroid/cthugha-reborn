@@ -15,6 +15,7 @@ build/
 /logs/*.log
 *~
 /app/src/dist/configs/
+/app/src/dist/beatpresets/
 /app/src/dist/state.ini
 /app/src/dist/state-*.ini
 # Auto-created by Config.state() when tests run with the module dir as their working directory.
