@@ -10,7 +10,8 @@
     "animation-weird": "Hand-drawn/animated, surreal or morphing imagery",
     "urban-decay": "Abandoned buildings, Chernobyl exclusion zone, decay, brutalist architecture — grungy and eerie",
     "vhs-glitch": "VCR UI, CRT static, SMPTE bars, tape noise, double-exposure retro-TV art — analog/broadcast glitch texture",
-    "carnival": "Ferris wheels, carousels, fairground rides — nostalgic/uncanny fairground imagery"
+    "carnival": "Ferris wheels, carousels, fairground rides — nostalgic/uncanny fairground imagery",
+    "vintage-8mm": "Grainy Super-8/16mm-style home-movie footage — sprocket-hole framing, faded color or B/W, nostalgic/uncanny family-movie texture"
   },
   "videos": [
     {
@@ -537,6 +538,244 @@
       "source": "pexels",
       "license": "Pexels License (free, no attribution required)",
       "tags": ["urban-grunge", "crowd"]
+    },
+    {
+      "file": "10227529-uhd_3840_2160_30fps.mp4",
+      "title": "Aerial drone shot of oil pumpjacks in a desert oilfield",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature", "desert", "aerial", "oil-industry"]
+    },
+    {
+      "file": "10396407-hd_3840_2160_30fps.mp4",
+      "title": "Illuminated oil refinery at night",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "industrial", "night"]
+    },
+    {
+      "file": "11975494_1920_1080_30fps.mp4",
+      "title": "Osprey perched on a balcony railing, sea view",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["wildlife", "nature"]
+    },
+    {
+      "file": "11996993_3840_2160_30fps.mp4",
+      "title": "Gas flare and refinery seen from a moving car in the desert",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature", "desert", "industrial", "motion-blur"]
+    },
+    {
+      "file": "12104811_4096_2160_30fps.mp4",
+      "title": "Bird flying low over coastal sand dunes",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature", "wildlife", "ocean"]
+    },
+    {
+      "file": "12221294_1920_1080_24fps.mp4",
+      "title": "Bird of prey soaring against a clear sky",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["wildlife", "nature"]
+    },
+    {
+      "file": "12920020_3840_2160_30fps.mp4",
+      "title": "Seabirds flying low over dark, rippling water (B/W)",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["wildlife", "black-and-white", "grunge-abstract"]
+    },
+    {
+      "file": "13393607_1920_1080_24fps.mp4",
+      "title": "Vintage 8mm footage of a 1960s gas station",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "urban-grunge", "grainy"]
+    },
+    {
+      "file": "13498750_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm footage of a card game",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+    },
+    {
+      "file": "13544369_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm home movie: children by a garden bird bath",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "nature", "grainy"]
+    },
+    {
+      "file": "13544384_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm home movie: child running across a field",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "nature", "grainy"]
+    },
+    {
+      "file": "13553127_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm home movie: man walking a toddler up a garden path (B/W)",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "black-and-white", "grainy"]
+    },
+    {
+      "file": "13582310_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm home movie: backyard badminton in the suburbs",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+    },
+    {
+      "file": "13604904_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm footage of a small-town main street",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "urban-grunge", "grainy"]
+    },
+    {
+      "file": "13651885_1920_1080_30fps.mp4",
+      "title": "Vintage 8mm home movie: towing a car in the snow",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+    },
+    {
+      "file": "13774711_1920_1080_30fps.mp4",
+      "title": "Retro-filtered footage of a man in a mid-century kitchen",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vhs-glitch", "people-scenery", "grainy"]
+    },
+    {
+      "file": "15159933_3840_2160_60fps.mp4",
+      "title": "Aerial B/W view of a coastal industrial harbor at dusk",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "black-and-white", "industrial"]
+    },
+    {
+      "file": "17469008-uhd_3840_2160_30fps.mp4",
+      "title": "Aerial dusk view of an oil refinery flare stack",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "industrial", "night"]
+    },
+    {
+      "file": "18281059-hd_1920_1080_30fps.mp4",
+      "title": "Flock of seagulls flying against a blue sky",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["wildlife", "nature"]
+    },
+    {
+      "file": "18692266-hd_1920_1080_24fps.mp4",
+      "title": "Aerial night view of an industrial plant with a flare stack",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "industrial", "night"]
+    },
+    {
+      "file": "2082027-uhd_3840_2160_15fps.mp4",
+      "title": "Vintage-filtered footage of a tropical beach with a sailboat",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature", "people-scenery", "ocean", "grainy"]
+    },
+    {
+      "file": "3588881-hd_1920_1080_18fps.mp4",
+      "title": "Grainy B/W footage of a photographer's reflection in a car mirror",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "black-and-white", "grainy", "people-scenery"]
+    },
+    {
+      "file": "3588895-hd_1920_1080_18fps.mp4",
+      "title": "Vintage B/W footage looking out through a barn doorway to a field",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "nature", "black-and-white", "grainy"]
+    },
+    {
+      "file": "3698056-uhd_3840_2160_15fps.mp4",
+      "title": "Retro-filtered close-up of hands playing piano",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "people-scenery", "grainy"]
+    },
+    {
+      "file": "4409226-hd_1920_1080_18fps.mp4",
+      "title": "Film-burn light-leak transition (short clip)",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vhs-glitch", "grunge-abstract", "grainy"]
+    },
+    {
+      "file": "4988407-hd_1920_1080_30fps.mp4",
+      "title": "Aerial night view of a coastal city from an airplane",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "night"]
+    },
+    {
+      "file": "5007180-hd_1080_1920_30fps.mp4",
+      "title": "Aerial night view of a city street grid (portrait)",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "night"]
+    },
+    {
+      "file": "5077343-hd_1920_1080_30fps.mp4",
+      "title": "Aerial night view over a rail yard and city lights",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["urban-grunge", "night", "industrial"]
+    },
+    {
+      "file": "5223375-hd_1920_932_30fps.mp4",
+      "title": "Towering storm cloud seen from above, aerial airplane view",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature"]
+    },
+    {
+      "file": "5510668-hd_1920_1080_18fps.mp4",
+      "title": "Vintage 8mm home movie: sunset over a rural field",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "nature", "grainy"]
+    },
+    {
+      "file": "6742348-hd_1920_1080_30fps.mp4",
+      "title": "Young eagle perched on a bare branch",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["wildlife", "nature"]
+    },
+    {
+      "file": "7188464-uhd_2560_1440_30fps.mp4",
+      "title": "Saguaro cactus in the Arizona desert",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature", "desert"]
+    },
+    {
+      "file": "7276307-hd_1920_1080_18fps.mp4",
+      "title": "Vintage 8mm home movie: sunset over a pond",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["vintage-8mm", "nature", "grainy"]
+    },
+    {
+      "file": "9011093-uhd_3840_2160_30fps.mp4",
+      "title": "Joshua Tree desert landscape with boulders",
+      "source": "pixabay",
+      "license": "Pixabay Content License (free, no attribution required)",
+      "tags": ["nature", "desert"]
     }
   ]
 }
