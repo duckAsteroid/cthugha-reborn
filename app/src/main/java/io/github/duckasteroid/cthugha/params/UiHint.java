@@ -135,5 +135,17 @@ public final class UiHint {
      */
     public static final String PREVIEW_OF = "preview-of";
 
+    /**
+     * Key: on a {@code ContainerNode} that also carries {@link #PREVIEW_OF}, names a direct
+     * {@code BOOLEAN} child (by node name, not full path) that pauses/resumes playback of the
+     * previewed item — e.g. {@code VideoPhase}'s "Playback" group points at its own "Paused"
+     * child. The remote UI renders that child as a play/pause icon overlaid on the preview
+     * thumbnail (bottom-right corner, showing the action a tap would perform) instead of as its
+     * own toggle row; the child should also carry {@link #HIDDEN} so it doesn't additionally
+     * render as a row, while remaining a normal addressable/serialized leaf for the overlay to
+     * read and PATCH.
+     */
+    public static final String PAUSE_CONTROL = "pause-control";
+
     private UiHint() {}
 }

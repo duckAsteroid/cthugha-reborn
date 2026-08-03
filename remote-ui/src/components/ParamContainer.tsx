@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronDown, ChevronRight, ImageOff } from 'lucide-react';
+import { ChevronDown, ChevronRight, ImageOff, Pause, Play } from 'lucide-react';
 import type { ActionNode, ContainerNode, LeafNode, StringNode } from '../types';
 import { ParamLeaf } from './ParamLeaf';
 import { ActionButton } from './ActionButton';
@@ -9,8 +9,9 @@ import { NodeIcon } from './NodeIcon';
 import { TabsContainer } from './TabsContainer';
 import { XYPadParam } from './XYPadParam';
 import { useSSEState } from '../SSEContext';
-import { isRenderable, resolveCurrentPreview, type CurrentPreview } from '../nodeUtils';
+import { isRenderable, resolveCurrentPreview, resolvePauseControl, type CurrentPreview } from '../nodeUtils';
 import { dispatchSelectTag } from '../tagSelection';
+import { patchParam } from '../api';
 
 interface ParamContainerProps {
   node: ContainerNode;
@@ -31,6 +32,14 @@ export function ParamContainer({ node, path, defaultOpen = false, currentPreview
   // Live state comes from the single app-wide SSE connection (see SSEContext) — no
   // per-container subscription needed.
   const sseState = useSSEState();
+  const pauseControl = resolvePauseControl(node, path, sseState);
+
+  const togglePause = () => {
+    if (!pauseControl) return;
+    patchParam(pauseControl.path, pauseControl.paused ? 0 : 1).catch(() => {
+      // error is handled by api.ts (session-expired event)
+    });
+  };
 
   if (isTabs) {
     return <TabsContainer node={node} path={path} />;
@@ -63,17 +72,34 @@ export function ParamContainer({ node, path, defaultOpen = false, currentPreview
       <Collapsible.Content className="pl-4 pr-1 mt-1 space-y-1">
         {currentPreview && (
           <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-neutral-900/50">
-            {currentPreview.option?.preview ? (
-              <img
-                src={currentPreview.option.preview}
-                alt=""
-                className="w-24 h-24 rounded-lg object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-lg bg-neutral-800 flex items-center justify-center shrink-0">
-                <ImageOff className="w-6 h-6 text-neutral-500" />
-              </div>
-            )}
+            <div className="relative w-24 h-24 rounded-lg shrink-0">
+              {currentPreview.option?.preview ? (
+                <img
+                  src={currentPreview.option.preview}
+                  alt=""
+                  className="w-full h-full rounded-lg object-cover"
+                />
+              ) : (
+                <div className="w-full h-full rounded-lg bg-neutral-800 flex items-center justify-center">
+                  <ImageOff className="w-6 h-6 text-neutral-500" />
+                </div>
+              )}
+              {pauseControl && (
+                <button
+                  onClick={togglePause}
+                  aria-label={pauseControl.paused ? 'Resume playback' : 'Pause playback'}
+                  className="absolute inset-0 rounded-lg flex items-end justify-end p-1"
+                >
+                  <span className="p-1 rounded-full bg-black/60 text-white flex items-center justify-center">
+                    {pauseControl.paused ? (
+                      <Play className="w-3.5 h-3.5" fill="currentColor" />
+                    ) : (
+                      <Pause className="w-3.5 h-3.5" fill="currentColor" />
+                    )}
+                  </span>
+                </button>
+              )}
+            </div>
             <div className="flex flex-col gap-1.5 min-w-0">
               <span className="text-sm text-neutral-200 font-medium truncate">
                 {currentPreview.option?.label ?? '—'}

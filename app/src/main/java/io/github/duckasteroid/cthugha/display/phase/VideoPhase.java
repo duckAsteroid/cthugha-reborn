@@ -538,6 +538,10 @@ public class VideoPhase implements RenderPhase {
         // Mirrors the "Video" picker's current thumbnail (see VideosLibraryNode) so the
         // currently-loaded video is visible from this panel too, without switching tabs.
         videoGroup.withUiHint(UiHint.PREVIEW_OF, "Video");
+        // Rendered as a play/pause overlay on the preview thumbnail instead of its own row —
+        // see UiHint.PAUSE_CONTROL. `paused` stays a normal, addressable, serialized leaf.
+        videoGroup.withUiHint(UiHint.PAUSE_CONTROL, "Paused");
+        paused.withUiHint(UiHint.HIDDEN, "true");
         videoGroup.addChild(enabled);
         videoGroup.addChild(alpha);
         videoGroup.addChild(blendMode);

@@ -64,3 +64,30 @@ export function resolveCurrentPreview(
   const index = Math.round(liveValue ?? sibling.value);
   return { siblingName, siblingPath, option: sibling.options?.[index] };
 }
+
+export interface PauseControl {
+  /** Full param path of the BOOLEAN leaf, e.g. {@code "Videos/Playback/Paused"}. */
+  path: string;
+  paused: boolean;
+}
+
+/**
+ * Resolves a {@code pause-control} uiHint (see UiHint.java) on {@code node} into its own
+ * {@code BOOLEAN} child's live path/value, so a play/pause icon can be overlaid on the
+ * container's {@link resolveCurrentPreview} thumbnail instead of rendering that child as its
+ * own toggle row (the child also carries {@code hidden} so it doesn't double up).
+ */
+export function resolvePauseControl(
+  node: ContainerNode,
+  path: string,
+  sseState: Map<string, ParamState>,
+): PauseControl | undefined {
+  const childName = node.uiHints?.['pause-control'];
+  if (!childName) return undefined;
+  const child = node.children.find((c) => c.name === childName);
+  if (!child || child.type !== 'BOOLEAN') return undefined;
+  const childPath = path ? `${path}/${child.name}` : child.name;
+  const liveValue = sseState.get(childPath)?.value;
+  const paused = (liveValue ?? child.value) !== 0;
+  return { path: childPath, paused };
+}
