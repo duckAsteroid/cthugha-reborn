@@ -55,6 +55,16 @@ public class JCthugha extends ParamNode implements Closeable {
 	public final BooleanParameter notifications = new BooleanParameter("Notifications",
 			Config.state().getConfigAs("display", "notifications", "true", Boolean::parseBoolean));
 
+	/**
+	 * Whether the Library Manager (rename/organize videos, images, and palettes from a separate
+	 * browser tab) is reachable. Seeded from cthugha.ini's {@code [remote] library_manager}, then
+	 * overridable live from the General settings toggle — once toggled, the override is what's
+	 * remembered across restarts, in state.ini, taking precedence over the ini seed.
+	 */
+	public final BooleanParameter libraryManagerEnabled = new BooleanParameter("Library Manager",
+			Config.state().getConfigAs("remote", "library_manager",
+					Config.singleton().getConfig("remote", "library_manager", "true"), Boolean::parseBoolean));
+
 	/** Dynamic list of wave visualisation instances (replaces the old fixed one-of-each-type fields). */
 	public WaveSystem waveSystem = new WaveSystem();
 	public BindingSystem bindings = new BindingSystem();
@@ -111,6 +121,8 @@ public class JCthugha extends ParamNode implements Closeable {
 
 		notifications.addChangeListener(() ->
 				Config.state().setConfig("display", "notifications", String.valueOf(notifications.value)));
+		libraryManagerEnabled.addChangeListener(() ->
+				Config.state().setConfig("remote", "library_manager", String.valueOf(libraryManagerEnabled.value)));
 
 		// Deliberately no default wave/binding seeding here (see #resetToDefaults): whether a
 		// fresh session gets deterministic defaults or the persisted "current" state is decided

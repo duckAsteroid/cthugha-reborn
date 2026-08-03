@@ -213,9 +213,16 @@ public class ActionTreeBuilder {
         cthugha.notifications.withNoAnimate();
         cthugha.bindings.enabled.withUiHint(UiHint.ICON, "zap");
         cthugha.bindings.enabled.withNoAnimate();
+        cthugha.libraryManagerEnabled.withUiHint(UiHint.ICON, "library-big");
+        cthugha.libraryManagerEnabled.withDescription("Enables the Library Manager: rename/organize "
+            + "videos, images, and palettes from a separate browser tab (opened via the header icon "
+            + "in the remote UI). Turning this off hides that icon and disables its write endpoints "
+            + "on the embedded web server — handy on an untrusted network.");
+        cthugha.libraryManagerEnabled.withNoAnimate();
         generalGroup.addChild(fullscreenEnabled);
         generalGroup.addChild(cthugha.notifications);
         generalGroup.addChild(cthugha.bindings.enabled);
+        generalGroup.addChild(cthugha.libraryManagerEnabled);
         AbstractAction resetToDefaults = action("Reset to Defaults", "rotate-ccw", ctx -> {
             cthugha.resetToDefaults();
             ctx.notify("Reset to defaults");

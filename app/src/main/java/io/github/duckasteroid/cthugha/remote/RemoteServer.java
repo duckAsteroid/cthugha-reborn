@@ -43,6 +43,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 public class RemoteServer {
@@ -58,6 +59,7 @@ public class RemoteServer {
     private final ActionContext actionContext;
     private final ParamSerializer serializer;
     private final ObjectMapper mapper;
+    private final BooleanSupplier libraryManagerEnabled;
 
     private Javalin app;
     private volatile Runnable onFirstAuth;
@@ -70,7 +72,7 @@ public class RemoteServer {
 
     public RemoteServer(Node paramRoot, BindingSystem bindings, TokenStore tokenStore,
                         RemoteEventBroadcaster broadcaster, RemoteConfig config,
-                        ActionContext actionContext) {
+                        ActionContext actionContext, BooleanSupplier libraryManagerEnabled) {
         this.paramRoot = paramRoot;
         this.bindings = bindings;
         this.tokenStore = tokenStore;
@@ -79,6 +81,7 @@ public class RemoteServer {
         this.actionContext = actionContext;
         this.serializer = new ParamSerializer(bindings);
         this.mapper = serializer.getMapper();
+        this.libraryManagerEnabled = libraryManagerEnabled;
     }
 
     public void setOnFirstAuth(Runnable r) {
@@ -100,7 +103,7 @@ public class RemoteServer {
         app.before(this::authFilter);
 
         app.get("/api/v1/info", ctx ->
-                ctx.json(Map.of("version", "1.0")));
+                ctx.json(Map.of("version", "1.0", "libraryManagerEnabled", libraryManagerEnabled.getAsBoolean())));
 
         app.get("/api/v1/maps/preview/*", ctx -> {
             String name = ctx.path().substring("/api/v1/maps/preview/".length());
@@ -461,10 +464,31 @@ public class RemoteServer {
             ctx.status(401).contentType("application/json").result("{\"error\":\"invalid_token\"}");
             throw new HttpResponseException(401, "invalid_token", Collections.emptyMap());
         }
+        if (isLibraryManagerOnlyRoute(ctx) && !libraryManagerEnabled.getAsBoolean()) {
+            ctx.status(403).contentType("application/json").result("{\"error\":\"library_manager_disabled\"}");
+            throw new HttpResponseException(403, "library_manager_disabled", Collections.emptyMap());
+        }
         if (firstAuthFired.compareAndSet(false, true)) {
             Runnable r = onFirstAuth;
             if (r != null) r.run();
         }
+    }
+
+    /**
+     * Routes that only the Library Manager UI needs: mutating the maps/images/videos libraries,
+     * plus the full-video byte stream used by its chapter-editing scrubber. Read-only browsing
+     * (GET maps/images/videos and their preview thumbnails) is shared with the main remote UI's
+     * pickers and stays available even when the Library Manager itself is disabled.
+     */
+    private boolean isLibraryManagerOnlyRoute(Context ctx) {
+        String method = ctx.method().name();
+        String path = ctx.path();
+        if (path.startsWith("/api/v1/videos/stream/")) return true;
+        if (path.startsWith("/api/v1/maps/") && method.equals("POST")) return true;
+        if (path.startsWith("/api/v1/images/") && method.equals("PATCH")) return true;
+        if (path.startsWith("/api/v1/videos/")
+                && (method.equals("PATCH") || method.equals("POST") || method.equals("DELETE"))) return true;
+        return false;
     }
 
     /**

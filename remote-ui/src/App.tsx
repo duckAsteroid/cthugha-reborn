@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Settings, LibraryBig } from 'lucide-react';
 import { initToken, getToken } from './token';
+import { getInfo } from './api';
 import { ParamTree } from './components/ParamTree';
 import { ActionToolbar } from './components/ActionToolbar';
 import { SSEProvider } from './SSEContext';
@@ -37,10 +38,18 @@ function LibraryButton() {
 
 function HeaderControls() {
   const { actions } = useToolbar();
+  const [libraryManagerEnabled, setLibraryManagerEnabled] = useState(false);
+
+  useEffect(() => {
+    getInfo()
+      .then(info => setLibraryManagerEnabled(info.libraryManagerEnabled))
+      .catch(() => setLibraryManagerEnabled(false));
+  }, []);
+
   return (
     <div className="ml-auto flex items-center gap-1">
       <ActionToolbar actions={actions} />
-      <LibraryButton />
+      {libraryManagerEnabled && <LibraryButton />}
       <SettingsButton />
     </div>
   );

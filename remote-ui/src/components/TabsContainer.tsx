@@ -17,7 +17,7 @@ import { useToolbar } from '../ToolbarContext';
 import { isRenderable, flattenSoleContainer, resolveCurrentPreview } from '../nodeUtils';
 
 /** Boolean toggles pulled out of the General expander into the Settings panel instead. */
-const SETTINGS_CONTROL_NAMES = new Set(['Fullscreen', 'Notifications', 'Bindings']);
+const SETTINGS_CONTROL_NAMES = new Set(['Fullscreen', 'Notifications', 'Bindings', 'Library Manager']);
 /** Tabs pulled out of the main tab row into the Settings panel instead. */
 const SETTINGS_TAB_NAMES = new Set(['Audio']);
 

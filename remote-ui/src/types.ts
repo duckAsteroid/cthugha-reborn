@@ -86,6 +86,7 @@ export interface SSEParamChangedEvent {
 
 export interface ServerInfo {
   version: string;
+  libraryManagerEnabled: boolean;
 }
 
 export interface VideoChapter {

@@ -66,6 +66,7 @@ class RemoteServerTest {
     private AtomicBoolean actionFired;
     private BindingSystem animation;
     private RemoteServer server;
+    private final AtomicBoolean libraryManagerEnabled = new AtomicBoolean(true);
     private HttpClient http;
     private String base;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -107,7 +108,8 @@ class RemoteServerTest {
         RemoteConfig config = new RemoteConfig();
         config.port = 0; // let the OS pick a free port
 
-        server = new RemoteServer(root, animation, tokenStore, new RemoteEventBroadcaster(), config, actionContext);
+        server = new RemoteServer(root, animation, tokenStore, new RemoteEventBroadcaster(), config, actionContext,
+                libraryManagerEnabled::get);
         server.start();
         base = "http://localhost:" + server.port();
         http = HttpClient.newHttpClient();
@@ -272,6 +274,24 @@ class RemoteServerTest {
                 HttpResponse.BodyHandlers.ofString());
         assertEquals(200, resp.statusCode());
         assertEquals("1.0", mapper.readTree(resp.body()).get("version").asText());
+        assertTrue(mapper.readTree(resp.body()).get("libraryManagerEnabled").asBoolean());
+    }
+
+    @Test
+    void libraryManagerWriteRoutesAre403WhenDisabledButReadsStillWork() throws Exception {
+        libraryManagerEnabled.set(false);
+
+        HttpResponse<String> post = send("POST", "/api/v1/maps/" + FIXTURE_MAP_NAME,
+                "{\"colors\":[\"#FF0000\"]}");
+        assertEquals(403, post.statusCode());
+
+        HttpResponse<String> get = get("/api/v1/maps");
+        assertEquals(200, get.statusCode(), "read-only browsing stays available for the main remote UI's pickers");
+
+        HttpResponse<String> info = http.send(
+                HttpRequest.newBuilder(URI.create(base + "/api/v1/info")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertFalse(mapper.readTree(info.body()).get("libraryManagerEnabled").asBoolean());
     }
 
     @Test

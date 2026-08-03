@@ -346,7 +346,8 @@ public class CthughaWindow extends GLWindow {
         if (remoteConfig != null && remoteConfig.enabled) {
             tokenStore = new TokenStore(remoteConfig.fixedToken);
             broadcaster = new RemoteEventBroadcaster();
-            remoteServer = new RemoteServer(cthugha, cthugha.bindings, tokenStore, broadcaster, remoteConfig, actionContext);
+            remoteServer = new RemoteServer(cthugha, cthugha.bindings, tokenStore, broadcaster, remoteConfig, actionContext,
+                    () -> cthugha.libraryManagerEnabled.value);
             remoteServer.start();
 
             cthugha.translateSource.setOnTreeChanged(
