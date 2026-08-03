@@ -87,3 +87,28 @@ export interface SSEParamChangedEvent {
 export interface ServerInfo {
   version: string;
 }
+
+export interface VideoChapter {
+  name: string;
+  start: number;
+  end: number;
+}
+
+export interface VideoEntry {
+  file: string;
+  title: string;
+  source: string;
+  license: string;
+  tags: string[];
+  durationSeconds: number | null;
+  chapters?: VideoChapter[];
+  defaultChapter: string | null;
+}
+
+export interface ImageEntry {
+  file: string;
+  title: string;
+  source: string | null;
+  license: string | null;
+  tags: string[];
+}

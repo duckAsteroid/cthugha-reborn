@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
-import { initToken } from './token';
+import { Settings, LibraryBig } from 'lucide-react';
+import { initToken, getToken } from './token';
 import { ParamTree } from './components/ParamTree';
 import { ActionToolbar } from './components/ActionToolbar';
 import { SSEProvider } from './SSEContext';
@@ -20,11 +20,27 @@ function SettingsButton() {
   );
 }
 
+function LibraryButton() {
+  const token = getToken();
+  return (
+    <a
+      href={`/library.html?token=${encodeURIComponent(token ?? '')}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Library manager"
+      className="p-1.5 rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+    >
+      <LibraryBig className="w-5 h-5" />
+    </a>
+  );
+}
+
 function HeaderControls() {
   const { actions } = useToolbar();
   return (
     <div className="ml-auto flex items-center gap-1">
       <ActionToolbar actions={actions} />
+      <LibraryButton />
       <SettingsButton />
     </div>
   );

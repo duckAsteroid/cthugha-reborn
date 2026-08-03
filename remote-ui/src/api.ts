@@ -1,5 +1,5 @@
 import { getToken } from './token';
-import type { LeafNode, ActionNode, ParamNode, ServerInfo, StringPatchResult } from './types';
+import type { LeafNode, ActionNode, ParamNode, ServerInfo, StringPatchResult, VideoEntry, ImageEntry } from './types';
 
 const BASE_URL = window.location.origin;
 
@@ -115,6 +115,91 @@ export async function updateTrigger(
 export async function deleteTrigger(path: string, name: string): Promise<LeafNode | ActionNode> {
   return apiFetch<LeafNode | ActionNode>(`/api/v1/params/${path}/triggers/${encodeURIComponent(name)}`, {
     method: 'DELETE',
+  });
+}
+
+export async function getVideos(): Promise<VideoEntry[]> {
+  return apiFetch<VideoEntry[]>('/api/v1/videos');
+}
+
+export async function updateVideo(
+  file: string,
+  patch: { title?: string; tags?: string[]; source?: string; license?: string; defaultChapter?: string | null },
+): Promise<VideoEntry> {
+  return apiFetch<VideoEntry>(`/api/v1/videos/${encodeURIComponent(file)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function renameVideo(file: string, newFile: string): Promise<VideoEntry> {
+  return apiFetch<VideoEntry>(`/api/v1/videos/${encodeURIComponent(file)}/rename`, {
+    method: 'PATCH',
+    body: JSON.stringify({ file: newFile }),
+  });
+}
+
+export async function createChapter(
+  file: string,
+  chapter: { name: string; start: number; end: number },
+): Promise<VideoEntry> {
+  return apiFetch<VideoEntry>(`/api/v1/videos/${encodeURIComponent(file)}/chapters`, {
+    method: 'POST',
+    body: JSON.stringify(chapter),
+  });
+}
+
+export async function updateChapter(
+  file: string,
+  name: string,
+  patch: { name?: string; start?: number; end?: number },
+): Promise<VideoEntry> {
+  return apiFetch<VideoEntry>(`/api/v1/videos/${encodeURIComponent(file)}/chapters/${encodeURIComponent(name)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteChapter(file: string, name: string): Promise<VideoEntry> {
+  return apiFetch<VideoEntry>(`/api/v1/videos/${encodeURIComponent(file)}/chapters/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function videoStreamUrl(file: string): string {
+  const token = getToken();
+  return `${BASE_URL}/api/v1/videos/stream/${encodeURIComponent(file)}?token=${encodeURIComponent(token ?? '')}`;
+}
+
+export async function getImages(): Promise<ImageEntry[]> {
+  return apiFetch<ImageEntry[]>('/api/v1/images');
+}
+
+export async function updateImage(
+  file: string,
+  patch: { title?: string; tags?: string[]; source?: string; license?: string },
+): Promise<ImageEntry> {
+  return apiFetch<ImageEntry>(`/api/v1/images/${encodeURIComponent(file)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function renameImage(file: string, newFile: string): Promise<ImageEntry> {
+  return apiFetch<ImageEntry>(`/api/v1/images/${encodeURIComponent(file)}/rename`, {
+    method: 'PATCH',
+    body: JSON.stringify({ file: newFile }),
+  });
+}
+
+export async function getMaps(): Promise<string[]> {
+  return apiFetch<string[]>('/api/v1/maps');
+}
+
+export async function saveMap(name: string, colors: string[]): Promise<{ name: string; size: number }> {
+  return apiFetch<{ name: string; size: number }>(`/api/v1/maps/${encodeURIComponent(name)}`, {
+    method: 'POST',
+    body: JSON.stringify({ colors }),
   });
 }
 
