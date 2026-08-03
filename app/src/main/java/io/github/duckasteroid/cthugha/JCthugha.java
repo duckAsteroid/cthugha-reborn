@@ -19,7 +19,6 @@ import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import com.asteroid.duck.opengl.util.stats.Stats;
 import com.asteroid.duck.opengl.util.stats.StatsFactory;
-import io.github.duckasteroid.cthugha.quote.Constants;
 import io.github.duckasteroid.cthugha.quote.Quote;
 import io.github.duckasteroid.cthugha.quote.RandomQuoteSource;
 import io.github.duckasteroid.cthugha.params.DynamicChildList;
@@ -47,9 +46,6 @@ import org.slf4j.LoggerFactory;
 public class JCthugha extends ParamNode implements Closeable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(JCthugha.class);
-
-	private static final Duration QUOTE_DURATION = Config.singleton().getConfigAs(
-		Constants.SECTION, Constants.KEY_DURATION, "PT10S", Duration::parse);
 
 	/** How often the "current" state is flushed to disk; see {@link CurrentStatePersister}. */
 	private static final Duration CURRENT_STATE_WRITE_INTERVAL = Config.singleton().getConfigAs(
@@ -303,7 +299,7 @@ public class JCthugha extends ParamNode implements Closeable {
 	/** Shows a specific quote (e.g. picked from the remote UI's Quotes tab). */
 	public void showQuote(Quote quote) {
 		currentQuote = quote;
-		quoteExpiry = Instant.now().plus(QUOTE_DURATION);
+		quoteExpiry = Instant.now().plus(Duration.ofMillis(Math.round(quotePhase.duration.value * 1000.0)));
 	}
 
 	/** All quotes available for selection in the remote UI's Quotes tab. */

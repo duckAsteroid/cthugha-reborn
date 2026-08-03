@@ -16,6 +16,7 @@ import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.transform.TransformParams;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.quote.Constants;
 import io.github.duckasteroid.cthugha.quote.Quote;
 import org.joml.Matrix4f;
@@ -25,6 +26,7 @@ import org.lwjgl.BufferUtils;
 import java.awt.Font;
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.time.Duration;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER;
@@ -52,6 +54,10 @@ public class QuotePhase implements RenderPhase {
     // quote's own computed anchor position (see updateLayout()/applyTransform()). Animatable via
     // the existing animation system, same as wave renderer transforms.
     public final TransformParams transform = new TransformParams("Transform");
+
+    /** How long a newly shown quote stays on screen before expiring, in seconds. */
+    public final DoubleParameter duration = new DoubleParameter("Duration", 1.0, 60.0,
+            CFG.getConfigAs(Constants.SECTION, Constants.KEY_DURATION, "PT10S", Duration::parse).toMillis() / 1000.0);
 
     // Screen overlay renderers
     private StringRenderer quoteRenderer;
@@ -182,6 +188,9 @@ public class QuotePhase implements RenderPhase {
         transform.withDescription("Spin, scale, or skew the quote and its attribution together as "
                 + "a single rigid unit, pivoting around the quote's own auto-computed position.");
         generalGroup.addChild(transform);
+
+        duration.withDescription("How long a quote stays on screen before disappearing, in seconds.");
+        generalGroup.addChild(duration);
     }
 
     @Override
