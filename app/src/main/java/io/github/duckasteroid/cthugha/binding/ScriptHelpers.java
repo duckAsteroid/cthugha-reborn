@@ -23,6 +23,7 @@ import java.util.Random;
  *   beat(name)       — beat strength [0,1] for any named band; 0 if unknown/unavailable
  *   random()         — uniform random double in [0,1)
  *   random(min,max)  — uniform random double in [min,max)
+ *   range(min,max,value) — remaps value from [0,1] into [min,max], e.g. range(0.2,0.5,sine(0.05))
  *   state.get(key,def) / state.set(key,value) — per-binding state, private to this script
  *   global.get(key,def) / global.set(key,value) — state shared across every binding
  *   TWO_PI           — 2π constant
@@ -150,6 +151,16 @@ public abstract class ScriptHelpers {
     /** Uniform random double in [min, max). */
     protected double random(double min, double max) {
         return min + random() * (max - min);
+    }
+
+    /**
+     * Remaps {@code value} (expected in [0,1], e.g. the output of {@link #sine(double)} or
+     * another wave helper) into [min, max]. Useful for confining an animated value to a sub-range,
+     * e.g. {@code range(0.2, 0.5, sine(0.05))} to oscillate an XY translate within a small band
+     * instead of sweeping the parameter's full span.
+     */
+    protected double range(double min, double max, double value) {
+        return min + value * (max - min);
     }
 
     /**
