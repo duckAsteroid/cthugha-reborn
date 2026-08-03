@@ -353,6 +353,12 @@ public class VideoPhase implements RenderPhase {
             // Sized lazily off the new stream's stride on its first decoded frame.
             copyBufA = null;
             copyBufB = null;
+            // Drop any frame the old decode thread published but the GL thread hadn't consumed
+            // yet — it's sized/strided for the old video, and videoWidth/videoHeight/videoStride
+            // above now (or shortly will) describe the new one. Uploading it against the new
+            // dimensions reads past the buffer's end, which segfaults the GL driver rather than
+            // Java, so this can't be caught — see hs_err_pid crash logs.
+            pendingFrame.set(null);
 
             running = true;
             decodeThread = Thread.ofVirtual()
