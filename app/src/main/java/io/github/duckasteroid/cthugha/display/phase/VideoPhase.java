@@ -13,6 +13,7 @@ import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.resources.texture.Wrap;
 import io.github.duckasteroid.cthugha.params.ContainerNode;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
@@ -534,6 +535,9 @@ public class VideoPhase implements RenderPhase {
         // path resolution (Videos/Video/... always found the picker, never this group).
         ContainerNode videoGroup = new ContainerNode("Playback");
         videoGroup.withDescription("Alpha-blended full-screen video overlay, playing on loop for the whole session.");
+        // Mirrors the "Video" picker's current thumbnail (see VideosLibraryNode) so the
+        // currently-loaded video is visible from this panel too, without switching tabs.
+        videoGroup.withUiHint(UiHint.PREVIEW_OF, "Video");
         videoGroup.addChild(enabled);
         videoGroup.addChild(alpha);
         videoGroup.addChild(blendMode);

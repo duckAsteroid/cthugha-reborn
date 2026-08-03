@@ -1,4 +1,5 @@
-import type { ContainerNode, ParamNode } from './types';
+import type { ContainerNode, EnumOption, ParamNode } from './types';
+import type { ParamState } from './SSEContext';
 
 /**
  * Whether a node should be rendered at all. A hidden node is never renderable;
@@ -30,4 +31,36 @@ export function flattenSoleContainer(
     return flattenSoleContainer(onlyVisible, onlyPath);
   }
   return { children, path };
+}
+
+export interface CurrentPreview {
+  /** Name of the sibling ENUM leaf this mirrors (e.g. {@code "Video"}) — used as a row label. */
+  siblingName: string;
+  /** Full param path of the sibling ENUM leaf, e.g. {@code "Videos/Video"} — see tagSelection.ts. */
+  siblingPath: string;
+  /** The sibling's currently-selected option (label/preview/tags), or undefined mid-load. */
+  option: EnumOption | undefined;
+}
+
+/**
+ * Resolves a {@code preview-of} uiHint (see UiHint.java) into the sibling's currently-selected
+ * option: finds the named sibling ENUM leaf among {@code siblings}, then reads that leaf's
+ * current option (label/preview/tags — the same data already shown in its GRID/CAROUSEL
+ * control) using its live SSE value if one has arrived, falling back to the leaf's
+ * last-fetched value otherwise.
+ */
+export function resolveCurrentPreview(
+  child: ParamNode,
+  siblings: ParamNode[],
+  parentPath: string,
+  sseState: Map<string, ParamState>,
+): CurrentPreview | undefined {
+  const siblingName = child.type === 'CONTAINER' ? child.uiHints?.['preview-of'] : undefined;
+  if (!siblingName) return undefined;
+  const sibling = siblings.find((s) => s.name === siblingName);
+  if (!sibling || sibling.type !== 'ENUM') return undefined;
+  const siblingPath = parentPath ? `${parentPath}/${sibling.name}` : sibling.name;
+  const liveValue = sseState.get(siblingPath)?.value;
+  const index = Math.round(liveValue ?? sibling.value);
+  return { siblingName, siblingPath, option: sibling.options?.[index] };
 }

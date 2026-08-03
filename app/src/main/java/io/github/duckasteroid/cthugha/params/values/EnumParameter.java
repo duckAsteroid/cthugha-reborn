@@ -25,6 +25,7 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   private final List<T> values;
   private Function<Integer, String> previewUrlProvider = null;
   private Function<Integer, String> groupProvider = null;
+  private Function<Integer, List<String>> tagsProvider = null;
 
   /**
    * @param description display name
@@ -76,6 +77,17 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   /** Returns the group/tag for option {@code index}, or {@code null} if none was set. */
   public String getGroup(int index) {
     return groupProvider != null ? groupProvider.apply(index) : null;
+  }
+
+  /** Attaches the full set of free-text tags to each option, for client-side multi-tag filtering. */
+  public EnumParameter<T> withTags(Function<Integer, List<String>> provider) {
+    this.tagsProvider = provider;
+    return this;
+  }
+
+  /** Returns the full tag list for option {@code index}, or {@code null} if none was set. */
+  public List<String> getTags(int index) {
+    return tagsProvider != null ? tagsProvider.apply(index) : null;
   }
 
   /** Returns the string labels for all options, in order. */

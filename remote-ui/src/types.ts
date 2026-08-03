@@ -4,6 +4,7 @@ export interface EnumOption {
   label: string;
   preview?: string;
   group?: string;
+  tags?: string[];
 }
 
 export interface ContainerNode {

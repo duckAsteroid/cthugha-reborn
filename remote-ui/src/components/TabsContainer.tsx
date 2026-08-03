@@ -14,7 +14,7 @@ import { useSSEState } from '../SSEContext';
 import type { ParamState } from '../SSEContext';
 import { useSettings } from '../SettingsContext';
 import { useToolbar } from '../ToolbarContext';
-import { isRenderable, flattenSoleContainer } from '../nodeUtils';
+import { isRenderable, flattenSoleContainer, resolveCurrentPreview } from '../nodeUtils';
 
 /** Boolean toggles pulled out of the General expander into the Settings panel instead. */
 const SETTINGS_CONTROL_NAMES = new Set(['Fullscreen', 'Notifications', 'Bindings']);
@@ -26,10 +26,22 @@ interface TabsContainerProps {
   path: string;
 }
 
-function renderChild(child: ParamNode, basePath: string, sseState: Map<string, ParamState>) {
+function renderChild(
+  child: ParamNode,
+  basePath: string,
+  sseState: Map<string, ParamState>,
+  siblings: ParamNode[],
+) {
   const childPath = basePath ? `${basePath}/${child.name}` : child.name;
   if (child.type === 'CONTAINER') {
-    return <ParamContainer key={child.name} node={child as ContainerNode} path={childPath} />;
+    return (
+      <ParamContainer
+        key={child.name}
+        node={child as ContainerNode}
+        path={childPath}
+        currentPreview={resolveCurrentPreview(child, siblings, basePath, sseState)}
+      />
+    );
   }
   if (child.type === 'ACTION') {
     return <ActionButton key={child.name} path={childPath} node={child as ActionNode} />;
@@ -106,7 +118,7 @@ export function TabsContainer({ node, path }: TabsContainerProps) {
     if (tab.uiHints?.['control-type'] === 'GENERATOR_TAB') {
       return <GeneratorTab children={tabChildren} path={contentPath} />;
     }
-    return tabChildren.map(child => renderChild(child, contentPath, sseState));
+    return tabChildren.map(child => renderChild(child, contentPath, sseState, tabChildren));
   };
 
   return (

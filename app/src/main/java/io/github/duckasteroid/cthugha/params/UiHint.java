@@ -124,5 +124,16 @@ public final class UiHint {
      */
     public static final String GENERATOR_TAB = "GENERATOR_TAB";
 
+    /**
+     * Key: on a {@code ContainerNode}, names a sibling {@code ENUM} leaf (by node name, not
+     * full path) whose currently-selected option's {@code preview} image should be shown as a
+     * static thumbnail alongside this container's own header — e.g. {@code VideoPhase}'s
+     * "Playback" group points at the "Video" picker so the currently-loaded video stays visible
+     * without switching to the picker itself. Resolved entirely client-side from data already in
+     * the tree (the sibling's live value plus its own {@code options[].preview}), so no separate
+     * preview field or SSE event is needed — the sibling leaf already updates live.
+     */
+    public static final String PREVIEW_OF = "preview-of";
+
     private UiHint() {}
 }

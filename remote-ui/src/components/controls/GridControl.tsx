@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EnumOption } from '../../types';
 import { ArrowDownAZ, ArrowUpAZ, Columns2, Columns3, Columns4, ImageOff, Search } from 'lucide-react';
+import { SELECT_TAG_EVENT, type SelectTagDetail } from '../../tagSelection';
 
 type SortDir = 'none' | 'asc' | 'desc';
 type ThumbSize = 'large' | 'medium' | 'small';
@@ -41,30 +42,69 @@ interface GridControlProps {
    * with `object-fit: fill` instead of the default cropped 1:1 photo-thumbnail tile.
    */
   previewStyle?: string;
+  /**
+   * This leaf's full param path (e.g. "Videos/Video") — identifies which GridControl instance a
+   * `cthugha:select-tag` event (see tagSelection.ts) targets, since more than one GRID-typed
+   * ENUM can be mounted at once.
+   */
+  path?: string;
 }
 
-export function GridControl({ value, options, disabled, onChange, previewStyle }: GridControlProps) {
+/** Falls back to a single-element list from `group` when an option has no `tags` array. */
+function optionTags(opt: EnumOption): string[] {
+  return opt.tags ?? (opt.group ? [opt.group] : []);
+}
+
+export function GridControl({ value, options, disabled, onChange, previewStyle, path }: GridControlProps) {
   const [search, setSearch] = useState('');
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [sortDir, setSortDir] = useState<SortDir>('none');
   const [thumbSize, setThumbSize] = useState<ThumbSize>(loadThumbSize);
   const swatch = previewStyle === 'SWATCH';
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  const groups = useMemo(
-    () => Array.from(new Set(options.map((o) => o.group).filter((g): g is string => !!g))).sort(),
+  // Lets a tag chip rendered elsewhere (e.g. the "Current Video" preview row) drive this
+  // instance's own tag filter and bring it into view — see tagSelection.ts.
+  useEffect(() => {
+    if (!path) return;
+    const handler = (event: Event) => {
+      const { path: targetPath, tag } = (event as CustomEvent<SelectTagDetail>).detail;
+      if (targetPath !== path) return;
+      setSearch('');
+      setSelectedTags(new Set([tag]));
+      rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    window.addEventListener(SELECT_TAG_EVENT, handler);
+    return () => window.removeEventListener(SELECT_TAG_EVENT, handler);
+  }, [path]);
+
+  const allTags = useMemo(
+    () => Array.from(new Set(options.flatMap(optionTags))).sort(),
     [options],
   );
 
   if (options.length === 0) return null;
 
+  const toggleTag = (tag: string) =>
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+
   const query = search.trim().toLowerCase();
   let filtered = options
     .map((opt, idx) => ({ opt, idx }))
-    .filter(
-      ({ opt }) =>
+    .filter(({ opt }) => {
+      const tags = optionTags(opt);
+      const matchesQuery =
         !query ||
         opt.label.toLowerCase().includes(query) ||
-        (opt.group ?? '').toLowerCase().includes(query),
-    );
+        tags.some((t) => t.toLowerCase().includes(query));
+      const matchesTags = selectedTags.size === 0 || tags.some((t) => selectedTags.has(t));
+      return matchesQuery && matchesTags;
+    });
 
   if (sortDir !== 'none') {
     filtered = [...filtered].sort((a, b) => {
@@ -86,16 +126,16 @@ export function GridControl({ value, options, disabled, onChange, previewStyle }
   const ThumbSizeIcon = THUMB_SIZE_ICON[thumbSize];
 
   return (
-    <div className={`flex flex-col gap-2 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div ref={rootRef} className={`flex flex-col gap-2 ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
       <div className="flex items-center gap-1.5">
-        {groups.length > 1 && (
+        {allTags.length > 1 && (
           <div className="flex-1 flex items-center gap-1.5 px-2 py-1 bg-neutral-800 border border-neutral-600 rounded">
             <Search className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search or filter by tag…"
+              placeholder="Search…"
               className="w-full bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none"
             />
           </div>
@@ -130,21 +170,21 @@ export function GridControl({ value, options, disabled, onChange, previewStyle }
         </button>
       </div>
 
-      {groups.length > 1 && (
+      {allTags.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
-          {groups.map((group) => {
-            const active = query === group.toLowerCase();
+          {allTags.map((tag) => {
+            const active = selectedTags.has(tag);
             return (
               <button
-                key={group}
-                onClick={() => setSearch(active ? '' : group)}
+                key={tag}
+                onClick={() => toggleTag(tag)}
                 className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
                   active
                     ? 'border-indigo-400 bg-indigo-950/40 text-indigo-300'
                     : 'border-neutral-600 text-neutral-400 hover:bg-neutral-800'
                 }`}
               >
-                {group}
+                {tag}
               </button>
             );
           })}

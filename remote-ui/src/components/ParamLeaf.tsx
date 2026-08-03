@@ -78,6 +78,7 @@ export function ParamLeaf({ path, node, liveValue, liveControlled }: ParamLeafPr
             disabled={controlled}
             onChange={handleChange}
             previewStyle={node.uiHints?.['preview-style']}
+            path={path}
           />
         );
       }

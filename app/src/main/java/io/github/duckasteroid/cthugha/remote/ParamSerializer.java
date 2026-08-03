@@ -88,6 +88,12 @@ public class ParamSerializer {
                     if (preview != null) opt.put("preview", preview);
                     String group = ep.getGroup(i);
                     if (group != null && !group.isBlank()) opt.put("group", group);
+                    List<String> tags = ep.getTags(i);
+                    if (tags != null && !tags.isEmpty()) {
+                        ArrayNode tagsNode = mapper.createArrayNode();
+                        tags.forEach(tagsNode::add);
+                        opt.set("tags", tagsNode);
+                    }
                     options.add(opt);
                 }
                 obj.set("options", options);
