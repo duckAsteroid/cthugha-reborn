@@ -3,12 +3,15 @@ package com.asteroid.duck.opengl.util.audio.analysis;
 import java.util.List;
 
 /**
- * Per-frame beat detector that operates on the {@code float[] magnitudes} output of
- * {@link FFTProcessor} — no extra FFT cost.
+ * Per-frame beat detector that operates on {@link FFTProcessor}'s raw, per-bin FFT magnitudes —
+ * <em>before</em> they are coarsened onto a display-sized {@code numBins} grid — so it costs no
+ * extra FFT work and is immune to the low-frequency bin-duplication a small {@code numBins} would
+ * otherwise introduce (a band like "bass" spanning only a handful of display bars can end up
+ * driven by a single raw FFT bin, right where mic self-noise and room rumble live).
  *
  * <h2>Algorithm (per band, per frame)</h2>
  * <ol>
- *   <li>Compute the mean magnitude over the band's mapped FFT output bins → instant energy.</li>
+ *   <li>Compute the mean magnitude over the band's raw FFT bin range → instant energy.</li>
  *   <li>Update a rolling history of length {@code historyLength} frames.</li>
  *   <li>Compute {@code ratio = instantEnergy / (rollingAverage + ε)}.</li>
  *   <li>If {@code ratio > threshold}: {@code raw = clamp((ratio − threshold) × sensitivity, 0, 1)}.
@@ -25,7 +28,7 @@ import java.util.List;
  *     FrequencyBand.HI_HAT
  * );
  * BeatDetector beats = new BeatDetector(
- *     bands, numBins, 20f, 20_000f,
+ *     bands, fftSize, sampleRate,
  *     43,    // history: ~0.7 s at 60 fps
  *     1.3f,  // threshold: 30% above average before triggering
  *     2.0f,  // sensitivity: 50% above average → strength 1.0
@@ -35,9 +38,9 @@ import java.util.List;
  *
  * <h2>Typical usage</h2>
  * <pre>{@code
- * BeatDetector beats = new BeatDetector(numBins, 20f, 20_000f);
- * // each frame, after fftProcessor.process(samples, magnitudes):
- * beats.update(magnitudes);
+ * BeatDetector beats = new BeatDetector(freqProc);
+ * freqProc.addSink(beats);
+ * // each frame, after freqProc.process():
  * float kick  = beats.getBeatStrength("bass");
  * float snare = beats.getBeatStrength(1);
  * }</pre>
@@ -56,9 +59,8 @@ public class BeatDetector implements FrequencySink {
      * Full constructor.
      *
      * @param bands         frequency bands to track; arbitrary size and Hz ranges
-     * @param numBins       number of output bars from {@link FFTProcessor} (e.g. 128)
-     * @param fftFMin       lowest frequency in the FFTProcessor's output range in Hz (e.g. 20)
-     * @param fftFMax       highest frequency in the FFTProcessor's output range in Hz (e.g. 20 000)
+     * @param fftSize       the FFT window size in samples (e.g. from {@link FrequencyProcessor#getFftSize()})
+     * @param sampleRate    the audio sample rate in Hz (e.g. from {@link FrequencyProcessor#getSampleRate()})
      * @param historyLength number of past frames used for the rolling energy average
      * @param threshold     ratio above the rolling average required to start triggering
      *                      (e.g. {@code 1.3} = 30% louder than average)
@@ -68,7 +70,7 @@ public class BeatDetector implements FrequencySink {
      * @param decayPerFrame per-frame fall rate of the published beat strength;
      *                      {@code 1.0 / 60} causes full scale to decay to zero in one second at 60 fps
      */
-    public BeatDetector(List<FrequencyBand> bands, int numBins, float fftFMin, float fftFMax,
+    public BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
                         int historyLength, float threshold, float sensitivity, float decayPerFrame) {
         this.bands = List.copyOf(bands);
         this.threshold = threshold;
@@ -76,7 +78,7 @@ public class BeatDetector implements FrequencySink {
         this.decayPerFrame = decayPerFrame;
         this.states = new BandState[bands.size()];
         for (int i = 0; i < bands.size(); i++) {
-            states[i] = new BandState(bands.get(i), numBins, fftFMin, fftFMax, historyLength);
+            states[i] = new BandState(bands.get(i), fftSize, sampleRate, historyLength);
         }
     }
 
@@ -85,12 +87,11 @@ public class BeatDetector implements FrequencySink {
      * and sensible defaults: 43-frame history (~0.7 s at 60 fps), threshold 1.3, sensitivity 2.0,
      * decay 1/60 per frame.
      *
-     * @param numBins  number of output bars from {@link FFTProcessor}
-     * @param fftFMin  lowest Hz of the FFTProcessor's output range
-     * @param fftFMax  highest Hz of the FFTProcessor's output range
+     * @param fftSize    the FFT window size in samples
+     * @param sampleRate the audio sample rate in Hz
      */
-    public BeatDetector(int numBins, float fftFMin, float fftFMax) {
-        this(FrequencyBand.defaults(), numBins, fftFMin, fftFMax, 43, 1.3f, 2.0f, 1.0f / 60f);
+    public BeatDetector(int fftSize, float sampleRate) {
+        this(FrequencyBand.defaults(), fftSize, sampleRate, 43, 1.3f, 2.0f, 1.0f / 60f);
     }
 
     /**
@@ -104,7 +105,7 @@ public class BeatDetector implements FrequencySink {
      */
     public BeatDetector(FrequencyProcessor processor) {
         this(FrequencyBand.defaults(),
-             processor.getNumBins(), processor.getFMin(), processor.getFMax(),
+             processor.getFftSize(), processor.getSampleRate(),
              43, 1.3f, 2.0f, 1.0f / 60f);
     }
 
@@ -116,7 +117,7 @@ public class BeatDetector implements FrequencySink {
      */
     public BeatDetector(List<FrequencyBand> bands, FrequencyProcessor processor) {
         this(bands,
-             processor.getNumBins(), processor.getFMin(), processor.getFMax(),
+             processor.getFftSize(), processor.getSampleRate(),
              43, 1.3f, 2.0f, 1.0f / 60f);
     }
 
@@ -126,22 +127,23 @@ public class BeatDetector implements FrequencySink {
      * as a sink; do not call directly.
      */
     @Override
-    public void onSpectrum(float[] magnitudes) {
-        update(magnitudes);
+    public void onRawSpectrum(float[] rawMagnitudes, int fftSize, float sampleRate) {
+        update(rawMagnitudes);
     }
 
     /**
-     * Update all bands from the latest FFT output.
-     * Call once per frame, immediately after {@link FFTProcessor#process}.
+     * Update all bands from the latest raw FFT magnitudes.
+     * Call once per frame, immediately after {@link FFTProcessor#process}, passing
+     * {@link FFTProcessor#getRawMagnitudes()}.
      * When using a {@link FrequencyProcessor}, prefer registering via {@link FrequencyProcessor#addSink}
      * and let {@link FrequencyProcessor#process} drive this automatically.
      *
-     * @param magnitudes normalised magnitude array from {@link FFTProcessor#process};
-     *                   must have length {@code >= numBins} passed at construction
+     * @param rawMagnitudes normalised per-bin magnitude array from {@link FFTProcessor#getRawMagnitudes()};
+     *                      must have length {@code >= fftSize/2 + 1} passed at construction
      */
-    public void update(float[] magnitudes) {
+    public void update(float[] rawMagnitudes) {
         for (BandState state : states) {
-            state.update(magnitudes, threshold, sensitivity, decayPerFrame);
+            state.update(rawMagnitudes, threshold, sensitivity, decayPerFrame);
         }
     }
 
@@ -202,10 +204,10 @@ public class BeatDetector implements FrequencySink {
         float historySum;
         float beatStrength;
 
-        BandState(FrequencyBand band, int numBins, float fftFMin, float fftFMax, int historyLength) {
+        BandState(FrequencyBand band, int fftSize, float sampleRate, int historyLength) {
             this.band = band;
             this.energyHistory = new float[historyLength];
-            int[] range = computeBinRange(band, numBins, fftFMin, fftFMax);
+            int[] range = computeBinRange(band, fftSize, sampleRate);
             this.binLow  = range[0];
             this.binHigh = range[1];
         }
@@ -238,22 +240,23 @@ public class BeatDetector implements FrequencySink {
     }
 
     /**
-     * Map a frequency band's Hz range to [binLow, binHigh) indices in the FFTProcessor output,
-     * using the same log-frequency scale that FFTProcessor uses internally.
-     * Returns {0, 0} if the band has no overlap with the FFT's output range.
+     * Map a frequency band's Hz range to {@code [binLow, binHigh)} indices into the raw linear
+     * FFT bin array (see {@link FFTProcessor#getRawMagnitudes()}).
+     * Returns {@code {0, 0}} if the band has no overlap with the representable frequency range
+     * ({@code (0, sampleRate/2]}).
      */
-    public static int[] computeBinRange(FrequencyBand band, int numBins, float fftFMin, float fftFMax) {
-        if (band.fMin() >= fftFMax || band.fMax() <= fftFMin) {
+    public static int[] computeBinRange(FrequencyBand band, int fftSize, float sampleRate) {
+        int nyquistBin = fftSize / 2;
+        float nyquistHz = sampleRate / 2f;
+        if (band.fMin() >= nyquistHz || band.fMax() <= 0f) {
             return new int[]{0, 0};
         }
-        double logScale = Math.log((double) fftFMax / fftFMin);
-        double effMin = Math.max(band.fMin(), fftFMin);
-        double effMax = Math.min(band.fMax(), fftFMax);
-        int lo = (int) Math.floor(numBins * Math.log(effMin / fftFMin) / logScale);
-        // floor for hi keeps adjacent bands exactly contiguous (no 1-bin overlap at boundaries)
-        int hi = (int) Math.floor(numBins * Math.log(effMax / fftFMin) / logScale);
-        lo = Math.max(0, lo);
-        hi = Math.min(numBins, Math.max(lo + 1, hi));
+        float effMin = Math.max(band.fMin(), 0f);
+        float effMax = Math.min(band.fMax(), nyquistHz);
+        int lo = Math.max(1, Math.round(effMin * fftSize / sampleRate));
+        int hi = Math.round(effMax * fftSize / sampleRate);
+        lo = Math.min(lo, nyquistBin - 1);
+        hi = Math.min(Math.max(hi, lo + 1), nyquistBin);
         return new int[]{lo, hi};
     }
 }

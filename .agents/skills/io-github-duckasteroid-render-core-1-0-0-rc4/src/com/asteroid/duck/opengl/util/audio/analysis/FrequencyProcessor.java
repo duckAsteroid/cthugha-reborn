@@ -15,7 +15,9 @@ import java.util.List;
  * <p>This mirrors the role of {@code AudioReader} in the raw-audio pipeline — one source,
  * multiple consumers — but operates at the frequency level. Any number of
  * {@link FrequencySink}s (e.g. {@link BeatDetector}, {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}) share a single
- * FFT computation with no duplication of work.</p>
+ * FFT computation with no duplication of work — each sink receives both the display-sized
+ * {@link FrequencySink#onSpectrum log-binned bars} and the un-coarsened
+ * {@link FrequencySink#onRawSpectrum raw per-bin magnitudes}.</p>
  *
  * <h2>Threading model</h2>
  * <ul>
@@ -120,8 +122,12 @@ public class FrequencyProcessor implements AudioSink {
     public void process() {
         audioBuffer.readSamples(sampleBuffer, fftProcessor.getFftSize(), channelMode);
         fftProcessor.process(sampleBuffer, magnitudes);
+        float[] rawMagnitudes = fftProcessor.getRawMagnitudes();
+        int     fftSize       = fftProcessor.getFftSize();
+        float   sampleRate    = fftProcessor.getSampleRate();
         for (FrequencySink sink : sinks) {
             sink.onSpectrum(magnitudes);
+            sink.onRawSpectrum(rawMagnitudes, fftSize, sampleRate);
         }
     }
 
@@ -153,4 +159,7 @@ public class FrequencyProcessor implements AudioSink {
 
     /** Highest frequency in the output range in Hz; matches {@code fMax} at construction. */
     public float getFMax() { return fftProcessor.getFMax(); }
+
+    /** Audio sample rate in Hz; matches {@code sampleRate} at construction. */
+    public float getSampleRate() { return fftProcessor.getSampleRate(); }
 }

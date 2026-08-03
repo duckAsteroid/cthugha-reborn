@@ -19,11 +19,17 @@ import org.jtransforms.fft.FloatFFT_1D;
  * <p>All expensive objects (FFT engine, Hann coefficients, bin-range mapping) are pre-computed
  * at construction time.  {@link #process} allocates nothing and is safe to call on the render
  * thread at 60 fps.</p>
+ *
+ * <p>{@link #process} also retains the per-bin normalised dB magnitude before the log-frequency
+ * bucketing step, available via {@link #getRawMagnitudes()}. Consumers that need finer frequency
+ * resolution than {@code numBins} affords — e.g. {@link BeatDetector} — should read from there
+ * instead of the coarsened {@code output} bars.</p>
  */
 public class FFTProcessor {
 
     private final int   fftSize;
     private final int   numBins;
+    private final float sampleRate;
     private final float fMin;
     private final float fMax;
 
@@ -32,6 +38,14 @@ public class FFTProcessor {
 
     /** Reusable FFT work buffer — must not be shared across threads. */
     private final float[] workBuffer;
+
+    /**
+     * Per-bin normalised dB magnitude from the most recent {@link #process} call, indexed by raw
+     * linear FFT bin (length {@code fftSize/2 + 1}; index 0 is the unused DC bin). Populated once
+     * per call and reused both to build the log-binned {@code output} bars and to serve raw-bin
+     * consumers via {@link #getRawMagnitudes()} — see {@link FrequencySink#onRawSpectrum}.
+     */
+    private final float[] rawMagnitudes;
 
     /**
      * Inclusive lower FFT bin index for each output bar.
@@ -63,8 +77,9 @@ public class FFTProcessor {
      */
     public FFTProcessor(int fftSize, int numBins, float sampleRate,
                         float fMin, float fMax, float dBFloor, float dBCeiling) {
-        this.fftSize = fftSize;
-        this.numBins = numBins;
+        this.fftSize    = fftSize;
+        this.numBins    = numBins;
+        this.sampleRate = sampleRate;
         this.fMin    = fMin;
         this.fMax    = fMax;
         this.dBFloor = dBFloor;
@@ -72,6 +87,7 @@ public class FFTProcessor {
 
         this.fft = new FloatFFT_1D(fftSize);
         this.workBuffer = new float[fftSize];
+        this.rawMagnitudes = new float[fftSize / 2 + 1];
 
         // Hann window: w[i] = 0.5 * (1 - cos(2π i / (N-1)))
         this.window = new float[fftSize];
@@ -117,25 +133,63 @@ public class FFTProcessor {
         //   workBuffer[2*k+1]= Im[k]    for k = 1 .. N/2-1
         fft.realForward(workBuffer);
 
+        // Normalised dB magnitude per raw linear FFT bin — computed once and shared by the
+        // log-binned bars below and by raw-bin consumers (see getRawMagnitudes()).
         int nyquistBin = fftSize / 2;
+        for (int k = 1; k <= nyquistBin; k++) {
+            float re, im;
+            if (k == nyquistBin) {
+                re = workBuffer[1];
+                im = 0.0f;
+            } else {
+                re = workBuffer[2 * k];
+                im = workBuffer[2 * k + 1];
+            }
+            float mag = (float) Math.sqrt(re * re + im * im) / fftSize;
+            float dB = 20.0f * (float) Math.log10(Math.max(mag, 1e-10f));
+            rawMagnitudes[k] = Math.max(0.0f, Math.min(1.0f, (dB - dBFloor) / dBRange));
+        }
+
         for (int b = 0; b < numBins; b++) {
             float peakMag = 0.0f;
             for (int k = binLow[b]; k < binHigh[b]; k++) {
-                float re, im;
-                if (k == nyquistBin) {
-                    re = workBuffer[1];
-                    im = 0.0f;
-                } else {
-                    re = workBuffer[2 * k];
-                    im = workBuffer[2 * k + 1];
-                }
-                float mag = (float) Math.sqrt(re * re + im * im) / fftSize;
-                if (mag > peakMag) peakMag = mag;
+                if (rawMagnitudes[k] > peakMag) peakMag = rawMagnitudes[k];
             }
-            float dB = 20.0f * (float) Math.log10(Math.max(peakMag, 1e-10f));
-            output[b] = Math.max(0.0f, Math.min(1.0f, (dB - dBFloor) / dBRange));
+            output[b] = peakMag;
         }
     }
+
+    /**
+     * Read-only view of the most recent {@link #process} call's per-bin normalised dB magnitudes,
+     * indexed by raw linear FFT bin — <em>not</em> the log-binned {@code numBins} bars.
+     *
+     * <p>Unlike {@code output}, this array is not coarsened onto a display-sized grid, so it does
+     * not suffer the low-frequency bin-duplication a small {@code numBins} produces (see
+     * {@link BeatDetector}). Values are only valid until the next {@link #process} call; copy out
+     * if they need to outlive it. Do not modify.</p>
+     *
+     * @return array of length {@code fftSize/2 + 1}; index 0 (DC) is always {@code 0}
+     */
+    public float[] getRawMagnitudes() { return rawMagnitudes; }
+
+    /**
+     * Maps a frequency to its nearest raw linear FFT bin index, clamped to the valid range.
+     *
+     * @param hz frequency in Hz
+     * @return bin index in {@code [0, fftSize/2]}
+     */
+    public int binForFrequency(float hz) {
+        int nyquistBin = fftSize / 2;
+        int bin = Math.round(hz * fftSize / sampleRate);
+        return Math.max(0, Math.min(nyquistBin, bin));
+    }
+
+    /**
+     * Audio sample rate in Hz, as passed at construction.
+     *
+     * @return the sample rate
+     */
+    public float getSampleRate() { return sampleRate; }
 
     /**
      * Number of audio samples consumed per {@link #process} call.

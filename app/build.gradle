@@ -33,7 +33,7 @@ dependencies {
 	// Logging API
 	implementation(group: 'org.slf4j', name:'slf4j-api', version: '2.0.7')
 	// OpenGL utils
-	implementation('io.github.duckasteroid:render-core:1.0.0-RC3')
+	implementation('io.github.duckasteroid:render-core:1.0.0-RC4')
 	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
 	implementation platform('org.lwjgl:lwjgl-bom:3.4.2')
 	implementation 'org.lwjgl:lwjgl'
@@ -96,6 +96,7 @@ distributions {
 			exclude '*.log'
 			exclude 'screenshot-*.png'
 			exclude 'configs/**'
+			exclude 'beatpresets/**'
 			exclude 'state.ini'
 			exclude 'state-*.ini'
 			exclude 'tabs/Spiral/**'
