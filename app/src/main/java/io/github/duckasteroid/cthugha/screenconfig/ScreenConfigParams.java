@@ -4,8 +4,10 @@ import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.DynamicChildList;
 import io.github.duckasteroid.cthugha.params.DynamicChildList.ChildSpec;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.RestoreAware;
 import io.github.duckasteroid.cthugha.params.StringValue;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,10 +84,34 @@ public class ScreenConfigParams {
      * applying an earlier entry (e.g. a generator selector) can restructure the tree — swapping
      * in a different child subtree — before later entries in the same snapshot are applied.
      * Unrecognised or type-mismatched paths are silently ignored.</p>
+     *
+     * <p>Every {@link RestoreAware} node reachable from {@code root} is put into "restore mode"
+     * (via {@link RestoreAware#beginRestore()}) before values are applied and released (via
+     * {@link RestoreAware#endRestore()}) once the whole snapshot has been replayed, so that
+     * change-triggered side effects on those nodes (e.g. randomising and regenerating a
+     * translation map on generator selection) don't race the snapshot's own values for the same
+     * subtree.</p>
      */
     public static void apply(Node root, Snapshot snapshot) {
         applyDynamicChildren(root, snapshot.dynamicChildren());
-        applyValues(root, snapshot.values());
+        List<RestoreAware> restoreAware = collectRestoreAware(root);
+        restoreAware.forEach(RestoreAware::beginRestore);
+        try {
+            applyValues(root, snapshot.values());
+        } finally {
+            restoreAware.forEach(RestoreAware::endRestore);
+        }
+    }
+
+    private static List<RestoreAware> collectRestoreAware(Node node) {
+        List<RestoreAware> result = new ArrayList<>();
+        walkRestoreAware(node, result);
+        return result;
+    }
+
+    private static void walkRestoreAware(Node node, List<RestoreAware> result) {
+        if (node instanceof RestoreAware ra) result.add(ra);
+        node.getChildren().forEach(child -> walkRestoreAware(child, result));
     }
 
     private static void applyDynamicChildren(Node root, Map<String, List<ChildSpec>> dynamicChildren) {

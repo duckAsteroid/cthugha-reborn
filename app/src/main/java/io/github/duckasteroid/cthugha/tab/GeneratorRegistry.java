@@ -4,6 +4,7 @@ import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.RestoreAware;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 import io.github.duckasteroid.cthugha.params.values.StringParameter;
@@ -39,13 +40,18 @@ import java.util.stream.StreamSupport;
  *       changes.  The caller should regenerate using the current (unchanged) params.</li>
  * </ul>
  * <p>Call {@link #beginBatch()}/{@link #endBatch()} around bulk param writes (e.g. preset load)
- * to suppress per-value regeneration triggers.</p>
+ * to suppress per-value regeneration triggers, and generator-selector changes during that window
+ * also skip {@link #setOnNewGeneratorSelected}'s randomise-and-regenerate. Implements {@link
+ * io.github.duckasteroid.cthugha.params.RestoreAware} so {@link
+ * io.github.duckasteroid.cthugha.screenconfig.ScreenConfigParams#apply} gets this for free when
+ * replaying a whole-tree snapshot (screen config load, or the "current" state restored on
+ * startup) — see {@link #beginRestore()}/{@link #endRestore()}.</p>
  *
  * <h2>Tree change events</h2>
  * <p>{@link #setOnTreeChanged} is called whenever the active generator changes, so the caller
  * can broadcast a {@code treeChanged} SSE event and let remote clients re-fetch the param tree.</p>
  */
-public class GeneratorRegistry extends ParamNode {
+public class GeneratorRegistry extends ParamNode implements RestoreAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(GeneratorRegistry.class);
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
@@ -112,7 +118,11 @@ public class GeneratorRegistry extends ParamNode {
 
         generatorSelector.addChangeListener(() -> {
             if (changingSelector) return;
-            applySelection(generatorSelector.getValue().intValue(), true);
+            // While batchMode is on (e.g. a whole-tree snapshot restore in progress — see
+            // RestoreAware), a selector change must still swap in the right generator node, but
+            // must not fire onNewGeneratorSelected: that callback randomises the generator's
+            // params, which would clobber the values the same snapshot is about to apply.
+            applySelection(generatorSelector.getValue().intValue(), !batchMode);
         });
 
         rebuildChildren();
@@ -135,6 +145,20 @@ public class GeneratorRegistry extends ParamNode {
 
     /** Re-enables per-parameter regeneration callbacks. */
     public void endBatch()   { batchMode = false; }
+
+    /** {@link RestoreAware}: equivalent to {@link #beginBatch()}. */
+    @Override public void beginRestore() { beginBatch(); }
+
+    /**
+     * {@link RestoreAware}: re-enables regeneration callbacks, then explicitly triggers one
+     * regeneration using the just-restored generator/params (no randomisation) so the translation
+     * map reflects them — nothing else would, since {@link #beginRestore()} suppressed every
+     * per-value trigger that normally does this.
+     */
+    @Override public void endRestore() {
+        endBatch();
+        if (onRegenerateNeeded != null) onRegenerateNeeded.run();
+    }
 
     /** Generates a translation map using the current generator after randomising its params. */
     public TabMapping generate(int width, int height, Random rng) {
