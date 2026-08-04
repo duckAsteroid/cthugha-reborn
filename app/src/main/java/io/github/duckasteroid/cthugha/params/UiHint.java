@@ -112,6 +112,13 @@ public final class UiHint {
     public static final String XY_PAD = "XY_PAD";
 
     /**
+     * Value for {@link #CONTROL_TYPE} on a {@code ColorParam} container: renders its
+     * {@code R}/{@code G}/{@code B} children as a single native colour-swatch picker instead
+     * of three separate sliders. See {@link io.github.duckasteroid.cthugha.params.ColorParam#withColorControl()}.
+     */
+    public static final String COLOR = "COLOR";
+
+    /**
      * Value for {@link #CONTROL_TYPE} on a {@code ContainerNode} whose children are a dynamic
      * list of item containers (e.g. {@code WaveSystem}'s wave instances) plus exactly one picker
      * leaf and one create {@link io.github.duckasteroid.cthugha.params.action.Action} used to add
@@ -176,6 +183,23 @@ public final class UiHint {
      * {@link #HIDDEN} for the same reason as {@link #CHAPTER_CONTROL}'s target.
      */
     public static final String POSITION_OF = "position-of";
+
+    /**
+     * Key: names a sibling {@code ENUM} leaf (by node name, not full path) that gates this
+     * node's visibility in the remote UI -- paired with {@link #VISIBLE_WHEN_VALUES}. Resolved
+     * client-side from the sibling's live value (SSE-updated, same mechanism as
+     * {@link #PREVIEW_OF}), so visibility reacts immediately as the sibling changes -- e.g. a
+     * wave's colour controls switching between an index slider and an RGB swatch as its render
+     * Mode changes. See {@link ParamNode#withVisibleWhen(String, String...)}.
+     */
+    public static final String VISIBLE_WHEN = "visible-when";
+
+    /**
+     * Key: comma-separated option labels of the {@link #VISIBLE_WHEN} sibling for which this
+     * node is visible (matched against that sibling's current option label, e.g. {@code
+     * "BUFFER,BOTH"}).
+     */
+    public static final String VISIBLE_WHEN_VALUES = "visible-when-values";
 
     private UiHint() {}
 }

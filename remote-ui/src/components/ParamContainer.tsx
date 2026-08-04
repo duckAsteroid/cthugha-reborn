@@ -8,9 +8,11 @@ import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
 import { TabsContainer } from './TabsContainer';
 import { XYPadParam } from './XYPadParam';
+import { ColorParam } from './ColorParam';
 import { useSSEState } from '../SSEContext';
 import {
   isRenderable,
+  isVisibleWhen,
   resolveCurrentPreview,
   resolvePauseControl,
   resolveChapterControl,
@@ -33,13 +35,15 @@ export function ParamContainer({ node, path, defaultOpen, currentPreview }: Para
   const [open, setOpen] = useState(defaultOpen ?? node.uiHints?.['default-open'] === 'true');
   const iconName = node.uiHints?.['icon'];
 
-  const visibleChildren = node.children.filter(isRenderable);
-
   const isTabs = node.uiHints?.['control-type'] === 'TABS';
   const isXYPad = node.uiHints?.['control-type'] === 'XY_PAD';
+  const isColor = node.uiHints?.['control-type'] === 'COLOR';
   // Live state comes from the single app-wide SSE connection (see SSEContext) — no
   // per-container subscription needed.
   const sseState = useSSEState();
+  const visibleChildren = node.children.filter(
+    (c) => isRenderable(c) && isVisibleWhen(c, node.children, path, sseState),
+  );
   const pauseControl = resolvePauseControl(node, path, sseState);
   const chapterControl = resolveChapterControl(node, path, sseState);
   const position = resolvePositionOf(node, path, sseState);
@@ -57,6 +61,10 @@ export function ParamContainer({ node, path, defaultOpen, currentPreview }: Para
 
   if (isXYPad) {
     return <XYPadParam node={node} path={path} />;
+  }
+
+  if (isColor) {
+    return <ColorParam node={node} path={path} />;
   }
 
   if (visibleChildren.length === 0) {

@@ -1,6 +1,8 @@
 package io.github.duckasteroid.cthugha.display.wave;
 
+import io.github.duckasteroid.cthugha.params.ColorParam;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.RenderMode;
 import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
@@ -19,6 +21,11 @@ public class OscilloscopeModel extends ParamNode {
     public enum ChannelMode { BLEND, LEFT, RIGHT, STEREO }
 
     public BooleanParameter enabled = new BooleanParameter("enabled", true);
+    public EnumParameter<RenderMode> mode = new EnumParameter<>("mode", Arrays.asList(RenderMode.values()), RenderMode.BUFFER);
+    /** Palette index (0-1, normalised) of the trace colour -- used in BUFFER/BOTH. */
+    public DoubleParameter index = new DoubleParameter("index", 0.0, 1.0, 1.0);
+    /** RGB colour of the trace -- used in OVERLAY/BOTH. */
+    public ColorParam color = new ColorParam("color");
     public DoubleParameter amplitude = new DoubleParameter("amplitude", 0.01, 5.0, 1.0);
     public DoubleParameter lineWidth = new DoubleParameter("lineWidth", 0.5, 10.0, 2.0);
     public BooleanParameter ellipse = new BooleanParameter("ellipse", false);
@@ -43,6 +50,13 @@ public class OscilloscopeModel extends ParamNode {
         withUiHint(UiHint.ICON, "activity");
         withResetAction();
 
+        mode.withDescription("How this wave is rendered: baked into the indexed render buffer (default -- " +
+                "subject to blur/translate like the rest of the visualisation), a crisp screen-space overlay " +
+                "immune to those effects, or both at once.");
+        index.withDescription("Palette index (as a fraction of the palette size) of the trace colour, used when Mode is BUFFER or BOTH.");
+        index.withVisibleWhen("mode", RenderMode.BUFFER.name(), RenderMode.BOTH.name());
+        color.withDescription("RGB colour of the trace, used when Mode is OVERLAY or BOTH.");
+        color.withColorControl().withVisibleWhen("mode", RenderMode.OVERLAY.name(), RenderMode.BOTH.name());
         amplitude.withDescription("Vertical scale of the waveform trace.");
         lineWidth.withDescription("Thickness of the drawn line, in pixels.");
         ellipse.withDescription("Bend the trace around an ellipse instead of drawing it as a straight horizontal line.");

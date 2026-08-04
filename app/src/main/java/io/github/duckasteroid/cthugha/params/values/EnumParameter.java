@@ -42,6 +42,16 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   }
 
   /**
+   * @param description display name
+   * @param values      ordered list of allowed values; the list index is the stored integer
+   * @param initial     the initially selected element (also used as the reset default)
+   */
+  public EnumParameter(String description, final List<T> values, T initial) {
+    super(description, 0, values.size(), values.indexOf(initial), values::get, values::indexOf);
+    this.values = values;
+  }
+
+  /**
    * Creates an {@link EnumParameter} for all constants of the given Java enum type, in their
    * declaration order.
    *

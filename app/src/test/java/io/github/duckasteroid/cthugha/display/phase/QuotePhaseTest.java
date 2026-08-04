@@ -28,14 +28,20 @@ class QuotePhaseTest {
     }
 
     @Test
-    void registerActionsAddsThreeEntries() {
+    void registerActionsAddsFourEntries() {
         long count = group.getChildren().count();
-        assertEquals(3, count, "Toggle Quote Mode, Transform, Duration");
+        assertEquals(4, count, "Toggle Quote Mode, Mode, Transform, Duration");
     }
 
     @Test
     void toggleQuoteModeActionNamedCorrectly() {
         assertTrue(group.getChild("Toggle Quote Mode").isPresent());
+    }
+
+    @Test
+    void modeNodeRegistered() {
+        assertTrue(group.getChild("Mode").isPresent());
+        assertSame(phase.mode, group.getChild("Mode").orElseThrow());
     }
 
     @Test

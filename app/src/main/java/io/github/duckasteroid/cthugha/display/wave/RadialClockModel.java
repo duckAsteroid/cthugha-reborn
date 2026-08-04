@@ -1,6 +1,8 @@
 package io.github.duckasteroid.cthugha.display.wave;
 
+import io.github.duckasteroid.cthugha.params.ColorParam;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.RenderMode;
 import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
@@ -13,6 +15,7 @@ import java.util.Arrays;
 
 public class RadialClockModel extends ParamNode {
     public BooleanParameter enabled = new BooleanParameter("enabled", true);
+    public EnumParameter<RenderMode> mode = new EnumParameter<>("mode", Arrays.asList(RenderMode.values()), RenderMode.BUFFER);
     public EnumParameter<RadialClockAnalyser.GrowthMode> growthMode =
             new EnumParameter<>("growthMode", Arrays.asList(RadialClockAnalyser.GrowthMode.values()));
     public IntegerParameter repeats = new IntegerParameter("repeats", 1, 8, 1);
@@ -25,12 +28,18 @@ public class RadialClockModel extends ParamNode {
     /** Maximum inward contraction at full magnitude, in NDC units. */
     public DoubleParameter innerDepth = new DoubleParameter("innerDepth", 0.0, 1.0, RadialClockAnalyser.DEFAULT_INNER_DEPTH);
 
-    /** Palette index (0-1, normalised) at the deepest possible inward extent. */
+    /** Palette index (0-1, normalised) at the deepest possible inward extent -- used in BUFFER/BOTH. */
     public DoubleParameter innerColor = new DoubleParameter("innerColor", 0.0, 1.0, 1.0);
-    /** Palette index (0-1, normalised) at the resting ring radius. */
+    /** RGB colour at the deepest possible inward extent -- used in OVERLAY/BOTH. */
+    public ColorParam innerColorRgb = new ColorParam("innerColorRgb");
+    /** Palette index (0-1, normalised) at the resting ring radius -- used in BUFFER/BOTH. */
     public DoubleParameter baseColor = new DoubleParameter("baseColor", 0.0, 1.0, 1.0);
-    /** Palette index (0-1, normalised) at the furthest possible outward extent. */
+    /** RGB colour at the resting ring radius -- used in OVERLAY/BOTH. */
+    public ColorParam baseColorRgb = new ColorParam("baseColorRgb");
+    /** Palette index (0-1, normalised) at the furthest possible outward extent -- used in BUFFER/BOTH. */
     public DoubleParameter outerColor = new DoubleParameter("outerColor", 0.0, 1.0, 1.0);
+    /** RGB colour at the furthest possible outward extent -- used in OVERLAY/BOTH. */
+    public ColorParam outerColorRgb = new ColorParam("outerColorRgb");
 
     public TransformParams transform = new TransformParams("transform");
 
@@ -55,6 +64,9 @@ public class RadialClockModel extends ParamNode {
         enabled.withDescription("Draws the frequency spectrum as retro clock-face ticks -- a resting dot per " +
                 "frequency bin that stretches into a radial bar as that bin's magnitude rises. Unlike the other " +
                 "spectrum analysers, this has no peak-hold indicator and applies no smoothing.");
+        mode.withDescription("How this wave is rendered: baked into the indexed render buffer (default -- " +
+                "subject to blur/translate like the rest of the visualisation), a crisp screen-space overlay " +
+                "immune to those effects, or both at once.");
         growthMode.withDescription("Direction each tick grows from the resting ring as its magnitude rises: " +
                 "OUTWARD (away from centre), INWARD (toward centre), or BOTH (away from the ring in both directions).");
         repeats.withDescription("Number of times the full set of bins is tiled around the circle. Odd-numbered " +
@@ -65,25 +77,48 @@ public class RadialClockModel extends ParamNode {
         outerHeight.withDescription("Maximum outward extension at full magnitude (used by OUTWARD and BOTH).");
         innerDepth.withDescription("Maximum inward contraction at full magnitude (used by INWARD and BOTH).");
         innerColor.withDescription("Palette index (as a fraction of the palette size) at the deepest possible " +
-                "inward extent. This is a palette-indexed render buffer, so only the index (red channel) matters " +
-                "-- not a full RGB colour.");
-        baseColor.withDescription("Palette index (as a fraction of the palette size) at the resting ring radius.");
-        outerColor.withDescription("Palette index (as a fraction of the palette size) at the furthest possible outward extent.");
+                "inward extent, used when Mode is BUFFER or BOTH.");
+        innerColor.withVisibleWhen("mode", RenderMode.BUFFER.name(), RenderMode.BOTH.name());
+        innerColorRgb.withDescription("RGB colour at the deepest possible inward extent, used when Mode is OVERLAY or BOTH.");
+        innerColorRgb.withColorControl().withVisibleWhen("mode", RenderMode.OVERLAY.name(), RenderMode.BOTH.name());
+        baseColor.withDescription("Palette index (as a fraction of the palette size) at the resting ring radius, used when Mode is BUFFER or BOTH.");
+        baseColor.withVisibleWhen("mode", RenderMode.BUFFER.name(), RenderMode.BOTH.name());
+        baseColorRgb.withDescription("RGB colour at the resting ring radius, used when Mode is OVERLAY or BOTH.");
+        baseColorRgb.withColorControl().withVisibleWhen("mode", RenderMode.OVERLAY.name(), RenderMode.BOTH.name());
+        outerColor.withDescription("Palette index (as a fraction of the palette size) at the furthest possible outward extent, used when Mode is BUFFER or BOTH.");
+        outerColor.withVisibleWhen("mode", RenderMode.BUFFER.name(), RenderMode.BOTH.name());
+        outerColorRgb.withDescription("RGB colour at the furthest possible outward extent, used when Mode is OVERLAY or BOTH.");
+        outerColorRgb.withColorControl().withVisibleWhen("mode", RenderMode.OVERLAY.name(), RenderMode.BOTH.name());
         transform.withDescription("Position, scale, rotation and shear applied to the radial clock.");
     }
 
-    /** RGBA colour for the inner-extent gradient stop -- red channel only. */
+    /** Indexed (BUFFER) RGBA colour for the inner-extent gradient stop -- red channel only. */
     public Vector4f innerColorVec() {
         return new Vector4f((float) innerColor.value, 0f, 0f, 1f);
     }
 
-    /** RGBA colour for the resting-ring gradient stop -- red channel only. */
+    /** Indexed (BUFFER) RGBA colour for the resting-ring gradient stop -- red channel only. */
     public Vector4f baseColorVec() {
         return new Vector4f((float) baseColor.value, 0f, 0f, 1f);
     }
 
-    /** RGBA colour for the outer-extent gradient stop -- red channel only. */
+    /** Indexed (BUFFER) RGBA colour for the outer-extent gradient stop -- red channel only. */
     public Vector4f outerColorVec() {
         return new Vector4f((float) outerColor.value, 0f, 0f, 1f);
+    }
+
+    /** Overlay (OVERLAY) RGBA colour for the inner-extent gradient stop. */
+    public Vector4f innerColorVecRgb() {
+        return innerColorRgb.toVector4f(1f);
+    }
+
+    /** Overlay (OVERLAY) RGBA colour for the resting-ring gradient stop. */
+    public Vector4f baseColorVecRgb() {
+        return baseColorRgb.toVector4f(1f);
+    }
+
+    /** Overlay (OVERLAY) RGBA colour for the outer-extent gradient stop. */
+    public Vector4f outerColorVecRgb() {
+        return outerColorRgb.toVector4f(1f);
     }
 }

@@ -138,3 +138,31 @@ export function resolvePositionOf(
   const liveValue = sseState.get(childPath)?.value;
   return liveValue ?? child.value;
 }
+
+/**
+ * Resolves a {@code visible-when}/{@code visible-when-values} uiHint pair (see UiHint.java) on
+ * {@code node}: {@code true} if {@code node} carries no such hint (nothing gates it), or if the
+ * sibling ENUM leaf named by {@code visible-when} (found by node name, not full path, among
+ * {@code siblings}) currently holds one of the option labels listed in {@code
+ * visible-when-values} -- read from the sibling's live SSE value when one has arrived, falling
+ * back to its last-fetched value otherwise, so visibility reacts immediately as the sibling
+ * changes (e.g. a wave's colour controls switching between an index slider and an RGB swatch as
+ * its render Mode changes).
+ */
+export function isVisibleWhen(
+  node: ParamNode,
+  siblings: ParamNode[],
+  parentPath: string,
+  sseState: Map<string, ParamState>,
+): boolean {
+  const siblingName = node.uiHints?.['visible-when'];
+  if (!siblingName) return true;
+  const values = node.uiHints?.['visible-when-values']?.split(',') ?? [];
+  const sibling = siblings.find((s) => s.name === siblingName);
+  if (!sibling || sibling.type !== 'ENUM') return true;
+  const siblingPath = parentPath ? `${parentPath}/${sibling.name}` : sibling.name;
+  const liveValue = sseState.get(siblingPath)?.value;
+  const index = Math.round(liveValue ?? sibling.value);
+  const label = sibling.options?.[index]?.label;
+  return label !== undefined && values.includes(label);
+}

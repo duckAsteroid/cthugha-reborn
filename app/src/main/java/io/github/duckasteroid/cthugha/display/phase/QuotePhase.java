@@ -13,10 +13,12 @@ import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.TextureBakeRenderer;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.RenderMode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.transform.TransformParams;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 import io.github.duckasteroid.cthugha.quote.Constants;
 import io.github.duckasteroid.cthugha.quote.Quote;
 import org.joml.Matrix4f;
@@ -27,6 +29,7 @@ import java.awt.Font;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.time.Duration;
+import java.util.Arrays;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL30.GL_FRAMEBUFFER;
@@ -45,10 +48,10 @@ public class QuotePhase implements RenderPhase {
 
     private static final Config CFG = Config.singleton();
 
-    public enum Mode { OVERLAY, BUFFER, BOTH }
-
     private final JCthugha cthugha;
-    private Mode mode = Mode.OVERLAY;
+
+    /** How the quote is rendered — screen overlay, baked into the indexed buffer, or both. */
+    public final EnumParameter<RenderMode> mode = new EnumParameter<>("Mode", Arrays.asList(RenderMode.values()));
 
     // Shared rigid transform applied to both the quote and its attribution, pivoting around the
     // quote's own computed anchor position (see updateLayout()/applyTransform()). Animatable via
@@ -129,7 +132,7 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void indexedRender(RenderContext ctx) {
-        if (mode == Mode.OVERLAY) return;
+        if (mode.getEnumeration() == RenderMode.OVERLAY) return;
         Quote quote = cthugha.getCurrentQuote();
         if (quote == null) return;
 
@@ -162,7 +165,7 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void screenRender(RenderContext ctx) {
-        if (mode == Mode.BUFFER) return;
+        if (mode.getEnumeration() == RenderMode.BUFFER) return;
         Quote quote = cthugha.getCurrentQuote();
         syncQuoteText(quote, ctx);
         if (quote == null) return;
@@ -177,13 +180,23 @@ public class QuotePhase implements RenderPhase {
 
     @Override
     public void registerActions(ParamNode generalGroup, RenderActionQueue renderActions) {
+        // Kept, but hidden from the remote UI, purely so the "B" key binding in cthugha.ini
+        // (Quotes/Toggle Quote Mode) keeps working — the SPA drives the mode via the "Mode"
+        // dropdown below instead.
         AbstractAction toggleMode = new AbstractAction("Toggle Quote Mode", ctx -> {
-            Mode[] values = Mode.values();
-            mode = values[(mode.ordinal() + 1) % values.length];
-            cthugha.notify("quote: " + (mode == Mode.BUFFER ? "in buffer" : mode.name().toLowerCase()));
+            RenderMode[] values = RenderMode.values();
+            RenderMode next = values[(mode.getEnumeration().ordinal() + 1) % values.length];
+            mode.setEnumeration(next);
+            cthugha.notify("quote: " + (next == RenderMode.BUFFER ? "in buffer" : next.name().toLowerCase()));
         });
         toggleMode.withUiHint(UiHint.ICON, "message-square");
+        toggleMode.withNoRemote();
         generalGroup.addChild(toggleMode);
+
+        mode.withDescription("How the quote is rendered: as a screen overlay, baked into the "
+                + "indexed render buffer (so blur/effects distort it), or both at once.");
+        mode.withUiHint(UiHint.ICON, "message-square");
+        generalGroup.addChild(mode);
 
         transform.withDescription("Spin, scale, or skew the quote and its attribution together as "
                 + "a single rigid unit, pivoting around the quote's own auto-computed position.");

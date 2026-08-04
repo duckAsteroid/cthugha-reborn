@@ -140,6 +140,18 @@ public abstract class ParamNode implements Node {
   }
 
   /**
+   * Ties this node's visibility in the remote UI to a sibling {@code ENUM} leaf: only rendered
+   * when the sibling named {@code siblingName} (resolved by node name, not full path, among
+   * this node's siblings) currently holds one of {@code values} (matched against that sibling's
+   * option labels). Returns {@code this} for fluent construction. See {@link UiHint#VISIBLE_WHEN}.
+   */
+  public ParamNode withVisibleWhen(String siblingName, String... values) {
+    uiHints.put(UiHint.VISIBLE_WHEN, siblingName);
+    uiHints.put(UiHint.VISIBLE_WHEN_VALUES, String.join(",", values));
+    return this;
+  }
+
+  /**
    * Marks this node as not accessible via the remote HTTP API and returns {@code this}
    * for fluent construction.  The remote server will return 403 for any request targeting
    * this node, and the serializer will omit it from the param tree entirely.

@@ -16,6 +16,7 @@ import io.github.duckasteroid.cthugha.display.wave.RadialSpectrumModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialWaveModel;
 import io.github.duckasteroid.cthugha.display.wave.SpectrumModel;
 import io.github.duckasteroid.cthugha.params.ParamNode;
+import io.github.duckasteroid.cthugha.params.RenderMode;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
@@ -27,23 +28,43 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.lwjgl.opengl.GL11.GL_BLEND;
+import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
+import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
+import static org.lwjgl.opengl.GL11.glBlendFunc;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+
 /**
  * Renders every wave instance in {@code cthugha.waveSystem} (see
- * {@link io.github.duckasteroid.cthugha.display.wave.WaveSystem}) directly into the R16 indexed
- * buffer, in list order -- later entries composite on top of earlier ones.
+ * {@link io.github.duckasteroid.cthugha.display.wave.WaveSystem}), in list order -- later
+ * entries composite on top of earlier ones -- into whichever of two targets its own
+ * {@code mode} ({@link RenderMode}) selects:
+ * <ul>
+ *   <li>{@link RenderMode#BUFFER} (default): baked into the R16 palette-indexed render buffer
+ *       during {@link #indexedRender}, coloured by a palette index (0-1, stored in the red
+ *       channel only -- green/blue are 0 so no colour information leaks into the palette
+ *       lookup) -- subject to blur/translate like the rest of the visualisation.</li>
+ *   <li>{@link RenderMode#OVERLAY}: drawn directly onto the window's RGBA framebuffer during
+ *       {@link #screenRender}, coloured by a real RGB colour ({@code ColorParam}) -- crisp,
+ *       immune to blur/translate.</li>
+ *   <li>{@link RenderMode#BOTH}: both of the above, once each per frame.</li>
+ * </ul>
  *
- * All wave renderers use {@code waveIdx = 1.0f} (the maximum normalised R16 value), which
- * PaletteRenderer resolves to the last palette entry via
- * {@code pixelIndex = sampledValue * totalEntries}. Only the red channel is non-zero; green
- * and blue are 0 so no colour information leaks into the palette lookup.
- *
- * The spectrum/radial-spectrum bar, fill and peak colours are user-tunable via
- * {@link SpectrumModel} / {@link RadialSpectrumModel}, but render-core's {@code SpectrumAnalyser}
- * / {@code RadialSpectrumAnalyser} only accept colours at construction time ({@code withBarColors}
- * / {@code withColors} / {@code withPeakColor} must be called before {@code init()} -- there is no
- * runtime colour setter). To keep those params live-editable from the remote UI, each spectrum
- * entry disposes and rebuilds its analyser on the render thread whenever a colour or show/hide
- * param changes, instead of only applying them once at startup.
+ * The spectrum/radial-spectrum/radial-clock bar, fill and peak colours are user-tunable via
+ * {@link SpectrumModel} / {@link RadialSpectrumModel} / {@code RadialClockModel} (one index
+ * param + one {@code ColorParam} per gradient stop), but render-core's {@code SpectrumAnalyser}
+ * / {@code RadialSpectrumAnalyser} / {@code RadialClockAnalyser} only accept colours at
+ * construction time ({@code withBarColors} / {@code withColors} / {@code withPeakColor} must be
+ * called before {@code init()} -- there is no runtime colour setter), and BUFFER's index colours
+ * vs. OVERLAY's RGB colours are simply different values, not something a single instance can be
+ * reconfigured to emit per-draw. So each of those three entry types keeps two independently
+ * live analyser instances -- one built with the index (BUFFER) colours, one with the RGB
+ * (OVERLAY) colours -- both registered as sinks on the shared {@code FrequencyProcessor} (so
+ * both see identical spectrum data), each disposed and rebuilt on the render thread only when
+ * its own colour/show-hide params change. This also means each analyser's {@code doRender} (and
+ * the peak-hold ballistics it advances as a side effect) is called at most once per real frame,
+ * regardless of {@code mode} -- no double-speed peak decay in {@link RenderMode#BOTH}.
  *
  * <p>The set of live GL renderer objects is kept in sync with {@code cthugha.waveSystem}'s
  * instance list by reconciling against it once per frame in {@link #indexedRender} (see
@@ -60,7 +81,6 @@ public class WavePhase implements RenderPhase {
     private final JCthugha cthugha;
     private AudioPipeline audioPipeline;
     private RenderContext initCtx;
-    private Vector4f waveColour;
 
     /** Live GL renderer entries, keyed by model instance, kept in {@code waveSystem} list order. */
     private final Map<ParamNode, WaveEntry> entries = new LinkedHashMap<>();
@@ -72,9 +92,6 @@ public class WavePhase implements RenderPhase {
     @Override
     public void init(RenderContext ctx) throws IOException {
         this.initCtx = ctx;
-        // pos = index / paletteSize so PaletteRenderer resolves pixelIndex = pos * totalEntries = index
-        float waveIdx = 1.0f; //200f / cthugha.paletteMap.size();
-        waveColour = new Vector4f(waveIdx, 0f, 0f, 1f);
 
         audioPipeline = new AudioPipeline();
         audioPipeline.init(ctx);
@@ -127,8 +144,25 @@ public class WavePhase implements RenderPhase {
         resyncWaves();
 
         for (WaveEntry entry : entries.values()) {
-            entry.render(ctx);
+            if (entry.mode() != RenderMode.OVERLAY) entry.render(ctx, false);
         }
+    }
+
+    /**
+     * Screen-space pass for waves in {@link RenderMode#OVERLAY}/{@link RenderMode#BOTH}: the
+     * same GL draw calls as the indexed pass, but issued while the window's RGBA framebuffer is
+     * bound instead of the palette-indexed render texture and coloured by each entry's RGB
+     * {@code ColorParam} instead of its palette index, so the result is a crisp overlay immune
+     * to blur/translate.
+     */
+    @Override
+    public void screenRender(RenderContext ctx) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        for (WaveEntry entry : entries.values()) {
+            if (entry.mode() != RenderMode.BUFFER) entry.render(ctx, true);
+        }
+        glDisable(GL_BLEND);
     }
 
     @Override
@@ -173,8 +207,17 @@ public class WavePhase implements RenderPhase {
 
     /** One live GL renderer backing a single wave model instance. */
     private interface WaveEntry {
-        /** Called every frame, whether or not the instance is currently enabled. */
-        void render(RenderContext ctx);
+        /**
+         * Called every frame, whether or not the instance is currently enabled. {@code
+         * overlayPass} is {@code false} from {@link #indexedRender} (draw into the palette-indexed
+         * buffer, coloured by index) and {@code true} from {@link #screenRender} (draw onto the
+         * screen framebuffer, coloured by RGB) -- see {@link #mode()} for which pass(es) an entry
+         * is actually called from.
+         */
+        void render(RenderContext ctx, boolean overlayPass);
+
+        /** The instance's current render mode -- governs which pass(es) {@link #render} is called from. */
+        RenderMode mode();
 
         /** GL thread only: releases this entry's GL resources. */
         void dispose();
@@ -187,13 +230,17 @@ public class WavePhase implements RenderPhase {
         OscilloscopeEntry(OscilloscopeModel model) throws IOException {
             this.model = model;
             wave = new AudioWave(audioPipeline.getPboSink());
-            wave.setLineColour(waveColour);
             wave.setClearBeforeRender(false);
             wave.init(initCtx);
         }
 
         @Override
-        public void render(RenderContext ctx) {
+        public RenderMode mode() {
+            return model.mode.getEnumeration();
+        }
+
+        @Override
+        public void render(RenderContext ctx, boolean overlayPass) {
             if (!model.enabled.value) return;
             float amp = (float) model.amplitude.value;
             wave.setLineWidth((float) model.lineWidth.value);
@@ -201,6 +248,9 @@ public class WavePhase implements RenderPhase {
             wave.setAmplitudeFunction(
                     model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
             wave.setTransform(model.transform.applyTo(new Matrix4f()));
+            wave.setLineColour(overlayPass
+                    ? model.color.toVector4f(1f)
+                    : new Vector4f((float) model.index.value, 0f, 0f, 1f));
             wave.doRender(ctx);
         }
 
@@ -217,13 +267,17 @@ public class WavePhase implements RenderPhase {
         RadialWaveEntry(RadialWaveModel model) throws IOException {
             this.model = model;
             wave = new RadialWave(audioPipeline.getPboSink());
-            wave.setLineColour(waveColour);
             wave.setClearBeforeRender(false);
             wave.init(initCtx);
         }
 
         @Override
-        public void render(RenderContext ctx) {
+        public RenderMode mode() {
+            return model.mode.getEnumeration();
+        }
+
+        @Override
+        public void render(RenderContext ctx, boolean overlayPass) {
             if (!model.enabled.value) return;
             float amp = (float) model.amplitude.value;
             wave.setLineWidth((float) model.lineWidth.value);
@@ -231,6 +285,9 @@ public class WavePhase implements RenderPhase {
             wave.setAmplitudeFunction(
                     model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
             wave.setTransform(model.transform.applyTo(new Matrix4f()));
+            wave.setLineColour(overlayPass
+                    ? model.color.toVector4f(1f)
+                    : new Vector4f((float) model.index.value, 0f, 0f, 1f));
             wave.doRender(ctx);
         }
 
@@ -242,23 +299,36 @@ public class WavePhase implements RenderPhase {
 
     private final class SpectrumEntry implements WaveEntry {
         private final SpectrumModel model;
-        private SpectrumAnalyser analyser;
-        private volatile boolean colourDirty = false;
+        private SpectrumAnalyser bufferAnalyser;
+        private SpectrumAnalyser overlayAnalyser;
+        private volatile boolean bufferColourDirty = false;
+        private volatile boolean overlayColourDirty = false;
 
         SpectrumEntry(SpectrumModel model) throws IOException {
             this.model = model;
-            analyser = build();
-            audioPipeline.getFreqProc().addSink(analyser);
-            analyser.init(initCtx);
-            Runnable mark = () -> colourDirty = true;
-            model.barColorLow.addChangeListener(mark);
-            model.barColorHigh.addChangeListener(mark);
-            model.peakColor.addChangeListener(mark);
-            model.showBars.addChangeListener(mark);
-            model.showPeakTicks.addChangeListener(mark);
+            bufferAnalyser = buildBuffer();
+            overlayAnalyser = buildOverlay();
+            audioPipeline.getFreqProc().addSink(bufferAnalyser);
+            audioPipeline.getFreqProc().addSink(overlayAnalyser);
+            bufferAnalyser.init(initCtx);
+            overlayAnalyser.init(initCtx);
+
+            Runnable markBuffer = () -> bufferColourDirty = true;
+            model.barColorLow.addChangeListener(markBuffer);
+            model.barColorHigh.addChangeListener(markBuffer);
+            model.peakColor.addChangeListener(markBuffer);
+
+            Runnable markOverlay = () -> overlayColourDirty = true;
+            model.barColorLowRgb.addChangeListener(markOverlay);
+            model.barColorHighRgb.addChangeListener(markOverlay);
+            model.peakColorRgb.addChangeListener(markOverlay);
+
+            Runnable markBoth = () -> { bufferColourDirty = true; overlayColourDirty = true; };
+            model.showBars.addChangeListener(markBoth);
+            model.showPeakTicks.addChangeListener(markBoth);
         }
 
-        private SpectrumAnalyser build() {
+        private SpectrumAnalyser buildBuffer() {
             SpectrumAnalyser sa = new SpectrumAnalyser(audioPipeline.getFreqProc())
                     .withBarColors(model.barColorLowVec(), model.barColorHighVec())
                     .withPeakColor(model.peakColorVec());
@@ -266,56 +336,105 @@ public class WavePhase implements RenderPhase {
             return sa;
         }
 
-        /** GL thread only: disposes and rebuilds the analyser with current colour params. */
-        private void reinit(RenderContext ctx) {
-            colourDirty = false;
-            audioPipeline.getFreqProc().removeSink(analyser);
-            analyser.dispose();
-            analyser = build();
-            audioPipeline.getFreqProc().addSink(analyser);
+        private SpectrumAnalyser buildOverlay() {
+            SpectrumAnalyser sa = new SpectrumAnalyser(audioPipeline.getFreqProc())
+                    .withBarColors(model.barColorLowVecRgb(), model.barColorHighVecRgb())
+                    .withPeakColor(model.peakColorVecRgb());
+            sa.setClearBeforeRender(false);
+            return sa;
+        }
+
+        /** GL thread only: disposes and rebuilds the buffer-target analyser with current index colour params. */
+        private void reinitBuffer(RenderContext ctx) {
+            bufferColourDirty = false;
+            audioPipeline.getFreqProc().removeSink(bufferAnalyser);
+            bufferAnalyser.dispose();
+            bufferAnalyser = buildBuffer();
+            audioPipeline.getFreqProc().addSink(bufferAnalyser);
             try {
-                analyser.init(ctx);
+                bufferAnalyser.init(ctx);
             } catch (IOException e) {
-                LOG.error("Failed to reinitialise spectrum analyser after a colour change", e);
+                LOG.error("Failed to reinitialise spectrum analyser after an index colour change", e);
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        /** GL thread only: disposes and rebuilds the overlay-target analyser with current RGB colour params. */
+        private void reinitOverlay(RenderContext ctx) {
+            overlayColourDirty = false;
+            audioPipeline.getFreqProc().removeSink(overlayAnalyser);
+            overlayAnalyser.dispose();
+            overlayAnalyser = buildOverlay();
+            audioPipeline.getFreqProc().addSink(overlayAnalyser);
+            try {
+                overlayAnalyser.init(ctx);
+            } catch (IOException e) {
+                LOG.error("Failed to reinitialise spectrum analyser after an RGB colour change", e);
                 throw new UncheckedIOException(e);
             }
         }
 
         @Override
-        public void render(RenderContext ctx) {
-            if (colourDirty) reinit(ctx);
+        public RenderMode mode() {
+            return model.mode.getEnumeration();
+        }
+
+        @Override
+        public void render(RenderContext ctx, boolean overlayPass) {
+            if (overlayPass) {
+                if (overlayColourDirty) reinitOverlay(ctx);
+            } else {
+                if (bufferColourDirty) reinitBuffer(ctx);
+            }
             if (!model.enabled.value) return;
-            analyser.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration())));
-            analyser.doRender(ctx);
+            SpectrumAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
+            active.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration())));
+            active.doRender(ctx);
         }
 
         @Override
         public void dispose() {
-            audioPipeline.getFreqProc().removeSink(analyser);
-            analyser.dispose();
+            audioPipeline.getFreqProc().removeSink(bufferAnalyser);
+            bufferAnalyser.dispose();
+            audioPipeline.getFreqProc().removeSink(overlayAnalyser);
+            overlayAnalyser.dispose();
         }
     }
 
     private final class RadialSpectrumEntry implements WaveEntry {
         private final RadialSpectrumModel model;
-        private RadialSpectrumAnalyser analyser;
-        private volatile boolean colourDirty = false;
+        private RadialSpectrumAnalyser bufferAnalyser;
+        private RadialSpectrumAnalyser overlayAnalyser;
+        private volatile boolean bufferColourDirty = false;
+        private volatile boolean overlayColourDirty = false;
 
         RadialSpectrumEntry(RadialSpectrumModel model) throws IOException {
             this.model = model;
-            analyser = build();
-            audioPipeline.getFreqProc().addSink(analyser);
-            analyser.init(initCtx);
-            Runnable mark = () -> colourDirty = true;
-            model.innerColor.addChangeListener(mark);
-            model.baseColor.addChangeListener(mark);
-            model.outerColor.addChangeListener(mark);
-            model.peakColor.addChangeListener(mark);
-            model.showBars.addChangeListener(mark);
-            model.showPeakTicks.addChangeListener(mark);
+            bufferAnalyser = buildBuffer();
+            overlayAnalyser = buildOverlay();
+            audioPipeline.getFreqProc().addSink(bufferAnalyser);
+            audioPipeline.getFreqProc().addSink(overlayAnalyser);
+            bufferAnalyser.init(initCtx);
+            overlayAnalyser.init(initCtx);
+
+            Runnable markBuffer = () -> bufferColourDirty = true;
+            model.innerColor.addChangeListener(markBuffer);
+            model.baseColor.addChangeListener(markBuffer);
+            model.outerColor.addChangeListener(markBuffer);
+            model.peakColor.addChangeListener(markBuffer);
+
+            Runnable markOverlay = () -> overlayColourDirty = true;
+            model.innerColorRgb.addChangeListener(markOverlay);
+            model.baseColorRgb.addChangeListener(markOverlay);
+            model.outerColorRgb.addChangeListener(markOverlay);
+            model.peakColorRgb.addChangeListener(markOverlay);
+
+            Runnable markBoth = () -> { bufferColourDirty = true; overlayColourDirty = true; };
+            model.showBars.addChangeListener(markBoth);
+            model.showPeakTicks.addChangeListener(markBoth);
         }
 
-        private RadialSpectrumAnalyser build() {
+        private RadialSpectrumAnalyser buildBuffer() {
             RadialSpectrumAnalyser rsa = new RadialSpectrumAnalyser(audioPipeline.getFreqProc())
                     .withColors(model.innerColorVec(), model.baseColorVec(), model.outerColorVec())
                     .withPeakColor(model.peakColorVec());
@@ -323,57 +442,107 @@ public class WavePhase implements RenderPhase {
             return rsa;
         }
 
-        /** GL thread only: disposes and rebuilds the analyser with current colour params. */
-        private void reinit(RenderContext ctx) {
-            colourDirty = false;
-            audioPipeline.getFreqProc().removeSink(analyser);
-            analyser.dispose();
-            analyser = build();
-            audioPipeline.getFreqProc().addSink(analyser);
+        private RadialSpectrumAnalyser buildOverlay() {
+            RadialSpectrumAnalyser rsa = new RadialSpectrumAnalyser(audioPipeline.getFreqProc())
+                    .withColors(model.innerColorVecRgb(), model.baseColorVecRgb(), model.outerColorVecRgb())
+                    .withPeakColor(model.peakColorVecRgb());
+            rsa.setClearBeforeRender(false);
+            return rsa;
+        }
+
+        /** GL thread only: disposes and rebuilds the buffer-target analyser with current index colour params. */
+        private void reinitBuffer(RenderContext ctx) {
+            bufferColourDirty = false;
+            audioPipeline.getFreqProc().removeSink(bufferAnalyser);
+            bufferAnalyser.dispose();
+            bufferAnalyser = buildBuffer();
+            audioPipeline.getFreqProc().addSink(bufferAnalyser);
             try {
-                analyser.init(ctx);
+                bufferAnalyser.init(ctx);
             } catch (IOException e) {
-                LOG.error("Failed to reinitialise radial spectrum analyser after a colour change", e);
+                LOG.error("Failed to reinitialise radial spectrum analyser after an index colour change", e);
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        /** GL thread only: disposes and rebuilds the overlay-target analyser with current RGB colour params. */
+        private void reinitOverlay(RenderContext ctx) {
+            overlayColourDirty = false;
+            audioPipeline.getFreqProc().removeSink(overlayAnalyser);
+            overlayAnalyser.dispose();
+            overlayAnalyser = buildOverlay();
+            audioPipeline.getFreqProc().addSink(overlayAnalyser);
+            try {
+                overlayAnalyser.init(ctx);
+            } catch (IOException e) {
+                LOG.error("Failed to reinitialise radial spectrum analyser after an RGB colour change", e);
                 throw new UncheckedIOException(e);
             }
         }
 
         @Override
-        public void render(RenderContext ctx) {
-            if (colourDirty) reinit(ctx);
+        public RenderMode mode() {
+            return model.mode.getEnumeration();
+        }
+
+        @Override
+        public void render(RenderContext ctx, boolean overlayPass) {
+            if (overlayPass) {
+                if (overlayColourDirty) reinitOverlay(ctx);
+            } else {
+                if (bufferColourDirty) reinitBuffer(ctx);
+            }
             if (!model.enabled.value) return;
-            analyser.withRepeats(model.repeats.value);
-            analyser.setTransform(model.transform.applyTo(new Matrix4f()));
-            analyser.doRender(ctx);
+            RadialSpectrumAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
+            active.withRepeats(model.repeats.value);
+            active.setTransform(model.transform.applyTo(new Matrix4f()));
+            active.doRender(ctx);
         }
 
         @Override
         public void dispose() {
-            audioPipeline.getFreqProc().removeSink(analyser);
-            analyser.dispose();
+            audioPipeline.getFreqProc().removeSink(bufferAnalyser);
+            bufferAnalyser.dispose();
+            audioPipeline.getFreqProc().removeSink(overlayAnalyser);
+            overlayAnalyser.dispose();
         }
     }
 
     private final class RadialClockEntry implements WaveEntry {
         private final RadialClockModel model;
-        private RadialClockAnalyser analyser;
-        private volatile boolean dirty = false;
+        private RadialClockAnalyser bufferAnalyser;
+        private RadialClockAnalyser overlayAnalyser;
+        private volatile boolean bufferDirty = false;
+        private volatile boolean overlayDirty = false;
 
         RadialClockEntry(RadialClockModel model) throws IOException {
             this.model = model;
-            analyser = build();
-            audioPipeline.getFreqProc().addSink(analyser);
-            analyser.init(initCtx);
-            Runnable mark = () -> dirty = true;
-            model.innerColor.addChangeListener(mark);
-            model.baseColor.addChangeListener(mark);
-            model.outerColor.addChangeListener(mark);
-            model.baseRadius.addChangeListener(mark);
-            model.outerHeight.addChangeListener(mark);
-            model.innerDepth.addChangeListener(mark);
+            bufferAnalyser = buildBuffer();
+            overlayAnalyser = buildOverlay();
+            audioPipeline.getFreqProc().addSink(bufferAnalyser);
+            audioPipeline.getFreqProc().addSink(overlayAnalyser);
+            bufferAnalyser.init(initCtx);
+            overlayAnalyser.init(initCtx);
+
+            Runnable markBuffer = () -> bufferDirty = true;
+            model.innerColor.addChangeListener(markBuffer);
+            model.baseColor.addChangeListener(markBuffer);
+            model.outerColor.addChangeListener(markBuffer);
+
+            Runnable markOverlay = () -> overlayDirty = true;
+            model.innerColorRgb.addChangeListener(markOverlay);
+            model.baseColorRgb.addChangeListener(markOverlay);
+            model.outerColorRgb.addChangeListener(markOverlay);
+
+            // Geometry is baked into both analysers' constructors alike (it isn't mode-dependent
+            // the way colour is), so a geometry change must rebuild both.
+            Runnable markBoth = () -> { bufferDirty = true; overlayDirty = true; };
+            model.baseRadius.addChangeListener(markBoth);
+            model.outerHeight.addChangeListener(markBoth);
+            model.innerDepth.addChangeListener(markBoth);
         }
 
-        private RadialClockAnalyser build() {
+        private RadialClockAnalyser buildBuffer() {
             RadialClockAnalyser rca = new RadialClockAnalyser(audioPipeline.getFreqProc(),
                     (float) model.baseRadius.value, (float) model.outerHeight.value, (float) model.innerDepth.value)
                     .withColors(model.innerColorVec(), model.baseColorVec(), model.outerColorVec());
@@ -381,36 +550,71 @@ public class WavePhase implements RenderPhase {
             return rca;
         }
 
-        /** GL thread only: disposes and rebuilds the analyser with current colour/geometry params. */
-        private void reinit(RenderContext ctx) {
-            dirty = false;
-            audioPipeline.getFreqProc().removeSink(analyser);
-            analyser.dispose();
-            analyser = build();
-            audioPipeline.getFreqProc().addSink(analyser);
+        private RadialClockAnalyser buildOverlay() {
+            RadialClockAnalyser rca = new RadialClockAnalyser(audioPipeline.getFreqProc(),
+                    (float) model.baseRadius.value, (float) model.outerHeight.value, (float) model.innerDepth.value)
+                    .withColors(model.innerColorVecRgb(), model.baseColorVecRgb(), model.outerColorVecRgb());
+            rca.setClearBeforeRender(false);
+            return rca;
+        }
+
+        /** GL thread only: disposes and rebuilds the buffer-target analyser with current index colour/geometry params. */
+        private void reinitBuffer(RenderContext ctx) {
+            bufferDirty = false;
+            audioPipeline.getFreqProc().removeSink(bufferAnalyser);
+            bufferAnalyser.dispose();
+            bufferAnalyser = buildBuffer();
+            audioPipeline.getFreqProc().addSink(bufferAnalyser);
             try {
-                analyser.init(ctx);
+                bufferAnalyser.init(ctx);
             } catch (IOException e) {
-                LOG.error("Failed to reinitialise radial clock analyser after a colour/geometry change", e);
+                LOG.error("Failed to reinitialise radial clock analyser after an index colour/geometry change", e);
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        /** GL thread only: disposes and rebuilds the overlay-target analyser with current RGB colour/geometry params. */
+        private void reinitOverlay(RenderContext ctx) {
+            overlayDirty = false;
+            audioPipeline.getFreqProc().removeSink(overlayAnalyser);
+            overlayAnalyser.dispose();
+            overlayAnalyser = buildOverlay();
+            audioPipeline.getFreqProc().addSink(overlayAnalyser);
+            try {
+                overlayAnalyser.init(ctx);
+            } catch (IOException e) {
+                LOG.error("Failed to reinitialise radial clock analyser after an RGB colour/geometry change", e);
                 throw new UncheckedIOException(e);
             }
         }
 
         @Override
-        public void render(RenderContext ctx) {
-            if (dirty) reinit(ctx);
+        public RenderMode mode() {
+            return model.mode.getEnumeration();
+        }
+
+        @Override
+        public void render(RenderContext ctx, boolean overlayPass) {
+            if (overlayPass) {
+                if (overlayDirty) reinitOverlay(ctx);
+            } else {
+                if (bufferDirty) reinitBuffer(ctx);
+            }
             if (!model.enabled.value) return;
-            analyser.withGrowthMode(model.growthMode.getEnumeration());
-            analyser.withRepeats(model.repeats.value);
-            analyser.withWidthFraction((float) model.widthFraction.value);
-            analyser.setTransform(model.transform.applyTo(new Matrix4f()));
-            analyser.doRender(ctx);
+            RadialClockAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
+            active.withGrowthMode(model.growthMode.getEnumeration());
+            active.withRepeats(model.repeats.value);
+            active.withWidthFraction((float) model.widthFraction.value);
+            active.setTransform(model.transform.applyTo(new Matrix4f()));
+            active.doRender(ctx);
         }
 
         @Override
         public void dispose() {
-            audioPipeline.getFreqProc().removeSink(analyser);
-            analyser.dispose();
+            audioPipeline.getFreqProc().removeSink(bufferAnalyser);
+            bufferAnalyser.dispose();
+            audioPipeline.getFreqProc().removeSink(overlayAnalyser);
+            overlayAnalyser.dispose();
         }
     }
 }
