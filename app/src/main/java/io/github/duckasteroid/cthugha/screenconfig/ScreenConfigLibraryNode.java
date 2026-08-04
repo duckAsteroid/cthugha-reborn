@@ -44,6 +44,8 @@ public class ScreenConfigLibraryNode extends ParamNode {
      */
     private volatile String pendingOverwriteName;
 
+    private volatile Runnable onTreeChanged = () -> {};
+
     public ScreenConfigLibraryNode(ScreenConfigStore store, Node treeRoot) {
         super("Configs");
         withUiHint(UiHint.ICON, "bookmark");
@@ -63,6 +65,11 @@ public class ScreenConfigLibraryNode extends ParamNode {
         refresh();
     }
 
+    /** Notified whenever the saved-config list changes, so the caller can broadcast a
+     * {@code treeChanged} SSE event and let remote clients re-fetch the param tree — mirrors
+     * {@code WaveSystem}/{@code BindingSystem}/{@code GeneratorRegistry}'s {@code setOnTreeChanged}. */
+    public void setOnTreeChanged(Runnable r) { this.onTreeChanged = r != null ? r : () -> {}; }
+
     /** Rebuilds the list of saved-config children from disk. Call after any save or delete. */
     public void refresh() {
         List<Node> current = getChildren().collect(Collectors.toList());
@@ -72,6 +79,7 @@ public class ScreenConfigLibraryNode extends ParamNode {
         }
         addChild(saveName);
         addChild(saveAction);
+        onTreeChanged.run();
     }
 
     private AbstractAction buildSaveAction() {

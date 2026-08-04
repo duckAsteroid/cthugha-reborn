@@ -356,6 +356,8 @@ public class CthughaWindow extends GLWindow {
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
             cthugha.waveSystem.setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
+            treeBuilder.getConfigsGroup().setOnTreeChanged(
+                    () -> broadcaster.broadcastAll("treeChanged", "{}"));
 
             ContainerNode remoteNode = new ContainerNode("Remote");
             remoteNode.withUiHint(UiHint.ICON, "wifi");

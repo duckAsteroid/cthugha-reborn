@@ -60,6 +60,7 @@ public class ActionTreeBuilder {
     private final boolean screenCaptureToolbarEnabled;
 
     private ContainerNode generalGroup;
+    private ScreenConfigLibraryNode configsGroup;
 
     public ActionTreeBuilder(JCthugha cthugha,
                              PaletteActionContext actionContext,
@@ -157,7 +158,7 @@ public class ActionTreeBuilder {
         renderGroup.addChild(blurNode);
 
         // ---- Configs tab: named whole-tree snapshots ("screen configs") ----
-        ScreenConfigLibraryNode configsGroup = new ScreenConfigLibraryNode(cthugha.screenConfigStore, cthugha);
+        configsGroup = new ScreenConfigLibraryNode(cthugha.screenConfigStore, cthugha);
 
         // ---- Audio tab: named beat-detector tuning presets ----
         cthugha.audioSource.beatDetectorSettings.addChild(
@@ -265,6 +266,11 @@ public class ActionTreeBuilder {
     /** The General group node; available after {@link #build()} for adding the Remote sub-node. */
     public ContainerNode getGeneralGroup() {
         return generalGroup;
+    }
+
+    /** The Configs group node; available after {@link #build()} for wiring {@code setOnTreeChanged}. */
+    public ScreenConfigLibraryNode getConfigsGroup() {
+        return configsGroup;
     }
 
     private static AbstractAction action(String name, String icon, Consumer<ActionContext> body) {
