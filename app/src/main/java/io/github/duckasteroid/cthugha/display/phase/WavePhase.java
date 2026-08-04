@@ -605,6 +605,7 @@ public class WavePhase implements RenderPhase {
             active.withGrowthMode(model.growthMode.getEnumeration());
             active.withRepeats(model.repeats.value);
             active.withWidthFraction((float) model.widthFraction.value);
+            active.withBinRange(model.binStart.value, model.binEnd.value, model.binSkip.value);
             active.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }

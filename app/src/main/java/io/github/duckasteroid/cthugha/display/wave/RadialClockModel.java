@@ -19,6 +19,12 @@ public class RadialClockModel extends ParamNode {
     public EnumParameter<RadialClockAnalyser.GrowthMode> growthMode =
             new EnumParameter<>("growthMode", Arrays.asList(RadialClockAnalyser.GrowthMode.values()));
     public IntegerParameter repeats = new IntegerParameter("repeats", 1, 8, 1);
+    /** First raw FFT bin sampled (inclusive). */
+    public IntegerParameter binStart = new IntegerParameter("binStart", 0, 511, 0);
+    /** Last raw FFT bin sampled (exclusive); clamped down to the true bin count if larger. */
+    public IntegerParameter binEnd = new IntegerParameter("binEnd", 1, 512, 512);
+    /** Stride between sampled raw FFT bins within {@code [binStart, binEnd)}. */
+    public IntegerParameter binSkip = new IntegerParameter("binSkip", 1, 16, 1);
     /** Fraction of the maximum non-overlapping capsule width to actually draw, leaving a gap between ticks. */
     public DoubleParameter widthFraction = new DoubleParameter("widthFraction", 0.05, 1.0, RadialClockAnalyser.DEFAULT_WIDTH_FRACTION);
     /** Base ring radius (dot position), in NDC units. */
@@ -71,6 +77,13 @@ public class RadialClockModel extends ParamNode {
                 "OUTWARD (away from centre), INWARD (toward centre), or BOTH (away from the ring in both directions).");
         repeats.withDescription("Number of times the full set of bins is tiled around the circle. Odd-numbered " +
                 "tiles mirror their bin order so bass and treble meet at every seam, giving rotational symmetry.");
+        binStart.withDescription("First FFT bin sampled (inclusive) -- raise to drop the lowest-frequency ticks. " +
+                "Clamped to the actual bin count if set too high.");
+        binEnd.withDescription("Last FFT bin sampled (exclusive) -- lower to drop the highest-frequency ticks. " +
+                "Clamped to the actual bin count if set too high, so the default (512) always keeps the full range.");
+        binSkip.withDescription("Stride between sampled bins within [binStart, binEnd) -- 1 samples every bin, " +
+                "2 samples every other bin, and so on, thinning out the tick count without narrowing the " +
+                "frequency range covered.");
         widthFraction.withDescription("Fraction of the maximum non-overlapping tick width to actually draw, " +
                 "leaving a gap between adjacent ticks. 1.0 means ticks just touch at their most extreme radius.");
         baseRadius.withDescription("Radius of the resting ring -- where each tick's dot sits at zero magnitude.");

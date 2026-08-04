@@ -45,6 +45,13 @@ import static org.lwjgl.opengl.GL30.*;
  * <p>A 3-stop gradient controlled by {@link #withColors}, keyed by absolute radius rather than
  * position along an individual capsule: {@code base} at the resting ring radius, {@code inner} at
  * the deepest possible inward extent, {@code outer} at the furthest possible outward extent.</p>
+ *
+ * <h2>Bin range</h2>
+ * <p>{@link #withBinRange} restricts which raw FFT bins are sampled to {@code [start, end)} with a
+ * given stride, so fewer ticks than the full bin count can be drawn (e.g. to drop the highest bins,
+ * or thin out a dense spectrum). Because bins are sampled discretely rather than interpolated, any
+ * subset and stride produces a clean result with no blending artefacts. Tick count, spacing and
+ * width all follow the resulting active bin count rather than the raw FFT bin count.</p>
  */
 public class RadialClockAnalyser extends FrequencyRenderer {
 
@@ -76,7 +83,9 @@ public class RadialClockAnalyser extends FrequencyRenderer {
     private static final String VERTEX_SHADER = """
             #version 330 core
             uniform sampler1D uFFTTex;
-            uniform int   uNumBins;
+            uniform int   uBinCount;     // number of active (post start/end/skip) bins per repeat tile
+            uniform int   uBinStart;
+            uniform int   uBinSkip;
             uniform int   uRepeats;
             uniform int   uGrowthMode;   // 0 = OUTWARD, 1 = INWARD, 2 = BOTH
             uniform float uBaseRadius;
@@ -94,16 +103,16 @@ public class RadialClockAnalyser extends FrequencyRenderer {
             const float PI = 3.14159265358979;
 
             void main() {
-                int totalSlots = uNumBins * uRepeats;
+                int totalSlots = uBinCount * uRepeats;
                 int slotIdx = gl_VertexID / 6;
                 int corner  = gl_VertexID % 6;
 
-                int segment  = slotIdx / uNumBins;
-                int localIdx = slotIdx % uNumBins;
+                int segment  = slotIdx / uBinCount;
+                int localIdx = slotIdx % uBinCount;
                 bool reversed = (segment % 2) == 1;
-                int binIdx = reversed ? (uNumBins - 1 - localIdx) : localIdx;
+                int binIdx = reversed ? (uBinCount - 1 - localIdx) : localIdx;
 
-                float magnitude = texelFetch(uFFTTex, binIdx, 0).r;
+                float magnitude = texelFetch(uFFTTex, uBinStart + binIdx * uBinSkip, 0).r;
 
                 float rNear;
                 float rFar;
@@ -206,12 +215,21 @@ public class RadialClockAnalyser extends FrequencyRenderer {
     private Uniform<Integer> uGrowthModeUniform;
     private Uniform<Float> uHalfWidthUniform;
     private Uniform<Matrix4f> uTransformUniform;
+    private Uniform<Integer> uBinCountUniform;
+    private Uniform<Integer> uBinStartUniform;
+    private Uniform<Integer> uBinSkipUniform;
 
     // ── Per-frame / runtime-mutable state ────────────────────────────────────────
     private volatile float currentAspect = 1.0f;
     private volatile int repeats = 1;
     private volatile GrowthMode growthMode = GrowthMode.OUTWARD;
     private volatile float widthFraction = DEFAULT_WIDTH_FRACTION;
+    /** Start index (inclusive) into the raw FFT bin array actually sampled. */
+    private volatile int binStart = 0;
+    /** End index (exclusive) into the raw FFT bin array actually sampled; defaults to {@code numBins}. */
+    private volatile int binEnd;
+    /** Stride between sampled raw FFT bins. */
+    private volatile int binSkip = 1;
 
     // ── Constructors ─────────────────────────────────────────────────────────────
 
@@ -229,6 +247,7 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         this.baseRadius = baseRadius;
         this.outerHeight = outerHeight;
         this.innerDepth = innerDepth;
+        this.binEnd = numBins;
     }
 
     /**
@@ -297,8 +316,49 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         return this;
     }
 
+    /**
+     * Restricts which raw FFT bins are sampled, so fewer -- or a different subset of -- ticks are
+     * drawn than the full bin count. May be called before or after {@link #init}; the new range
+     * takes effect on the next rendered frame. Values are clamped against the actual bin count each
+     * frame, so out-of-range inputs (e.g. {@code end} larger than the bin count) are safe.
+     *
+     * @param start start bin index, inclusive
+     * @param end   end bin index, exclusive
+     * @param skip  stride between sampled bins within {@code [start, end)}; must be &gt;= 1
+     * @return {@code this} for fluent chaining
+     */
+    public RadialClockAnalyser withBinRange(int start, int end, int skip) {
+        this.binStart = start;
+        this.binEnd = end;
+        this.binSkip = skip;
+        return this;
+    }
+
     /** Returns the current repeat count. */
     public int getRepeats() { return repeats; }
+
+    /** Clamps {@link #binStart} into {@code [0, numBins-1]}. */
+    private int clampedBinStart() {
+        return Math.max(0, Math.min(binStart, numBins - 1));
+    }
+
+    /** Clamps {@link #binEnd} into {@code [start+1, numBins]}. */
+    private int clampedBinEnd(int start) {
+        return Math.max(start + 1, Math.min(binEnd, numBins));
+    }
+
+    /** Clamps {@link #binSkip} to {@code >= 1}. */
+    private int clampedBinSkip() {
+        return Math.max(1, binSkip);
+    }
+
+    /** Number of bins actually sampled per repeat tile, after clamping start/end/skip against {@code numBins}. */
+    private int activeBinCount() {
+        int start = clampedBinStart();
+        int end = clampedBinEnd(start);
+        int skip = clampedBinSkip();
+        return (end - start + skip - 1) / skip;
+    }
 
     /**
      * Computes the current capsule half-width: {@code widthFraction} of the chord half-length at
@@ -306,7 +366,7 @@ public class RadialClockAnalyser extends FrequencyRenderer {
      * adjacent capsules can never overlap regardless of current magnitude or growth mode.
      */
     private float computeHalfWidth() {
-        int totalSlots = numBins * repeats;
+        int totalSlots = activeBinCount() * repeats;
         float innerRadiusForWidth = (growthMode == GrowthMode.OUTWARD) ? baseRadius : baseRadius - innerDepth;
         return widthFraction * innerRadiusForWidth * (float) Math.sin(Math.PI / totalSlots);
     }
@@ -333,6 +393,9 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         }
         uploadFftTexture();
 
+        int binStartClamped = clampedBinStart();
+        int binCount = activeBinCount();
+
         glBindVertexArray(emptyVaoId);
         shader.use(ctx);
         uAspect.set(currentAspect);
@@ -340,8 +403,11 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         uGrowthModeUniform.set(growthMode.ordinal());
         uHalfWidthUniform.set(computeHalfWidth());
         uTransformUniform.set(transform);
+        uBinCountUniform.set(binCount);
+        uBinStartUniform.set(binStartClamped);
+        uBinSkipUniform.set(clampedBinSkip());
 
-        int totalSlots = numBins * repeats;
+        int totalSlots = binCount * repeats;
         glDrawArrays(GL_TRIANGLES, 0, totalSlots * 6);
     }
 
@@ -370,7 +436,6 @@ public class RadialClockAnalyser extends FrequencyRenderer {
                 null);
         shader.use(ctx);
         shader.uniforms().get("uFFTTex", Integer.class).set(0);
-        shader.uniforms().get("uNumBins", Integer.class).set(numBins);
         shader.uniforms().get("uBaseRadius", Float.class).set(baseRadius);
         shader.uniforms().get("uOuterHeight", Float.class).set(outerHeight);
         shader.uniforms().get("uInnerDepth", Float.class).set(innerDepth);
@@ -388,5 +453,11 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         uHalfWidthUniform.set(computeHalfWidth());
         uTransformUniform = shader.uniforms().get("uTransform", Matrix4f.class);
         uTransformUniform.set(new Matrix4f());
+        uBinCountUniform = shader.uniforms().get("uBinCount", Integer.class);
+        uBinCountUniform.set(activeBinCount());
+        uBinStartUniform = shader.uniforms().get("uBinStart", Integer.class);
+        uBinStartUniform.set(clampedBinStart());
+        uBinSkipUniform = shader.uniforms().get("uBinSkip", Integer.class);
+        uBinSkipUniform.set(clampedBinSkip());
     }
 }
