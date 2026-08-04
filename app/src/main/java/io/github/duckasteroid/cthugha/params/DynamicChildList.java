@@ -45,6 +45,19 @@ public interface DynamicChildList {
     void recreate(List<ChildSpec> specs);
 
     /**
+     * Drops any dynamic child that has become stale on its own terms -- e.g. a {@code
+     * ContinuousBinding} whose {@code target} path no longer resolves to anything, because the
+     * node it used to animate (a deleted wave instance, a deleted quote, etc.) is gone. Called by
+     * {@link ScreenConfigParams#capture} immediately before {@link #describe()}, so a snapshot
+     * (the periodic "current" state or an explicit named save) never persists garbage that would
+     * just fail to resolve again on load. No-op by default; only a subtree whose children can
+     * independently go stale (unlike {@code WaveSystem}'s wave instances, which are never
+     * anything but exactly what the user added) needs to override this.
+     */
+    default void pruneOrphaned() {
+    }
+
+    /**
      * Minimal, implementation-agnostic description of one dynamic child: the name it was (or
      * should be) given, a free-form type discriminator the implementer defines and interprets
      * (e.g. a {@code BindingMode} name today; a wave-kind name for a future {@code WaveSystem}),

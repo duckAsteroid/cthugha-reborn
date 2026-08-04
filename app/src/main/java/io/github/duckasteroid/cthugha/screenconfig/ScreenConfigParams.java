@@ -64,6 +64,7 @@ public class ScreenConfigParams {
             values.put(prefix, sv.getValue());
         } else {
             if (node instanceof DynamicChildList dcl) {
+                dcl.pruneOrphaned();
                 dynamicChildren.put(prefix, dcl.describe());
             }
             node.getChildren().forEach(child -> {

@@ -200,6 +200,30 @@ public class BindingSystem extends ParamNode implements DynamicChildList {
     /**
      * {@inheritDoc}
      *
+     * <p>Drops any binding whose {@code target} no longer resolves to anything in the live tree --
+     * e.g. one left behind by deleting the wave instance, quote, or other node it used to animate
+     * or trigger. A target that simply hasn't been created <em>yet</em> (mid {@link
+     * ScreenConfigParams#apply}, before a later {@link DynamicChildList} subtree in the same
+     * snapshot has been recreated) is indistinguishable from this at the language level, but in
+     * practice this only ever runs from {@link ScreenConfigParams#capture} -- a deliberate,
+     * synchronous snapshot of already-settled state, never interleaved with an in-flight {@code
+     * apply} on the same tree -- so that ambiguity doesn't arise here. A binding that hasn't been
+     * {@link Binding#init}ialised yet (this system's own {@link #init} hasn't run -- possible if a
+     * capture is somehow triggered in the narrow startup window before it has) is left alone
+     * rather than treated as orphaned, since its target can't be resolved either way yet.</p>
+     */
+    @Override
+    public void pruneOrphaned() {
+        for (Binding b : bindings) {
+            if (b.root != null && b.resolveTarget().isEmpty()) {
+                removeBinding(b);
+            }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * <p>Captures each binding's {@link BindingMode} as the {@code type} discriminator plus its
      * {@code target} and mode-specific fields ({@code script} for {@link ContinuousBinding};
      * {@code condition}/{@code cooldown}/{@code value} for {@link EdgeTriggeredBinding}) — enough
