@@ -12,14 +12,17 @@ import java.util.function.DoublePredicate;
  * A composite parameter node that exposes the components of a 2-D transform as
  * individually tunable parameters.
  *
- * <p>The transform is built from five child parameter groups, applied in this order by
- * {@link #applyTo(Matrix4f)}:</p>
+ * <p>The transform is built from five child parameter groups, applied to the geometry in this
+ * order by {@link #applyTo(Matrix4f, float)} (i.e. {@link #rotate} acts first, in local/object
+ * space, and {@link #translate} acts last, positioning the already-shaped result — so scaling or
+ * rotating never amplifies a translation you've already dialled in):</p>
  * <ol>
  *   <li>{@link #perspective} – optional perspective projection (disabled by default).</li>
+ *   <li>{@link #rotate} – rotation angle in radians around {@link #rotateCenter}, aspect-corrected
+ *       so it stays circular rather than squishing on a non-square viewport.</li>
+ *   <li>{@link #shear} – x/y shear factors (identity = 0).</li>
  *   <li>{@link #scale} – x/y scale factors (identity = 1).</li>
  *   <li>{@link #translate} – x/y translation offsets in NDC units (identity = 0).</li>
- *   <li>{@link #shear} – x/y shear factors (identity = 0).</li>
- *   <li>{@link #rotate} – rotation angle in radians around {@link #rotateCenter} in NDC space.</li>
  * </ol>
  *
  * <p>Each affine component is skipped when it equals its identity value (checked to 10 decimal
@@ -86,20 +89,25 @@ public class TransformParams extends ParamNode {
    * configured z-distance translation is applied first, making the subsequent affine components
    * act as model transforms within the 3-D view.</p>
    *
+   * <p>Rotation, shear and scale are applied before translation (see class docs for why), and
+   * rotation is corrected for {@code aspect} (viewport width / height) so it sweeps a circle
+   * rather than an ellipse on a non-square viewport.</p>
+   *
    * @param matrix the transform to modify
+   * @param aspect viewport width / height; pass 1.0 if unknown or the viewport is square
    * @return the same {@code matrix} instance, after applying the active components
    */
-  public Matrix4f applyTo(Matrix4f matrix) {
+  public Matrix4f applyTo(Matrix4f matrix, float aspect) {
     if (perspective.enabled.value) {
       float fovY = (float) Math.toRadians(perspective.fovY.value);
       float zDist = (float) perspective.zDistance.value;
       matrix.perspective(fovY, 1.0f, 0.1f, 10.0f).translate(0f, 0f, -zDist);
     }
-    if (!scale.is(UNITY)) {
-      matrix.scale((float) scale.x.value, (float) scale.y.value, 1f);
-    }
     if (!translate.is(ZERO)) {
       matrix.translate((float) translate.x.value, (float) translate.y.value, 0f);
+    }
+    if (!scale.is(UNITY)) {
+      matrix.scale((float) scale.x.value, (float) scale.y.value, 1f);
     }
     if (!shear.is(ZERO)) {
       float shx = (float) shear.x.value;
@@ -117,7 +125,14 @@ public class TransformParams extends ParamNode {
       float cx = (float) rotateCenter.x.value;
       float cy = (float) rotateCenter.y.value;
       float angle = (float) rotate.value;
-      matrix.translate(cx, cy, 0f).rotateZ(angle).translate(-cx, -cy, 0f);
+      float invAspect = aspect == 0f ? 1f : 1f / aspect;
+      // Rotating raw NDC coordinates squishes on a non-square viewport (x and y NDC units cover
+      // different physical extents); scale into aspect-corrected units, rotate, then scale back.
+      matrix.translate(cx, cy, 0f)
+          .scale(invAspect, 1f, 1f)
+          .rotateZ(angle)
+          .scale(aspect, 1f, 1f)
+          .translate(-cx, -cy, 0f);
     }
     return matrix;
   }

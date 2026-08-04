@@ -23,9 +23,10 @@
  *   <li>{@link io.github.duckasteroid.cthugha.params.transform.TransformParams} – a full
  *       affine/perspective transform expressed as tunable parameter groups (perspective, scale,
  *       shear, translate, rotate around a configurable centre).  Call
- *       {@link io.github.duckasteroid.cthugha.params.transform.TransformParams#applyTo(org.joml.Matrix4f)}
+ *       {@link io.github.duckasteroid.cthugha.params.transform.TransformParams#applyTo(org.joml.Matrix4f, float)}
  *       each frame to accumulate only the active (non-identity) components into a JOML
- *       {@link org.joml.Matrix4f}.</li>
+ *       {@link org.joml.Matrix4f}, passing the current viewport aspect ratio (width / height) so
+ *       rotation stays circular rather than squishing on a non-square viewport.</li>
  * </ul>
  *
  * <h2>Typical usage</h2>
@@ -35,8 +36,8 @@
  *
  *     public MyWaveModel() { super("MyWaveModel"); initFields(getClass()); }
  *
- *     public void render(Matrix4f mvp) {
- *         transform.applyTo(mvp);
+ *     public void render(Matrix4f mvp, float viewportAspect) {
+ *         transform.applyTo(mvp, viewportAspect);
  *         // ... draw with mvp
  *     }
  * }

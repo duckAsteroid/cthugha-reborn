@@ -247,7 +247,7 @@ public class WavePhase implements RenderPhase {
             wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
             wave.setAmplitudeFunction(
                     model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            wave.setTransform(model.transform.applyTo(new Matrix4f()));
+            wave.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
             wave.setLineColour(overlayPass
                     ? model.color.toVector4f(1f)
                     : new Vector4f((float) model.index.value, 0f, 0f, 1f));
@@ -284,7 +284,7 @@ public class WavePhase implements RenderPhase {
             wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
             wave.setAmplitudeFunction(
                     model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            wave.setTransform(model.transform.applyTo(new Matrix4f()));
+            wave.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
             wave.setLineColour(overlayPass
                     ? model.color.toVector4f(1f)
                     : new Vector4f((float) model.index.value, 0f, 0f, 1f));
@@ -388,7 +388,7 @@ public class WavePhase implements RenderPhase {
             }
             if (!model.enabled.value) return;
             SpectrumAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
-            active.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration())));
+            active.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration()), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }
 
@@ -495,7 +495,7 @@ public class WavePhase implements RenderPhase {
             if (!model.enabled.value) return;
             RadialSpectrumAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
             active.withRepeats(model.repeats.value);
-            active.setTransform(model.transform.applyTo(new Matrix4f()));
+            active.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }
 
@@ -605,7 +605,7 @@ public class WavePhase implements RenderPhase {
             active.withGrowthMode(model.growthMode.getEnumeration());
             active.withRepeats(model.repeats.value);
             active.withWidthFraction((float) model.widthFraction.value);
-            active.setTransform(model.transform.applyTo(new Matrix4f()));
+            active.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }
 

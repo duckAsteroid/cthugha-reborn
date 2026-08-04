@@ -1,12 +1,20 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
+import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import org.joml.Vector4f;
 
 import java.awt.Font;
+import java.awt.Rectangle;
 
 /** Shared INI-parsing helpers used by display phases. */
 class PhaseConfig {
+
+    /** Current window width / height, for {@link io.github.duckasteroid.cthugha.params.transform.TransformParams#applyTo}. */
+    static float aspect(RenderContext ctx) {
+        Rectangle win = ctx.getWindow();
+        return win.height == 0 ? 1f : (float) win.width / win.height;
+    }
 
     /** Parses "18", "18px", or "2%" of refHeight, capped at 120px to bound atlas size. */
     static int parseFontSize(String value, int refHeight) {

@@ -553,10 +553,11 @@ public class VideoPhase implements RenderPhase {
         uColorMode.set(colorMode.getEnumeration().ordinal());
         uInvert.set(invert.value);
         uBlendMode.set(blendMode.getEnumeration().ordinal());
-        uAspect.set(windowHeight == 0 ? 1.0f : (float) windowWidth / windowHeight);
+        float aspect = windowHeight == 0 ? 1.0f : (float) windowWidth / windowHeight;
+        uAspect.set(aspect);
         uVigRadius.set((float) vignetteRadius.value);
         uVigDarkness.set((float) vignetteDarkness.value);
-        uTransform.set(transform.applyTo(new Matrix4f()));
+        uTransform.set(transform.applyTo(new Matrix4f(), aspect));
 
         glEnable(GL_BLEND);
         applyBlendMode(blendMode.getEnumeration());

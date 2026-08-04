@@ -63,7 +63,10 @@ public class XYParam extends ParamNode {
   }
 
   /**
-   * Returns {@code true} if either the {@code x} or {@code y} value satisfies {@code test}.
+   * Returns {@code true} if both the {@code x} and {@code y} values satisfy {@code test} — used
+   * as an identity check (e.g. "is this whole XY pair still at its default?"). Using this for a
+   * single-component check would be wrong: only one axis needs to differ from identity for the
+   * pair as a whole to be non-identity.
    *
    * @param test predicate to evaluate against each component
    */
@@ -71,7 +74,7 @@ public class XYParam extends ParamNode {
     return Stream.of(x, y)
       .map(DoubleParameter::getValue)
       .mapToDouble(Number::doubleValue)
-      .anyMatch(test);
+      .allMatch(test);
   }
 
   /** Returns the current x/y values as a JOML {@link Vector2f}. */

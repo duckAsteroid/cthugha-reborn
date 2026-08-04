@@ -137,7 +137,7 @@ public class QuotePhase implements RenderPhase {
         if (quote == null) return;
 
         syncQuoteText(quote, ctx);
-        applyTransform();
+        applyTransform(ctx);
 
         // Save current FBO binding (renderFBO bound by CthughaWindow)
         IntBuffer savedFbo = BufferUtils.createIntBuffer(1);
@@ -169,7 +169,7 @@ public class QuotePhase implements RenderPhase {
         Quote quote = cthugha.getCurrentQuote();
         syncQuoteText(quote, ctx);
         if (quote == null) return;
-        applyTransform();
+        applyTransform(ctx);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -228,7 +228,7 @@ public class QuotePhase implements RenderPhase {
      * Recomputes the quote's anchor position and the attribution's offset relative to that
      * anchor, from the reference window size ({@link #refWidth}/{@link #refHeight}) and text
      * metrics. Does not touch the renderers' transforms — that happens every frame in
-     * {@link #applyTransform()} so the shared, animatable {@link #transform} is honoured even
+     * {@link #applyTransform(RenderContext)} so the shared, animatable {@link #transform} is honoured even
      * when the quote text itself hasn't changed.
      */
     private void updateLayout(Quote quote) {
@@ -272,8 +272,9 @@ public class QuotePhase implements RenderPhase {
      * composed matrix, so it rotates/scales/shears together with the quote around the identical
      * pivot rather than computing its own absolute, independent placement.
      */
-    private void applyTransform() {
-        Matrix4f quoteModel = transform.applyTo(new Matrix4f().translate(quoteX, quoteY, 0.0f));
+    private void applyTransform(RenderContext ctx) {
+        Matrix4f quoteModel = transform.applyTo(
+                new Matrix4f().translate(quoteX, quoteY, 0.0f), PhaseConfig.aspect(ctx));
         quoteRenderer.setTransform(quoteModel);
 
         Matrix4f attrModel = new Matrix4f(quoteModel).translate(attrOffsetX, attrOffsetY, 0.0f);
