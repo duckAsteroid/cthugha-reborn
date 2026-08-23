@@ -146,6 +146,36 @@ public class EnumParameter<T> extends ObjectParameter<T> {
     setObjectValue(value);
   }
 
+  /**
+   * Returns the display label of the currently selected option — i.e. {@code
+   * getOptions().get(getValue().intValue())}. Stable across reordering/insertion of other
+   * options, unlike the underlying integer index, provided the option's label itself doesn't
+   * change; used as the persistence key for screen configs (see {@code ScreenConfigParams}) in
+   * place of the raw index.
+   */
+  public String getSelectedLabel() {
+    return values.get(getValue().intValue()).toString();
+  }
+
+  /**
+   * Selects whichever option's label (per {@link #getOptions()}) equals {@code label}, if any.
+   * On a tie (two options sharing a label) the first match wins.
+   *
+   * @param label the display label to look up
+   * @return {@code true} if a matching option was found and selected; {@code false} (leaving the
+   *         current selection unchanged) if no option has that label — e.g. it was renamed or
+   *         removed since the label was captured
+   */
+  public boolean selectByLabel(String label) {
+    for (int i = 0; i < values.size(); i++) {
+      if (values.get(i).toString().equals(label)) {
+        setValue(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   public String toString() {
     return super.getName()+ " [" + getNodeType().name() + "]: " + getEnumeration().toString()

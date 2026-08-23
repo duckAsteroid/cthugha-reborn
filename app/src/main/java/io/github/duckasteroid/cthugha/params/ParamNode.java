@@ -43,6 +43,9 @@ public abstract class ParamNode implements Node {
 
   private boolean persistExclude = false;
 
+  /** {@code null} means "use {@link Node}'s default" (opaque iff this is a {@link DynamicChildList}). */
+  private Boolean structureHashExcluded = null;
+
   private String description;
 
   /** Slash-delimited path from tree root to this node; computed lazily, cached after first access. */
@@ -178,6 +181,23 @@ public abstract class ParamNode implements Node {
   @Override
   public boolean isPersistExcluded() {
     return persistExclude;
+  }
+
+  /**
+   * Forces this node to count as a single opaque unit in a screen config's structural hash and
+   * returns {@code this} for fluent construction. Only needed for a subtree whose children are
+   * runtime-scanned or user-managed <em>without</em> already implementing {@link
+   * DynamicChildList} (which gets this for free — see {@link #isStructureHashExcluded()}), e.g.
+   * a saved-presets listing.
+   */
+  public ParamNode withNoStructureHash() {
+    this.structureHashExcluded = true;
+    return this;
+  }
+
+  @Override
+  public boolean isStructureHashExcluded() {
+    return structureHashExcluded != null ? structureHashExcluded : Node.super.isStructureHashExcluded();
   }
 
   /**

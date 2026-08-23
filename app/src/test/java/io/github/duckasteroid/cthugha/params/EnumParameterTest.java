@@ -20,4 +20,27 @@ class EnumParameterTest {
     assertEquals(2, subj.getValue());
     System.out.println(subj);
   }
+
+  @Test
+  void selectedLabelTracksTheSelectedOption() {
+    EnumParameter<TestEnum> subj = EnumParameter.forType(TestEnum.class);
+    assertEquals("ON", subj.getSelectedLabel());
+    subj.setEnumeration(TestEnum.MOSTLY_OFF);
+    assertEquals("MOSTLY_OFF", subj.getSelectedLabel());
+  }
+
+  @Test
+  void selectByLabelFindsTheMatchingOptionRegardlessOfIndex() {
+    EnumParameter<TestEnum> subj = EnumParameter.forType(TestEnum.class);
+    assertTrue(subj.selectByLabel("MOSTLY_OFF"));
+    assertEquals(TestEnum.MOSTLY_OFF, subj.getEnumeration());
+  }
+
+  @Test
+  void selectByLabelLeavesSelectionUnchangedWhenLabelIsUnknown() {
+    EnumParameter<TestEnum> subj = EnumParameter.forType(TestEnum.class);
+    subj.setEnumeration(TestEnum.KIND_OF_ON);
+    assertFalse(subj.selectByLabel("DOES_NOT_EXIST"));
+    assertEquals(TestEnum.KIND_OF_ON, subj.getEnumeration());
+  }
 }

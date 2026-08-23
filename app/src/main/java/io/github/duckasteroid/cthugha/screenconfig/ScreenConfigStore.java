@@ -94,6 +94,7 @@ public class ScreenConfigStore {
         ScreenConfigParams.Snapshot snapshot = ScreenConfigParams.capture(treeRoot);
         config.params = snapshot.values();
         config.dynamicChildren = snapshot.dynamicChildren();
+        config.structureHash = snapshot.structureHash();
         MAPPER.writerWithDefaultPrettyPrinter().writeValue(file.toFile(), config);
         LOG.info("Saved screen config '{}' -> {}", displayName, file);
     }
@@ -113,7 +114,8 @@ public class ScreenConfigStore {
     public void load(ScreenConfig config, Node treeRoot) {
         Map<String, List<DynamicChildList.ChildSpec>> dynamicChildren =
                 config.dynamicChildren != null ? config.dynamicChildren : Map.of();
-        ScreenConfigParams.apply(treeRoot, new ScreenConfigParams.Snapshot(config.params, dynamicChildren));
+        ScreenConfigParams.apply(treeRoot,
+                new ScreenConfigParams.Snapshot(config.params, dynamicChildren, config.structureHash));
         LOG.info("Loaded screen config '{}'", config.name);
     }
 

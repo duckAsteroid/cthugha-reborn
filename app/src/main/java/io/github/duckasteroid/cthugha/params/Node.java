@@ -160,6 +160,20 @@ public interface Node {
   }
 
   /**
+   * Returns {@code true} if this node (and its descendants) should count as a single opaque unit
+   * — rather than being descended into — when computing a screen config's structural hash (see
+   * {@code ScreenConfigParams#structureHash}). Defaults to {@code true} for any {@link
+   * DynamicChildList} implementor (its children are runtime/user data by definition — adding a
+   * wave instance or a binding is not a code change and shouldn't look like one), {@code false}
+   * otherwise. Override (e.g. via {@code ParamNode#withNoStructureHash()}) to also exclude a
+   * subtree whose children are runtime-scanned or user-managed without going through {@link
+   * DynamicChildList} — e.g. a saved-presets listing.
+   */
+  default boolean isStructureHashExcluded() {
+    return this instanceof DynamicChildList;
+  }
+
+  /**
    * Returns a human-readable explanation of what this parameter does, or {@code null} if none
    * has been set. Surfaced in the remote UI as an on-demand hint (tap-to-expand, not a hover
    * tooltip, since the primary client is a phone). Purely descriptive — never parsed or relied

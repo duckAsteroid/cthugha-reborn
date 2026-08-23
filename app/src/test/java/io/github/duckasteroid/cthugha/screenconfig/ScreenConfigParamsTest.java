@@ -11,6 +11,7 @@ import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 import io.github.duckasteroid.cthugha.params.action.ActionContext;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 import io.github.duckasteroid.cthugha.params.values.StringParameter;
 import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
 import io.github.duckasteroid.cthugha.tab.TabGenerator;
@@ -154,5 +155,137 @@ class ScreenConfigParamsTest {
                 .orElseThrow();
         assertEquals("bass() > 0.5", restoredTrigger.condition.getValue());
         assertEquals(0.4, restoredTrigger.cooldown.value, 1e-9);
+    }
+
+    /**
+     * The scenario motivating label-based enum capture: a config saved while "B" sat at index 1
+     * must still select "B" after something (a new file dropped into a scanned library, a new
+     * generator registered, etc.) shifts everyone after it up a slot. Index-based capture would
+     * silently re-select whatever now sits at index 1 ("A" here) instead.
+     */
+    @Test
+    void capturesAndAppliesEnumSelectionByLabelNotIndex() {
+        ContainerNode savedRoot = new ContainerNode("Root");
+        EnumParameter<String> savedSelector = new EnumParameter<>("Selector", List.of("A", "B", "C"));
+        savedSelector.setValue(1); // "B"
+        savedRoot.addChild(savedSelector);
+
+        ScreenConfigParams.Snapshot snapshot = ScreenConfigParams.capture(savedRoot);
+        assertEquals("B", snapshot.values().get("Selector"));
+
+        // A new option was inserted ahead of "B" between save and load, shifting its index from 1 to 2.
+        ContainerNode loadRoot = new ContainerNode("Root");
+        EnumParameter<String> loadSelector = new EnumParameter<>("Selector", List.of("Z", "A", "B", "C"));
+        loadRoot.addChild(loadSelector);
+
+        ScreenConfigParams.apply(loadRoot, snapshot);
+
+        assertEquals("B", loadSelector.getSelectedLabel());
+        assertEquals(2, loadSelector.getValue());
+    }
+
+    /** Configs saved before enum options were keyed by label still apply via the raw index. */
+    @Test
+    void appliesLegacyIndexBasedEnumValuesForBackwardCompatibility() {
+        ContainerNode root = new ContainerNode("Root");
+        EnumParameter<String> selector = new EnumParameter<>("Selector", List.of("A", "B", "C"));
+        root.addChild(selector);
+
+        ScreenConfigParams.Snapshot legacy = new ScreenConfigParams.Snapshot(Map.of("Selector", 2), Map.of());
+        ScreenConfigParams.apply(root, legacy);
+
+        assertEquals("C", selector.getSelectedLabel());
+    }
+
+    /** An unresolvable label (option renamed/removed since capture) leaves the current selection alone. */
+    @Test
+    void unresolvedEnumLabelLeavesCurrentSelectionUnchanged() {
+        ContainerNode root = new ContainerNode("Root");
+        EnumParameter<String> selector = new EnumParameter<>("Selector", List.of("A", "B", "C"));
+        selector.setValue(0); // "A"
+        root.addChild(selector);
+
+        ScreenConfigParams.Snapshot snapshot = new ScreenConfigParams.Snapshot(Map.of("Selector", "Deleted"), Map.of());
+        ScreenConfigParams.apply(root, snapshot);
+
+        assertEquals("A", selector.getSelectedLabel());
+    }
+
+    @Test
+    void structureHashIsStableAcrossValueOnlyChanges() {
+        ContainerNode root = new ContainerNode("Root");
+        DoubleParameter amp = new DoubleParameter("amplitude", 0, 10, 2.0);
+        root.addChild(amp);
+        String before = ScreenConfigParams.structureHash(root);
+
+        amp.setValue(9.0);
+
+        assertEquals(before, ScreenConfigParams.structureHash(root));
+    }
+
+    @Test
+    void structureHashChangesWhenALeafIsAddedOrRemoved() {
+        ContainerNode root = new ContainerNode("Root");
+        root.addChild(new DoubleParameter("amplitude", 0, 10, 2.0));
+        String before = ScreenConfigParams.structureHash(root);
+
+        root.addChild(new BooleanParameter("enabled", true));
+
+        assertNotEquals(before, ScreenConfigParams.structureHash(root));
+    }
+
+    /**
+     * {@link BindingSystem} implements {@link io.github.duckasteroid.cthugha.params.DynamicChildList},
+     * which per {@link io.github.duckasteroid.cthugha.params.Node#isStructureHashExcluded()}
+     * defaults to opaque for structural hashing — adding a binding is ordinary use, not a code
+     * change, and shouldn't look like one.
+     */
+    @Test
+    void structureHashIgnoresDynamicChildListContents() {
+        Root root = new Root();
+        root.bindings.init(new StaticClock(0.0, 0.0), root, CTX);
+        String before = ScreenConfigParams.structureHash(root);
+
+        root.bindings.addContinuous("anim", "Amplitude", "0.5");
+
+        assertEquals(before, ScreenConfigParams.structureHash(root));
+    }
+
+    /** The explicit opt-out, for a runtime-managed subtree that isn't a {@code DynamicChildList}. */
+    @Test
+    void structureHashIgnoresSubtreesMarkedWithNoStructureHash() {
+        ContainerNode root = new ContainerNode("Root");
+        ContainerNode presets = new ContainerNode("Presets");
+        presets.withNoStructureHash();
+        root.addChild(presets);
+        String before = ScreenConfigParams.structureHash(root);
+
+        presets.addChild(new DoubleParameter("Some Preset", 0, 1, 0.0));
+
+        assertEquals(before, ScreenConfigParams.structureHash(root));
+    }
+
+    @Test
+    void captureIncludesTheCurrentStructureHash() {
+        ContainerNode root = new ContainerNode("Root");
+        root.addChild(new DoubleParameter("amplitude", 0, 10, 2.0));
+
+        ScreenConfigParams.Snapshot snapshot = ScreenConfigParams.capture(root);
+
+        assertEquals(ScreenConfigParams.structureHash(root), snapshot.structureHash());
+    }
+
+    /** A structure-hash mismatch is a warning, not a hard failure — values still apply. */
+    @Test
+    void applyStillAppliesValuesWhenStructureHashDiffersFromCurrentTree() {
+        ContainerNode root = new ContainerNode("Root");
+        DoubleParameter amp = new DoubleParameter("amplitude", 0, 10, 2.0);
+        root.addChild(amp);
+
+        ScreenConfigParams.Snapshot snapshot =
+                new ScreenConfigParams.Snapshot(Map.of("amplitude", 7.0), Map.of(), "not-a-real-hash");
+        ScreenConfigParams.apply(root, snapshot);
+
+        assertEquals(7.0, amp.value);
     }
 }

@@ -28,6 +28,14 @@ public class ScreenConfig {
      */
     public Map<String, List<ChildSpec>> dynamicChildren;
 
+    /**
+     * SHA-256 hash of the parameter tree's shape at save time — see {@link
+     * ScreenConfigParams#structureHash}. {@code null} on configs saved before this field existed;
+     * {@link ScreenConfigParams#apply} treats that the same as a hash that simply hasn't been
+     * checked, skipping the structure-change warning rather than reporting a false mismatch.
+     */
+    public String structureHash;
+
     /** File name within the store directory — set by {@link ScreenConfigStore} on load, never serialised. */
     @JsonIgnore
     public String fileName;

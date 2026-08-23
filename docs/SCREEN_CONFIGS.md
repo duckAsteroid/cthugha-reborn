@@ -41,6 +41,7 @@ is no cached, resolution-bound binary the way `TabStore`'s `.tab` files work.
 ```
 capture(root)
   └─ walks root's subtree in child order
+       ├─ EnumParameter leaf  → record path → String (the selected option's display label)
        ├─ AbstractValue leaf  → record path → Number
        ├─ StringValue leaf    → record path → String
        ├─ node.isPersistExcluded() → skip this subtree entirely
@@ -52,6 +53,12 @@ capture(root)
      to match the walk
 ```
 
+`EnumParameter` is checked before the general `AbstractValue` case: although it stores its
+selection as an integer index internally (it extends `IntegerParameter`), that index is only
+stable for the lifetime of one option list. Capturing `getSelectedLabel()` instead — the option's
+`toString()` — makes the snapshot survive the option list being reordered or grown between save
+and load. See "Enum selections: label, not index" below.
+
 The insertion order is not incidental — it is the whole reason `apply()` is safe:
 
 ```
@@ -62,6 +69,8 @@ apply(root, snapshot)
 
   for each (path, value) in snapshot.values(), IN CAPTURE ORDER:
       target = root.getChild(path.split("/"))   ← fresh lookup, every time
+      if target is EnumParameter and value is String → target.selectByLabel(value)
+      if target is EnumParameter and value is Number → target.setValue(value)   ← legacy configs
       if target is AbstractValue and value is Number → target.setValue(value)
       if target is StringValue   and value is String → target.setValue(value)
       (unresolved or type-mismatched paths are silently ignored)
@@ -145,6 +154,52 @@ none exist to recreate) without erroring.
 
 ---
 
+## Enum selections: label, not index
+
+`EnumParameter` (`params/values/EnumParameter.java`) backs every "pick one of a list" control in
+the tree — the active palette (`Render/Palette/Map`), the active tab generator
+(`Tab/Translate Source/Generator`), the selected quote, image, video, and audio input device, plus
+every Java-enum-backed control (`RenderMode`, `ChannelMode`, `WaveType`, …). Internally it's always
+an `IntegerParameter`: the selection is stored as an index into an ordered `List<T>`.
+
+Several of those lists are built at runtime by scanning something external — `.MAP` files under
+`maps/`, images under `images/`, videos, saved quotes, audio devices, `ServiceLoader`-discovered
+`TabGenerator`s — and sorted for a stable display order. That sorting is exactly what makes the
+index fragile: dropping a new file into the middle of an alphabetically-sorted directory shifts
+every index after it. A screen config that captured "index 3" for the palette selector would, after
+such a change, load and select whatever now happens to sit at index 3 — silently the wrong palette,
+with no error.
+
+`ScreenConfigParams` closes this by capturing and applying `EnumParameter` selections through
+`getSelectedLabel()` / `selectByLabel(String)` (both on `EnumParameter`) instead of the raw index:
+
+- `getSelectedLabel()` returns the selected option's display label — `values.get(index).toString()`
+  — the same string `getOptions()` already exposes to the remote UI, so no new naming scheme was
+  introduced.
+- `selectByLabel(label)` linearly searches the current option list for a matching label and selects
+  it if found, leaving the current selection untouched (like any other unresolved path) if not —
+  e.g. the option was renamed or deleted since the config was saved.
+
+This trades one failure mode for a strictly narrower one: a label survives reordering and insertion,
+and only breaks if the option's own label changes — which, unlike a silent reshuffle, is a
+deliberate rename the user is more likely to notice a config didn't survive.
+
+**Backward compatibility, deprecated**: configs saved before this change have a plain integer for
+these paths. `ScreenConfigParams.apply` still accepts a `Number` for an `EnumParameter` target and
+applies it as a raw index — the old, index-fragile behaviour — so existing `.json` files under
+`configs/` keep loading (with the pre-existing limitation) rather than breaking outright. This path
+is considered deprecated: every config saved from now on writes the label instead, and every time
+the index-based fallback actually runs it logs a `WARN` naming the path and the value, so
+still-index-based configs (and where they live) show up in the log rather than silently persisting
+forever. Re-saving a config (Load, then Save over it) is enough to migrate it off the index path.
+
+Duplicate labels within one option list (two palettes that happen to share a display name) are not
+guarded against — `selectByLabel` selects the first match. None of the current runtime-scanned
+lists can actually produce a duplicate (filenames within one directory are unique), so this is a
+theoretical gap, not an observed one.
+
+---
+
 ## Excluding transient state: `persistExclude`
 
 Not every leaf in the tree belongs in a snapshot. A "Save Name" text field is UI state, not part
@@ -155,12 +210,17 @@ remote-visibility flag:
 |---|---|---|---|
 | `isRemoteAllowed()` | Hide/reject a node over the remote HTTP API | `true` | `withNoRemote()` |
 | `isPersistExcluded()` | Skip a node when capturing/applying a screen config | `false` | `withNoPersist()` |
+| `isStructureHashExcluded()` | Count a subtree as one opaque unit in `structureHash` (see below) | `true` iff `DynamicChildList` | `withNoStructureHash()` |
 | `getUiHints()` | Presentation hints for the remote React UI (widget type, icon, …) | `{}` | `withUiHint(key, value)` |
 
-These are deliberately three separate mechanisms rather than one shared map: `getUiHints()` is
+These are deliberately separate mechanisms rather than one shared map: `getUiHints()` is
 serialised wholesale to the browser on every tree fetch (`ParamSerializer`), so folding
 persistence-only metadata into it would either leak backend-only concerns over the wire or require
-filtering logic to strip them back out. `persistExclude` stays backend-only.
+filtering logic to strip them back out. `persistExclude` and `structureHashExcluded` stay
+backend-only, and answer different questions — a subtree can be persisted in full (its values
+*are* saved and restored) while still being excluded from the structural hash, because its shape
+legitimately varies with ordinary use rather than with a code change. See "Detecting structural
+drift" below.
 
 `persistExclude` is set at container roots, not leaf-by-leaf, and is inherited implicitly by never
 descending into an excluded subtree — so a new leaf param added under an already-excluded
@@ -170,6 +230,47 @@ extra bookkeeping. Two places currently opt out:
 - `ScreenConfigLibraryNode` itself (the whole Configs tab) — a config shouldn't be able to
   reference itself.
 - `GeneratorRegistry.saveName` — the tab-preset "Save Name" input field.
+
+---
+
+## Detecting structural drift: `structureHash`
+
+A screen config can silently stop matching the parameter tree it was saved against — a parameter
+gets renamed, removed, or changes type in a later code change — and until now the only symptom was
+the per-path `WARN`s from `apply()` (see above), discovered only by actually loading the config and
+reading the log. `ScreenConfigParams.structureHash(Node)` gives a cheap, up-front way to detect
+that a config's tree *shape* has drifted, before or alongside applying it.
+
+**What it hashes.** A SHA-256 digest of every non-excluded leaf's `path:kind` (e.g.
+`Wave/Oscilloscope/amplitude:DOUBLE`, `Render/Palette/Map:enum`) — deliberately *not* the leaf's
+current value, so tweaking a slider never changes the hash, only adding, removing, renaming, or
+retyping a parameter does. Tokens are collected into a sorted set before hashing, so sibling
+declaration order in code doesn't affect the result either — only which paths exist, and as what
+kind.
+
+**What it deliberately ignores**, per `isStructureHashExcluded()` above: any subtree whose shape
+varies with ordinary use rather than a code change.
+
+- Every `DynamicChildList` (`Bindings`, `Wave`) is opaque *by default* — adding a binding or a wave
+  instance is exactly what the feature is for, not a schema change, so it must never look like one.
+  This needed no code change in `BindingSystem`/`WaveSystem` themselves; it falls out of
+  `Node.isStructureHashExcluded()`'s default (`this instanceof DynamicChildList`).
+- Tab-preset listings (`SavedPresetsNode`, `AllPresetsNode`) opt out explicitly via
+  `withNoStructureHash()`, the same flag, since saving or deleting a preset isn't a structural
+  change either and they aren't `DynamicChildList`s.
+
+One flag, one rule (default-participate, opt out), applied automatically to one category
+(`DynamicChildList`) and explicitly to everything else that needs it — deliberately not two
+separate mechanisms for what is conceptually the same exclusion.
+
+**Where it's stored and checked.** `ScreenConfig.structureHash` holds the hash from capture time,
+written by `ScreenConfigStore.save()` (and by `CurrentStateStore` for the auto-persisted "current"
+state). `ScreenConfigParams.apply()` recomputes the hash of the *live* tree up front and compares:
+a mismatch logs one `WARN` naming both hashes, before the per-path warnings that explain what
+specifically didn't apply. A `null` stored hash (a config saved before this existed) skips the
+check entirely — `apply()` has no baseline to compare against, so it says nothing rather than
+reporting a false mismatch. Either way, loading still proceeds: this is a diagnostic signal, not a
+gate.
 
 ---
 
@@ -190,9 +291,9 @@ Each file is a `ScreenConfig`:
     "Wave/Oscilloscope/enabled" : 1,
     "Wave/Oscilloscope/amplitude" : 0.5,
     "Wave/Oscilloscope/lineWidth" : 2.0,
-    "Tab/Translate Source/Generator" : 3,
+    "Tab/Translate Source/Generator" : "Mandelbrot",
     "Tab/Translate Source/Mandelbrot/Zoom" : 250.0,
-    "Render/Palette/Map" : 7,
+    "Render/Palette/Map" : "SUNSET",
     "Render/Blur/Enabled" : 1,
     "Bindings/anim/target" : "Wave/Oscilloscope/amplitude",
     "Bindings/anim/script" : "sine(0.05)",
@@ -206,7 +307,8 @@ Each file is a `ScreenConfig`:
       { "name" : "Trigger 1", "type" : "EDGE_TRIGGERED",
         "fields" : { "condition" : "bass() > 0.7", "target" : "Flash White", "cooldown" : "0.15", "value" : "" } }
     ]
-  }
+  },
+  "structureHash" : "3f9c1a7e2b6d4850..."
 }
 ```
 
@@ -215,6 +317,8 @@ and reads a JSON object back into one by default), so a config saved on one run 
 entries in the same order on the next. `dynamicChildren` is a separate, sibling map — one entry
 per opted-in `DynamicChildList` subtree, keyed by that subtree's own path (here just `"Bindings"`,
 since it hangs directly off the root) — applied in full before `params`, per `apply()` above.
+`structureHash` is the tree-shape digest from "Detecting structural drift" above; `null`/absent on
+configs saved before it existed.
 
 There is no checksum and no per-resolution binary, unlike `TabConfig`/`.tab` files — a screen
 config is pure param data, so there's nothing to invalidate.
@@ -243,9 +347,10 @@ general REST API shape.
 
 | Class | Role |
 |---|---|
-| `ScreenConfigParams` | Static capture/apply tree-walking utility; `Snapshot` record pairs the leaf-value map with the dynamic-child-list map |
-| `DynamicChildList` (`params/`) | Opt-in contract (`describe()`/`recreate()`/`ChildSpec`) for a subtree with runtime-created children; implemented by `BindingSystem` today |
-| `ScreenConfig` | Plain JSON-serialisable snapshot (name + ordered param map + dynamic-children map) |
+| `ScreenConfigParams` | Static capture/apply tree-walking utility; `Snapshot` record pairs the leaf-value map, the dynamic-child-list map, and the `structureHash` |
+| `EnumParameter` (`params/values/`) | "Pick one of a list" leaf; `getSelectedLabel()`/`selectByLabel()` give screen configs a reorder-safe key in place of the raw index |
+| `DynamicChildList` (`params/`) | Opt-in contract (`describe()`/`recreate()`/`ChildSpec`/`pruneOrphaned()`) for a subtree with runtime-created children; implemented by `BindingSystem` and `WaveSystem`; opaque to `structureHash` by default |
+| `ScreenConfig` | Plain JSON-serialisable snapshot (name + ordered param map + dynamic-children map + `structureHash`) |
 | `ScreenConfigStore` | Disk I/O: `list()`, `save()`, `load()`, `delete()` |
 | `ScreenConfigNode` | Per-saved-config tree node (Load / Delete actions) |
 | `ScreenConfigLibraryNode` | Root "Configs" tab node: list + Save Name + Save |
@@ -254,15 +359,19 @@ general REST API shape.
 
 ## Known limitations
 
-- **Index-based selectors assume a stable ordering.** The active palette and active tab generator
-  are captured as integer indices into `PaletteLibraryNode`'s file list and
-  `GeneratorRegistry`'s generator list respectively. Adding or removing a `.MAP` palette file or a
-  `TabGenerator` implementation between saving and loading a config can shift those indices and
-  select the wrong entry. This is an existing limitation of the underlying `EnumParameter`
-  mechanism (also present in tab presets today), not something new to screen configs.
-- **Unrecognised paths are silently ignored**, both when a target node no longer exists (e.g. a
-  parameter was renamed/removed by a later code change) and when its type no longer matches the
-  saved value. There is no migration or versioning story yet.
+- ~~Index-based selectors assume a stable ordering.~~ **Fixed** — `EnumParameter` selections
+  (active palette, active tab generator, quote, image, video, audio source, etc.) are now captured
+  and applied by display label rather than list index; see "Enum selections: label, not index"
+  above. Configs saved before this change still round-trip via the old index-based path.
+- **Unrecognised paths are skipped and logged, not repaired.** A target node that no longer exists
+  (e.g. a parameter was renamed/removed by a later code change), a type mismatch against the saved
+  value, an enum label with no matching option, and a legacy index-based enum value are all logged
+  at `WARN` by `ScreenConfigParams.apply` as they're skipped — plus a one-line summary if any were,
+  and (see "Detecting structural drift" above) an upfront `WARN` if the tree's `structureHash` no
+  longer matches what the config was saved against. That covers *detection*: a partially-failed
+  load is now visible in the log rather than silently producing a subtly wrong result. There is
+  still no *migration* story — nothing attempts to map an old path to a renamed one, so recovering
+  from a real mismatch still means manually re-editing the saved config or resaving it from scratch.
 - **No partial capture.** A screen config always snapshots the whole non-excluded tree; there's no
   way to save "just the wave settings" as a distinct kind of preset.
 

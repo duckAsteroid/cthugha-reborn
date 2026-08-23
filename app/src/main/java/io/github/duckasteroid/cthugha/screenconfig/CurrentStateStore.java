@@ -73,7 +73,8 @@ public class CurrentStateStore {
         ScreenConfig config = MAPPER.readValue(file.toFile(), ScreenConfig.class);
         Map<String, java.util.List<DynamicChildList.ChildSpec>> dynamicChildren =
                 config.dynamicChildren != null ? config.dynamicChildren : Map.of();
-        ScreenConfigParams.apply(treeRoot, new ScreenConfigParams.Snapshot(config.params, dynamicChildren));
+        ScreenConfigParams.apply(treeRoot,
+                new ScreenConfigParams.Snapshot(config.params, dynamicChildren, config.structureHash));
         LOG.info("Restored current state from {}", file);
         return true;
     }
@@ -83,6 +84,7 @@ public class CurrentStateStore {
         config.name = null; // unnamed — never surfaced as a pickable config
         config.params = snapshot.values();
         config.dynamicChildren = snapshot.dynamicChildren();
+        config.structureHash = snapshot.structureHash();
         return config;
     }
 }

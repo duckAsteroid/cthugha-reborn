@@ -27,6 +27,7 @@ public class AllPresetsNode extends ParamNode {
         withUiHint(UiHint.ICON, "bookmark");
         withDescription("Every saved translation-table preset across all generators, grouped "
             + "by the generator that created them.");
+        withNoStructureHash();
         this.store = store;
         this.generators = generators;
         refresh();
