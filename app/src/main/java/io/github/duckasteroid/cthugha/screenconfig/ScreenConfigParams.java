@@ -177,18 +177,25 @@ public class ScreenConfigParams {
      * translation map on generator selection) don't race the snapshot's own values for the same
      * subtree.</p>
      *
-     * <p>If {@code snapshot.structureHash()} is present and doesn't match {@code root}'s current
-     * {@link #structureHash(Node)}, logs one {@code WARN} up front noting the tree shape has
-     * changed since this config was saved — a heads-up before the per-path warnings below explain
-     * specifically what didn't apply.</p>
+     * <p>If {@code snapshot.structureHash()} is present and doesn't match {@code root}'s
+     * {@link #structureHash(Node)} <em>after</em> values have been applied, logs one {@code WARN}
+     * summarising that the tree shape has changed since this config was saved. This check runs
+     * after (not before) value application deliberately: a selector-driven subtree — e.g. the
+     * active {@code TabGenerator}, swapped in by the "Generator" enum leaf — starts out on
+     * whichever default the tree was built with, not the snapshot's own selection, so hashing
+     * beforehand would spuriously flag every load whose saved selection isn't that default. Once
+     * {@code applyValues} has replayed the selector leaf (always captured before the subtree it
+     * selects — see {@link #capture}), the live tree has caught up to the snapshot's shape, so a
+     * hash mismatch at this point reflects genuine drift (a param renamed, added, or removed by a
+     * later code change) rather than which alternative subtree happened to be attached first.</p>
      */
     public static void apply(Node root, Snapshot snapshot) {
-        warnIfStructureChanged(root, snapshot.structureHash());
         applyDynamicChildren(root, snapshot.dynamicChildren());
         List<RestoreAware> restoreAware = collectRestoreAware(root);
         restoreAware.forEach(RestoreAware::beginRestore);
         try {
             int skipped = applyValues(root, snapshot.values());
+            warnIfStructureChanged(root, snapshot.structureHash());
             if (skipped > 0) {
                 LOG.warn("Screen config apply: {} of {} value(s) could not be applied — see "
                         + "preceding warnings for the affected paths", skipped, snapshot.values().size());
@@ -204,7 +211,7 @@ public class ScreenConfigParams {
         if (!savedHash.equals(currentHash)) {
             LOG.warn("Screen config apply: parameter tree structure differs from when this "
                     + "config was saved (structure hash {} at save, {} now) — some values may "
-                    + "fail to apply; see following warnings for specifics", savedHash, currentHash);
+                    + "have failed to apply; see preceding warnings for specifics", savedHash, currentHash);
         }
     }
 
