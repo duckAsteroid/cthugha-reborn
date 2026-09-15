@@ -4,6 +4,7 @@ plugins {
 	id "com.github.ben-manes.versions" version "0.47.0"
 	id 'io.github.duckasteroid.agent-docs' version '1.0.11'
 	id 'io.github.duckasteroid.github-packages' version '0.2.0'
+	id 'org.graalvm.buildtools.native' version '1.1.12'
 }
 
 agentDocs {
@@ -35,7 +36,15 @@ dependencies {
 	// OpenGL utils
 	implementation('io.github.duckasteroid:render-core:1.0.0-RC4')
 	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
-	implementation platform('org.lwjgl:lwjgl-bom:3.4.2')
+	// Pinned to 3.3.6 (pre-3.4.0) for this native-image experiment: 3.4.x defaults to an
+	// FFM-based native calling backend on JDK 25 that generates a hidden class on first
+	// use, which Native Image forbids at runtime; forcing that generation to build time
+	// bakes in native function pointers from the *builder* process, which segfault at
+	// image runtime. 3.3.6 uses the older, native-image-proven classic JNI backend.
+	// enforcedPlatform (not platform): render-core:1.0.0-RC4 itself imports the 3.4.2 BOM,
+	// and Gradle's default highest-version-wins conflict resolution would otherwise pick
+	// that over our 3.3.6 request.
+	implementation enforcedPlatform('org.lwjgl:lwjgl-bom:3.3.6')
 	implementation 'org.lwjgl:lwjgl'
 	implementation 'org.lwjgl:lwjgl-opengl'
 	implementation 'org.lwjgl:lwjgl-glfw'
@@ -146,6 +155,69 @@ application {
 	applicationName = "cthugha-reborn"
 	mainClass = "io.github.duckasteroid.cthugha.Main"
 	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
+}
+
+// Several dependency jars (e.g. joml, which carries a jspecify @NullMarked package
+// annotation) ship package-info.class files compiled to the ancient 46.0 (Java 1.2)
+// classfile version - a decades-old javac quirk for annotation-only package-info
+// sources. GraalVM 25's native-image classpath scan (which loads every class,
+// including package-info, to check for @Platforms/@AutomaticFeature annotations)
+// throws ClassFormatError on that version. Confirmed reproducible on both Oracle
+// GraalVM and GraalVM CE 25.3.4, so this is an upstream native-image bug, not
+// something fixable via config. Work around it by feeding native-image a copy of
+// the runtime classpath jars with package-info.class entries stripped - they carry
+// no runtime behaviour, only compile-time nullability annotations.
+def graalCpDir = layout.buildDirectory.dir('graalCp')
+def stripPackageInfoForNativeImage = tasks.register('stripPackageInfoForNativeImage') {
+	def inputFiles = configurations.runtimeClasspath
+	inputs.files(inputFiles)
+	outputs.dir(graalCpDir)
+	doLast {
+		def dir = graalCpDir.get().asFile
+		project.delete(dir)
+		dir.mkdirs()
+		inputFiles.files.findAll { it.isFile() && it.name.endsWith('.jar') }.each { File src ->
+			def dest = new File(dir, src.name)
+			src.withInputStream { is ->
+				new java.util.zip.ZipInputStream(is).withCloseable { zin ->
+					dest.withOutputStream { os ->
+						new java.util.zip.ZipOutputStream(os).withCloseable { zout ->
+							byte[] buf = new byte[8192]
+							def entry
+							while ((entry = zin.nextEntry) != null) {
+								if (entry.name.endsWith('package-info.class')) continue
+								zout.putNextEntry(new java.util.zip.ZipEntry(entry.name))
+								int n
+								while ((n = zin.read(buf)) != -1) zout.write(buf, 0, n)
+								zout.closeEntry()
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+graalvmNative {
+	metadataRepository {
+		enabled = true
+	}
+	binaries {
+		main {
+			imageName = 'cthugha-reborn'
+			mainClass = 'io.github.duckasteroid.cthugha.Main'
+			buildArgs.add('--enable-native-access=ALL-UNNAMED')
+			runtimeArgs.add('--enable-native-access=ALL-UNNAMED')
+			// LWJGL is pinned to 3.3.6 (see the dependency comment above) specifically to
+			// use its classic JNI native backend instead of 3.4.x's FFM-based one, so no
+			// initialize-at-build-time/runtime tuning should be needed for org.lwjgl here.
+			classpath.setFrom(
+				fileTree(graalCpDir) { include '*.jar' }.builtBy(stripPackageInfoForNativeImage),
+				sourceSets.main.output
+			)
+		}
+	}
 }
 
 run {

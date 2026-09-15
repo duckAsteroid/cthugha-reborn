@@ -74,9 +74,9 @@ public class QrOverlay implements RenderedItem {
             out vec4 fragColor;
             void main() {
                 vec2 center = vec2(0.5, 0.5);
-                vec2 half = uQrSize * 0.5;
-                vec2 lo = center - half;
-                vec2 hi = center + half;
+                vec2 halfSize = uQrSize * 0.5;
+                vec2 lo = center - halfSize;
+                vec2 hi = center + halfSize;
                 if (vTex.x < lo.x || vTex.x > hi.x || vTex.y < lo.y || vTex.y > hi.y) {
                     discard;
                 }
