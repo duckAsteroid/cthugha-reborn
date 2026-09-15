@@ -4891,12 +4891,6 @@
       "glob": "org/linux-x86_64/libva.so"
     },
     {
-      "glob": "remote"
-    },
-    {
-      "glob": "remote/index.html"
-    },
-    {
       "module": "java.base",
       "glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
     },
@@ -4916,6 +4910,12 @@
     },
     {
       "bundle": "sun.awt.resources.awt"
+    },
+    {
+      "glob": "remote/**"
+    },
+    {
+      "glob": "remote"
     }
   ]
 }
