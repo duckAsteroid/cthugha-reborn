@@ -142,10 +142,15 @@ tasks.register('smokeTest', Test) {
 			?: fileTree('/run/user/' + System.getProperty('user.name')).find { it.name.startsWith('.mutter-Xwaylandauth') }?.absolutePath
 }
 
+// Low-pause GC for a real-time render loop: G1's young-gen pauses (several ms) can exceed a
+// 60Hz frame's slack and drop a frame; ZGC's are sub-millisecond. A fixed heap avoids resizing.
+def renderJvmArgs = ['-XX:+UseZGC', '-Xms1g', '-Xmx1g', '-XX:+AlwaysPreTouch']
+
 application {
 	applicationName = "cthugha-reborn"
 	mainClass = "io.github.duckasteroid.cthugha.Main"
 	//applicationDefaultJvmArgs = ['-Duser.dir=%APP_HOME%']
+	applicationDefaultJvmArgs = renderJvmArgs
 }
 
 run {
@@ -155,6 +160,7 @@ run {
 	systemProperty("slf4j.internal.verbosity", "WARN")
 	systemProperty("joml.nounsafe", "true")
 	jvmArgs "--enable-native-access=ALL-UNNAMED"
+	jvmArgs renderJvmArgs
 	// Fixed remote-control token for local dev, so the same browser session/URL survives app restarts.
 	args "--remote-token=THIS_IS_A_TEST"
 	//systemProperty("sun.java2d.opengl", "true")
