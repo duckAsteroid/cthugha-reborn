@@ -12,3 +12,9 @@
 7. Per-notification-type toggle — e.g. suppress just the "tab calculation in progress" message —
    in addition to the existing global Notifications toggle. Worth noting the in-progress notice
    can also fire repeatedly during rapid slider drags, which may be the real irritant.
+8. Add a mechanism to document the config "tree" - a kind of tree/table that lists the IDs and their settings. Maybe do 
+   this through the React.JS frontend?
+9. Add an MCP interface so an agent can be used to control the configuration, and to allow for scripting of the configuration.  
+   Might need a mechanism for the agent to "see" the rendered output?
+10. Add a live quote (e.g. from agent) rather than always from static resources?
+11. Named packages of animation (e.g. for translations - with their own dials) so you can easily do trippy transform based animations
