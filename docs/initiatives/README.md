@@ -22,8 +22,8 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
 | 1 | [Cap the internal render resolution at high window sizes](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
-| 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | draft | — | 0 | — |
-| 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | draft | — | 0 | — |
+| 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | designed | ✅ ready | 0 | — |
+| 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | designed | ✅ ready | 0 | — |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | — | 0 | — |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | — | 0 | — |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
@@ -31,7 +31,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | draft | — | 0 | — |
 | 9 | [Decouple simulation from display with interpolated presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | draft | — | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
-| 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | draft | — | 0 | — |
+| 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | designed | ⛔ 2, 3 | 0 | — |
 | 12 | [Global animatable transform applied to the whole render](12-global-animatable-transform-applied-to-the-whole-render.md) | feature | draft | — | 0 | — |
 | 13 | [Gradient-based palette designer](13-gradient-based-palette-designer.md) | feature | draft | — | 0 | — |
 | 14 | [Random saved tab preset action](14-random-saved-tab-preset-action.md) | feature | draft | — | 0 | — |
@@ -42,14 +42,18 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 19 | [Live quotes from an external source](19-live-quotes-from-an-external-source.md) | feature | draft | — | 0 | — |
 | 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | draft | — | 0 | — |
 | 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | draft | — | 6 | — |
+| 22 | [Migrate to Jackson 3](22-migrate-to-jackson-3.md) | chore | draft | ⛔ 3 | 0 | — |
+| 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | ⛔ 3 | 0 | — |
+| 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | ⛔ 3 | 0 | — |
+| 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | ⛔ 3 | 0 | — |
 
 ### Dependencies
 
 ```mermaid
 flowchart RL
   n1["✏️ 1 Cap the internal render resolution at high window sizes"]
-  n2["✏️ 2 Bundle a pinned JDK 25 runtime with the app"]
-  n3["✏️ 3 Update all dependencies to their latest releases"]
+  n2["🟢 2 Bundle a pinned JDK 25 runtime with the app"]
+  n3["🟢 3 Update all dependencies to their latest releases"]
   n4["✏️ 4 Fix AudioReader busy-spin upstream in render-core"]
   n5["✏️ 5 Stop render-core wave setters allocating and rebuilding every frame"]
   n6["✏️ 6 Throttle tab regeneration driven by animation bindings"]
@@ -57,7 +61,7 @@ flowchart RL
   n8["✏️ 8 Make the flame simulation independent of display frame rate"]
   n9["✏️ 9 Decouple simulation from display with interpolated presentation"]
   n10["✏️ 10 Make primitive parameter values safe to read across threads"]
-  n11["✏️ 11 Bring CLAUDE.md up to date with the current codebase"]
+  n11["📐 11 Bring CLAUDE.md up to date with the current codebase"]
   n12["✏️ 12 Global animatable transform applied to the whole render"]
   n13["✏️ 13 Gradient-based palette designer"]
   n14["✏️ 14 Random saved tab preset action"]
@@ -68,6 +72,16 @@ flowchart RL
   n19["✏️ 19 Live quotes from an external source"]
   n20["✏️ 20 Named animation packages with their own dials"]
   n21["✏️ 21 Make TransformParams easy to animate"]
+  n22["✏️ 22 Migrate to Jackson 3"]
+  n23["✏️ 23 Migrate the remote server to Javalin 7"]
+  n24["✏️ 24 Migrate tests to JUnit 6"]
+  n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
+  n11 --> n2
+  n11 --> n3
+  n22 --> n3
+  n23 --> n3
+  n24 --> n3
+  n25 --> n3
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n2 href "02-bundle-a-pinned-jdk-25-runtime-with-the-app.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
@@ -89,6 +103,10 @@ flowchart RL
   click n19 href "19-live-quotes-from-an-external-source.md"
   click n20 href "20-named-animation-packages-with-their-own-dials.md"
   click n21 href "21-make-transformparams-easy-to-animate.md"
+  click n22 href "22-migrate-to-jackson-3.md"
+  click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
+  click n24 href "24-migrate-tests-to-junit-6.md"
+  click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
 ```
 
 ### Themes
