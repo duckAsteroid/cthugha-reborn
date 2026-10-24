@@ -1,8 +1,8 @@
 # Testing Notes — Bugs
 
 Observations from manual testing, clarified and grouped by area. Each item below is a real
-bug/behavior change to make, not a feature idea (feature ideas from the original notes have moved
-to `ideas.md`).
+bug/behavior change to make, not a feature idea (feature ideas are tracked as initiatives in
+`docs/initiatives/`).
 
 Once an item here is filed as a GitHub issue, remove it from this file — the issue is the source
 of truth from that point on.
