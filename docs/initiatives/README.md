@@ -39,6 +39,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 18 | [MCP interface for agent control and scripting](18-mcp-interface-for-agent-control-and-scripting.md) | feature | draft | — | 0 | — |
 | 19 | [Live quotes from an external source](19-live-quotes-from-an-external-source.md) | feature | draft | — | 0 | — |
 | 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | draft | — | 0 | — |
+| 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | draft | — | 6 | — |
 
 ### Dependencies
 
@@ -64,6 +65,7 @@ flowchart RL
   n18["✏️ 18 MCP interface for agent control and scripting"]
   n19["✏️ 19 Live quotes from an external source"]
   n20["✏️ 20 Named animation packages with their own dials"]
+  n21["✏️ 21 Make TransformParams easy to animate"]
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n2 href "02-bundle-a-pinned-jdk-25-runtime-with-the-app.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
@@ -84,6 +86,7 @@ flowchart RL
   click n18 href "18-mcp-interface-for-agent-control-and-scripting.md"
   click n19 href "19-live-quotes-from-an-external-source.md"
   click n20 href "20-named-animation-packages-with-their-own-dials.md"
+  click n21 href "21-make-transformparams-easy-to-animate.md"
 ```
 
 ### Completed
