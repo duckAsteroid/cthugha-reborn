@@ -2,6 +2,7 @@
 type: feature
 status: draft
 updated: 2026-10-24
+tags: [transforms]
 ---
 # Global animatable transform applied to the whole render
 

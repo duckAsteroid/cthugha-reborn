@@ -2,6 +2,7 @@
 type: feature
 status: draft
 updated: 2026-10-24
+tags: [transforms]
 ---
 # Named animation packages with their own dials
 

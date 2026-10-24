@@ -8,6 +8,8 @@ summary: "Planned work for Cthugha Reborn: features, fixes, performance and tool
 status: active
 docs: [CLAUDE.md, docs/*.md, README.MD]
 types: [feature, bug, perf, refactor, docs, chore, build, spike]
+tags:
+  transforms: Affine/perspective transforms (TransformParams) and animating them
 ---
 # Cthugha Reborn initiatives
 
@@ -88,6 +90,10 @@ flowchart RL
   click n20 href "20-named-animation-packages-with-their-own-dials.md"
   click n21 href "21-make-transformparams-easy-to-animate.md"
 ```
+
+### Themes
+
+- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 
 ### Completed
 
