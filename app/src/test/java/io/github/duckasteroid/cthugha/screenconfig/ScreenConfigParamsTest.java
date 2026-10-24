@@ -81,6 +81,40 @@ class ScreenConfigParamsTest {
         assertTrue(snapshot.values().containsKey("kept"));
     }
 
+    @Test
+    void applyIgnoresSavedValuesForPersistExcludedLeaves() {
+        // A config saved before the leaf was excluded (e.g. an old one carrying General/Fullscreen)
+        // must not apply it on load.
+        ContainerNode root = new ContainerNode("Root");
+        ContainerNode general = new ContainerNode("General");
+        BooleanParameter fullscreen = new BooleanParameter("Fullscreen", false);
+        fullscreen.withNoPersist();
+        general.addChild(fullscreen);
+        DoubleParameter kept = new DoubleParameter("kept", 0, 10, 5.0);
+        root.addChild(general);
+        root.addChild(kept);
+
+        ScreenConfigParams.apply(root, new ScreenConfigParams.Snapshot(
+                Map.of("General/Fullscreen", 1, "kept", 7.0), Map.of()));
+
+        assertFalse(fullscreen.value);
+        assertEquals(7.0, kept.value);
+    }
+
+    @Test
+    void applyIgnoresSavedValuesUnderPersistExcludedAncestors() {
+        ContainerNode root = new ContainerNode("Root");
+        ContainerNode excluded = new ContainerNode("Library");
+        excluded.withNoPersist();
+        DoubleParameter inside = new DoubleParameter("inside", 0, 10, 1.0);
+        excluded.addChild(inside);
+        root.addChild(excluded);
+
+        ScreenConfigParams.apply(root, new ScreenConfigParams.Snapshot(Map.of("Library/inside", 9.0), Map.of()));
+
+        assertEquals(1.0, inside.value);
+    }
+
     /**
      * {@link GeneratorRegistry} rebuilds its own children when its "Generator" selector param
      * changes (a different generator instance is swapped in as a child). This is the real-world

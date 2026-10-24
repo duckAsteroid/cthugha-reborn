@@ -225,6 +225,12 @@ public class ActionTreeBuilder {
             + "in the remote UI). Turning this off hides that icon and disables its write endpoints "
             + "on the embedded web server — handy on an untrusted network.");
         cthugha.libraryManagerEnabled.withNoAnimate();
+        // App/machine preferences, not part of a visualisation: each is remembered in state.ini on
+        // its own, so keep them out of screen configs (and the persisted "current" config) —
+        // loading a config must not flip the window to fullscreen or toggle the Library Manager.
+        fullscreenEnabled.withNoPersist();
+        cthugha.notifications.withNoPersist();
+        cthugha.libraryManagerEnabled.withNoPersist();
         generalGroup.addChild(fullscreenEnabled);
         generalGroup.addChild(cthugha.notifications);
         generalGroup.addChild(cthugha.bindings.enabled);

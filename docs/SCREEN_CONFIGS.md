@@ -222,14 +222,25 @@ backend-only, and answer different questions — a subtree can be persisted in f
 legitimately varies with ordinary use rather than with a code change. See "Detecting structural
 drift" below.
 
-`persistExclude` is set at container roots, not leaf-by-leaf, and is inherited implicitly by never
-descending into an excluded subtree — so a new leaf param added under an already-excluded
-container (e.g. a future field on the Configs tab itself) is automatically excluded without any
-extra bookkeeping. Two places currently opt out:
+`persistExclude` can be set on a single leaf or on a container. A container's flag is inherited
+implicitly: capture never descends into an excluded subtree, so a new leaf added under an
+already-excluded container (e.g. a future field on the Configs tab itself) is excluded without any
+extra bookkeeping. Apply honours the same flag: a saved value whose path resolves to an excluded
+node, or to anything beneath an excluded ancestor, is not applied — it is logged as a warning and
+counted in the "could not be applied" summary, so a config saved before a node was excluded
+neither flips that setting on load nor fails silently. Resaving the config drops the entry.
 
-- `ScreenConfigLibraryNode` itself (the whole Configs tab) — a config shouldn't be able to
-  reference itself.
-- `GeneratorRegistry.saveName` — the tab-preset "Save Name" input field.
+What opts out:
+
+- **Config/preset machinery** — `ScreenConfigLibraryNode` (the whole Configs tab; a config
+  shouldn't reference itself), `BeatPresetLibraryNode`, and the "Save Name" / "New Type" style
+  form fields (`GeneratorRegistry.saveName`, `WaveSystem`'s new-wave type picker).
+- **Library pickers** — the image, quote and audio-source selectors, which are one-shot actions
+  or device choices rather than part of the look.
+- **App and machine preferences** — `General/Fullscreen`, `General/Notifications` and
+  `General/Library Manager` (plus the audio tab's Debug Beats HUD). Each is remembered in
+  `state.ini` on its own, so loading a visualisation never changes the window mode or the remote
+  server's features.
 
 ---
 

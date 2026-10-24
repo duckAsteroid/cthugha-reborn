@@ -242,6 +242,14 @@ public class ScreenConfigParams {
         });
     }
 
+    /** {@code true} if {@code node} or any ancestor is marked {@link Node#isPersistExcluded()}. */
+    private static boolean isPersistExcluded(Node node) {
+        for (Node n = node; n != null; n = n.getParent()) {
+            if (n.isPersistExcluded()) return true;
+        }
+        return false;
+    }
+
     /** Applies each captured leaf value against the live tree; returns how many were skipped. */
     private static int applyValues(Node root, Map<String, Object> params) {
         int skipped = 0;
@@ -252,6 +260,13 @@ public class ScreenConfigParams {
             if (target == null) {
                 LOG.warn("Screen config: path '{}' no longer exists in the parameter tree — "
                         + "skipping (renamed or removed since this value was saved?)", path);
+                skipped++;
+            } else if (isPersistExcluded(target)) {
+                // Saved before this leaf (or an ancestor) was excluded from configs — e.g. an old
+                // config carrying General/Fullscreen. Capture would no longer record it, so don't
+                // let a stale entry apply it either.
+                LOG.warn("Screen config: '{}' is excluded from configs (withNoPersist) — ignoring "
+                        + "its saved value; resave this config to drop it", path);
                 skipped++;
             } else if (target instanceof EnumParameter<?> ep) {
                 if (value instanceof String label) {
