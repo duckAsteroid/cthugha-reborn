@@ -1,5 +1,5 @@
 ---
-name: io-github-duckasteroid-render-core-1-0-0-rc4
+name: io-github-duckasteroid-render-core-1-0-0-rc5
 description: "Reference for the com.asteroid.duck.opengl:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
 metadata:
   sources: src/

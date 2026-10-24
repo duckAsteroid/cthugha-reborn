@@ -14,8 +14,13 @@ import java.util.List;
  *   <li>Compute the mean magnitude over the band's raw FFT bin range → instant energy.</li>
  *   <li>Update a rolling history of length {@code historyLength} frames.</li>
  *   <li>Compute {@code ratio = instantEnergy / (rollingAverage + ε)}.</li>
- *   <li>If {@code ratio > threshold}: {@code raw = clamp((ratio − threshold) × sensitivity, 0, 1)}.
- *       </li>
+ *   <li>If {@code instantEnergy >= noiseFloor} <em>and</em> {@code ratio > threshold}:
+ *       {@code raw = clamp((ratio − threshold) × sensitivity, 0, 1)}; otherwise {@code raw = 0}.
+ *       The {@code noiseFloor} gate matters because {@code ratio} is purely relative — during
+ *       quiet passages the rolling average shrinks toward the mic/room noise floor, and ordinary
+ *       noise fluctuations then produce large ratios even though the absolute energy is
+ *       negligible. Without an absolute floor this makes the detector fire constantly on
+ *       near-silence.</li>
  *   <li>Published beat strength rises instantly to {@code raw} if higher; otherwise decays by
  *       {@code decayPerFrame} — same peak-hold pattern as {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}.</li>
  * </ol>
@@ -32,6 +37,7 @@ import java.util.List;
  *     43,    // history: ~0.7 s at 60 fps
  *     1.3f,  // threshold: 30% above average before triggering
  *     2.0f,  // sensitivity: 50% above average → strength 1.0
+ *     0.02f, // noise floor: ignore bands quieter than this in absolute terms
  *     1f/60f // decay: full scale falls to zero in one second
  * );
  * }</pre>
@@ -49,10 +55,19 @@ public class BeatDetector implements FrequencySink {
 
     private static final float EPSILON = 1e-10f;
 
+    /**
+     * Default {@code noiseFloor} used by the convenience constructors: bands with instant energy
+     * below this absolute level never trigger a beat, regardless of ratio. Magnitudes from
+     * {@link FFTProcessor#getRawMagnitudes()} are normalised to {@code [0, 1]}, so {@code 0.02}
+     * is 2% of full scale.
+     */
+    public static final float DEFAULT_NOISE_FLOOR = 0.02f;
+
     private final List<FrequencyBand> bands;
     private final BandState[] states;
     private final float threshold;
     private final float sensitivity;
+    private final float noiseFloor;
     private final float decayPerFrame;
 
     /**
@@ -67,14 +82,20 @@ public class BeatDetector implements FrequencySink {
      * @param sensitivity   scales {@code (ratio − threshold)} to {@code [0, 1]}; higher values
      *                      reach full strength at a lower peak
      *                      (e.g. {@code 2.0} → 50% above average = strength 1.0)
+     * @param noiseFloor    minimum absolute instant energy required before the ratio test is even
+     *                      considered; bands quieter than this never trigger, which prevents
+     *                      relative noise fluctuations during near-silence from being read as
+     *                      beats (see class Javadoc)
      * @param decayPerFrame per-frame fall rate of the published beat strength;
      *                      {@code 1.0 / 60} causes full scale to decay to zero in one second at 60 fps
      */
     public BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
-                        int historyLength, float threshold, float sensitivity, float decayPerFrame) {
+                        int historyLength, float threshold, float sensitivity, float noiseFloor,
+                        float decayPerFrame) {
         this.bands = List.copyOf(bands);
         this.threshold = threshold;
         this.sensitivity = sensitivity;
+        this.noiseFloor = noiseFloor;
         this.decayPerFrame = decayPerFrame;
         this.states = new BandState[bands.size()];
         for (int i = 0; i < bands.size(); i++) {
@@ -83,15 +104,28 @@ public class BeatDetector implements FrequencySink {
     }
 
     /**
+     * Compatibility overload of the full constructor without an explicit {@code noiseFloor};
+     * uses {@link #DEFAULT_NOISE_FLOOR}.
+     *
+     * @deprecated use the full constructor with an explicit {@code noiseFloor} instead.
+     */
+    @Deprecated
+    public BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
+                        int historyLength, float threshold, float sensitivity, float decayPerFrame) {
+        this(bands, fftSize, sampleRate, historyLength, threshold, sensitivity, DEFAULT_NOISE_FLOOR,
+             decayPerFrame);
+    }
+
+    /**
      * Convenience constructor using {@link FrequencyBand#defaults()} (bass / snare / hi-hat)
      * and sensible defaults: 43-frame history (~0.7 s at 60 fps), threshold 1.3, sensitivity 2.0,
-     * decay 1/60 per frame.
+     * noise floor {@link #DEFAULT_NOISE_FLOOR}, decay 1/60 per frame.
      *
      * @param fftSize    the FFT window size in samples
      * @param sampleRate the audio sample rate in Hz
      */
     public BeatDetector(int fftSize, float sampleRate) {
-        this(FrequencyBand.defaults(), fftSize, sampleRate, 43, 1.3f, 2.0f, 1.0f / 60f);
+        this(FrequencyBand.defaults(), fftSize, sampleRate, 43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, 1.0f / 60f);
     }
 
     /**
@@ -106,7 +140,7 @@ public class BeatDetector implements FrequencySink {
     public BeatDetector(FrequencyProcessor processor) {
         this(FrequencyBand.defaults(),
              processor.getFftSize(), processor.getSampleRate(),
-             43, 1.3f, 2.0f, 1.0f / 60f);
+             43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, 1.0f / 60f);
     }
 
     /**
@@ -118,7 +152,7 @@ public class BeatDetector implements FrequencySink {
     public BeatDetector(List<FrequencyBand> bands, FrequencyProcessor processor) {
         this(bands,
              processor.getFftSize(), processor.getSampleRate(),
-             43, 1.3f, 2.0f, 1.0f / 60f);
+             43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, 1.0f / 60f);
     }
 
     /**
@@ -143,7 +177,7 @@ public class BeatDetector implements FrequencySink {
      */
     public void update(float[] rawMagnitudes) {
         for (BandState state : states) {
-            state.update(rawMagnitudes, threshold, sensitivity, decayPerFrame);
+            state.update(rawMagnitudes, threshold, sensitivity, noiseFloor, decayPerFrame);
         }
     }
 
@@ -212,7 +246,8 @@ public class BeatDetector implements FrequencySink {
             this.binHigh = range[1];
         }
 
-        void update(float[] magnitudes, float threshold, float sensitivity, float decayPerFrame) {
+        void update(float[] magnitudes, float threshold, float sensitivity, float noiseFloor,
+                    float decayPerFrame) {
             float energy = 0;
             int width = binHigh - binLow;
             if (width > 0) {
@@ -230,7 +265,10 @@ public class BeatDetector implements FrequencySink {
 
             float avg = historySum / energyHistory.length;
             float ratio = energy / (avg + EPSILON);
-            float raw = (ratio > threshold)
+            // The noiseFloor gate matters because ratio is purely relative: during quiet
+            // passages avg shrinks toward the noise floor, and ordinary noise fluctuations then
+            // produce large ratios even though the absolute energy is negligible.
+            float raw = (energy >= noiseFloor && ratio > threshold)
                     ? Math.min(1.0f, (ratio - threshold) * sensitivity)
                     : 0.0f;
 

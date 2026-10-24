@@ -22,7 +22,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
 | 1 | [Cap the internal render resolution at high window sizes](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
-| 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | designed | ✅ ready | 0 | — |
+| 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | in-progress<br><sub>on develop</sub> | — | 0 | — |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | — | 0 | — |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | — | 0 | — |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
@@ -45,13 +45,15 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | ⛔ 3 | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | ⛔ 3 | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | ⛔ 3 | 0 | — |
+| 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | draft | — | 0 | — |
+| 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | draft | ⛔ 26 | 0 | — |
 
 ### Dependencies
 
 ```mermaid
 flowchart RL
   n1["✏️ 1 Cap the internal render resolution at high window sizes"]
-  n3["🟢 3 Update all dependencies to their latest releases"]
+  n3["🚧 3 Update all dependencies to their latest releases"]
   n4["✏️ 4 Fix AudioReader busy-spin upstream in render-core"]
   n5["✏️ 5 Stop render-core wave setters allocating and rebuilding every frame"]
   n6["✏️ 6 Throttle tab regeneration driven by animation bindings"]
@@ -74,6 +76,8 @@ flowchart RL
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
+  n26["✏️ 26 Fix render-core's Agent-Docs manifest artifact name upstream"]
+  n27["✏️ 27 Move the agent-docs Gradle plugin to 3.x"]
   n2["✅ <s>2 Bundle a pinned JDK 25 runtime with the app</s>"]
   n11 --> n2
   n11 --> n3
@@ -81,6 +85,7 @@ flowchart RL
   n23 --> n3
   n24 --> n3
   n25 --> n3
+  n27 --> n26
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
   click n4 href "04-fix-audioreader-busy-spin-upstream-in-render-core.md"
@@ -105,6 +110,8 @@ flowchart RL
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
+  click n26 href "26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md"
+  click n27 href "27-move-the-agent-docs-gradle-plugin-to-3-x.md"
   click n2 href "02-bundle-a-pinned-jdk-25-runtime-with-the-app.md"
 ```
 
