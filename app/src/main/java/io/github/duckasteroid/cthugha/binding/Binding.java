@@ -44,6 +44,10 @@ public abstract class Binding extends ParamNode {
     protected volatile Clock clock;
     protected volatile Node root;
     protected volatile ActionContext actionContext;
+    /** Last-resolved {@link #target} path and its segments, swapped as one unit (any thread may resolve). */
+    private volatile SplitPath splitPath;
+
+    private record SplitPath(String path, String[] segments) {}
 
     protected Binding(String name, BindingMode mode, String defaultTargetPath) {
         super(name);
@@ -80,7 +84,13 @@ public abstract class Binding extends ParamNode {
         Node r = root;
         String path = target.getValue();
         if (r == null || path == null || path.isBlank()) return Optional.empty();
-        return r.getChild(path.split("/"));
+        SplitPath split = splitPath;
+        if (split == null || !split.path().equals(path)) {
+            // Cache the split: ContinuousBinding resolves every tick, but the path rarely changes.
+            split = new SplitPath(path, path.split("/"));
+            splitPath = split;
+        }
+        return r.getChild(split.segments());
     }
 
     /** Subclass hook: called once clock/root/actionContext become available — compile the script. */

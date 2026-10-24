@@ -35,6 +35,11 @@ public class ColorParam extends ParamNode {
         return new Vector4f((float) r.value, (float) g.value, (float) b.value, alpha);
     }
 
+    /** Writes the current colour with the given alpha into {@code dest} and returns it. */
+    public Vector4f toVector4f(float alpha, Vector4f dest) {
+        return dest.set((float) r.value, (float) g.value, (float) b.value, alpha);
+    }
+
     /** Registers {@code listener} against all three of {@link #r}, {@link #g}, {@link #b}. */
     public void addChangeListener(Runnable listener) {
         r.addChangeListener(listener);

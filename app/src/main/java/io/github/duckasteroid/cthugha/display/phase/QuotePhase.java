@@ -23,11 +23,9 @@ import io.github.duckasteroid.cthugha.quote.Constants;
 import io.github.duckasteroid.cthugha.quote.Quote;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
-import org.lwjgl.BufferUtils;
 
 import java.awt.Font;
 import java.io.IOException;
-import java.nio.IntBuffer;
 import java.time.Duration;
 import java.util.Arrays;
 
@@ -140,9 +138,7 @@ public class QuotePhase implements RenderPhase {
         applyTransform(ctx);
 
         // Save current FBO binding (renderFBO bound by CthughaWindow)
-        IntBuffer savedFbo = BufferUtils.createIntBuffer(1);
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING, savedFbo);
-        int savedFboId = savedFbo.get(0);
+        int savedFboId = glGetInteger(GL_FRAMEBUFFER_BINDING); // stack-allocated, unlike createIntBuffer
 
         // Render RGBA text into our offscreen FBO
         textFBO.bind();

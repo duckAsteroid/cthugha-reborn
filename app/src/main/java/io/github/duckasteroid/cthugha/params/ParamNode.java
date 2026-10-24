@@ -286,6 +286,18 @@ public abstract class ParamNode implements Node {
     return children.stream();
   }
 
+  /** Plain loop rather than the Stream-based default: called per tick by binding path resolution. */
+  @Override
+  public Optional<Node> getChild(String name) {
+    for (int i = 0, n = children.size(); i < n; i++) {
+      Node child = children.get(i);
+      if (child.getName().equals(name)) {
+        return Optional.of(child);
+      }
+    }
+    return Optional.empty();
+  }
+
   @Override
   public boolean isLeaf() {
     return children.isEmpty();

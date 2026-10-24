@@ -1,7 +1,5 @@
 package io.github.duckasteroid.cthugha.params;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
@@ -112,9 +110,15 @@ public interface Node {
    * @return the node at the end of the path, or empty if any segment is not found
    */
   default Optional<Node> getChild(String[] path) {
-    ArrayDeque<String> pathQ = new ArrayDeque<>(path.length);
-    pathQ.addAll(Arrays.asList(path));
-    return getChild(pathQ);
+    Node current = this;
+    for (String segment : path) {
+      Optional<Node> next = current.getChild(segment);
+      if (next.isEmpty()) {
+        return Optional.empty();
+      }
+      current = next.get();
+    }
+    return Optional.of(current);
   }
 
   /**

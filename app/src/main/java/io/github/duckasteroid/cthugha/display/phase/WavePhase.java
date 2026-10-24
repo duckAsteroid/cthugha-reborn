@@ -84,6 +84,8 @@ public class WavePhase implements RenderPhase {
 
     /** Live GL renderer entries, keyed by model instance, kept in {@code waveSystem} list order. */
     private final Map<ParamNode, WaveEntry> entries = new LinkedHashMap<>();
+    /** {@code waveSystem.generation()} as of the last {@link #resyncWaves()}; GL thread only. */
+    private int syncedGeneration = -1;
 
     public WavePhase(JCthugha cthugha) {
         this.cthugha = cthugha;
@@ -126,8 +128,8 @@ public class WavePhase implements RenderPhase {
      * express on their own, since they only control growth direction and bin ordering along the
      * renderer's fixed horizontal/vertical axes.
      */
-    private static Matrix4f positionBase(SpectrumModel.Position position) {
-        Matrix4f base = new Matrix4f();
+    private static Matrix4f positionBase(SpectrumModel.Position position, Matrix4f base) {
+        base.identity();
         switch (position) {
             case TOP -> base.scale(1f, -1f, 1f);
             case LEFT -> base.rotateZ((float) (-Math.PI / 2));
@@ -180,6 +182,9 @@ public class WavePhase implements RenderPhase {
      * system's render order after every resync.
      */
     private void resyncWaves() {
+        int gen = cthugha.waveSystem.generation();
+        if (gen == syncedGeneration) return;
+        syncedGeneration = gen;
         List<ParamNode> current = cthugha.waveSystem.instances();
         entries.keySet().removeIf(model -> {
             if (current.contains(model)) return false;
@@ -223,8 +228,33 @@ public class WavePhase implements RenderPhase {
         void dispose();
     }
 
+    /**
+     * Tracks the amplitude envelope last handed to a wave, so it's only re-set when amplitude or
+     * ellipse actually change: each {@code setAmplitudeFunction} call makes render-core rebuild the
+     * wave's whole VBO (boxing a Float per vertex), and {@code AmplitudeFunction.constant/ellipse}
+     * themselves allocate a capturing lambda per call.
+     */
+    private static final class CachedAmplitude {
+        private AmplitudeFunction fn;
+        private float amp = Float.NaN;
+        private boolean ellipse;
+
+        /** @return {@code true} if {@link #fn} was rebuilt and needs applying */
+        boolean update(float amp, boolean ellipse) {
+            if (fn != null && amp == this.amp && ellipse == this.ellipse) return false;
+            fn = ellipse ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp);
+            this.amp = amp;
+            this.ellipse = ellipse;
+            return true;
+        }
+    }
+
     private final class OscilloscopeEntry implements WaveEntry {
         private final OscilloscopeModel model;
+        // Per-frame scratch, reused: render-core's setters copy their argument.
+        private final Matrix4f transform = new Matrix4f();
+        private final Vector4f colour = new Vector4f();
+        private final CachedAmplitude amplitude = new CachedAmplitude();
         private final AudioWave wave;
 
         OscilloscopeEntry(OscilloscopeModel model) throws IOException {
@@ -242,15 +272,15 @@ public class WavePhase implements RenderPhase {
         @Override
         public void render(RenderContext ctx, boolean overlayPass) {
             if (!model.enabled.value) return;
-            float amp = (float) model.amplitude.value;
             wave.setLineWidth((float) model.lineWidth.value);
             wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
-            wave.setAmplitudeFunction(
-                    model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            wave.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
+            if (amplitude.update((float) model.amplitude.value, model.ellipse.value)) {
+                wave.setAmplitudeFunction(amplitude.fn); // render-core rebuilds the VBO on every set
+            }
+            wave.setTransform(model.transform.applyTo(transform.identity(), PhaseConfig.aspect(ctx)));
             wave.setLineColour(overlayPass
-                    ? model.color.toVector4f(1f)
-                    : new Vector4f((float) model.index.value, 0f, 0f, 1f));
+                    ? model.color.toVector4f(1f, colour)
+                    : colour.set((float) model.index.value, 0f, 0f, 1f));
             wave.doRender(ctx);
         }
 
@@ -262,6 +292,10 @@ public class WavePhase implements RenderPhase {
 
     private final class RadialWaveEntry implements WaveEntry {
         private final RadialWaveModel model;
+        // Per-frame scratch, reused: render-core's setters copy their argument.
+        private final Matrix4f transform = new Matrix4f();
+        private final Vector4f colour = new Vector4f();
+        private final CachedAmplitude amplitude = new CachedAmplitude();
         private final RadialWave wave;
 
         RadialWaveEntry(RadialWaveModel model) throws IOException {
@@ -279,15 +313,15 @@ public class WavePhase implements RenderPhase {
         @Override
         public void render(RenderContext ctx, boolean overlayPass) {
             if (!model.enabled.value) return;
-            float amp = (float) model.amplitude.value;
             wave.setLineWidth((float) model.lineWidth.value);
             wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
-            wave.setAmplitudeFunction(
-                    model.ellipse.value ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
-            wave.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
+            if (amplitude.update((float) model.amplitude.value, model.ellipse.value)) {
+                wave.setAmplitudeFunction(amplitude.fn); // render-core rebuilds the VBO on every set
+            }
+            wave.setTransform(model.transform.applyTo(transform.identity(), PhaseConfig.aspect(ctx)));
             wave.setLineColour(overlayPass
-                    ? model.color.toVector4f(1f)
-                    : new Vector4f((float) model.index.value, 0f, 0f, 1f));
+                    ? model.color.toVector4f(1f, colour)
+                    : colour.set((float) model.index.value, 0f, 0f, 1f));
             wave.doRender(ctx);
         }
 
@@ -299,6 +333,7 @@ public class WavePhase implements RenderPhase {
 
     private final class SpectrumEntry implements WaveEntry {
         private final SpectrumModel model;
+        private final Matrix4f transform = new Matrix4f(); // per-frame scratch, reused
         private SpectrumAnalyser bufferAnalyser;
         private SpectrumAnalyser overlayAnalyser;
         private volatile boolean bufferColourDirty = false;
@@ -388,7 +423,7 @@ public class WavePhase implements RenderPhase {
             }
             if (!model.enabled.value) return;
             SpectrumAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
-            active.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration()), PhaseConfig.aspect(ctx)));
+            active.setTransform(model.transform.applyTo(positionBase(model.position.getEnumeration(), transform), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }
 
@@ -403,6 +438,7 @@ public class WavePhase implements RenderPhase {
 
     private final class RadialSpectrumEntry implements WaveEntry {
         private final RadialSpectrumModel model;
+        private final Matrix4f transform = new Matrix4f(); // per-frame scratch, reused
         private RadialSpectrumAnalyser bufferAnalyser;
         private RadialSpectrumAnalyser overlayAnalyser;
         private volatile boolean bufferColourDirty = false;
@@ -495,7 +531,7 @@ public class WavePhase implements RenderPhase {
             if (!model.enabled.value) return;
             RadialSpectrumAnalyser active = overlayPass ? overlayAnalyser : bufferAnalyser;
             active.withRepeats(model.repeats.value);
-            active.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
+            active.setTransform(model.transform.applyTo(transform.identity(), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }
 
@@ -510,6 +546,7 @@ public class WavePhase implements RenderPhase {
 
     private final class RadialClockEntry implements WaveEntry {
         private final RadialClockModel model;
+        private final Matrix4f transform = new Matrix4f(); // per-frame scratch, reused
         private RadialClockAnalyser bufferAnalyser;
         private RadialClockAnalyser overlayAnalyser;
         private volatile boolean bufferDirty = false;
@@ -606,7 +643,7 @@ public class WavePhase implements RenderPhase {
             active.withRepeats(model.repeats.value);
             active.withWidthFraction((float) model.widthFraction.value);
             active.withBinRange(model.binStart.value, model.binEnd.value, model.binSkip.value);
-            active.setTransform(model.transform.applyTo(new Matrix4f(), PhaseConfig.aspect(ctx)));
+            active.setTransform(model.transform.applyTo(transform.identity(), PhaseConfig.aspect(ctx)));
             active.doRender(ctx);
         }
 

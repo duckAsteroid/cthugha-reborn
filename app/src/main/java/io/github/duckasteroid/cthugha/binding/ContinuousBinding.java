@@ -3,6 +3,7 @@ package io.github.duckasteroid.cthugha.binding;
 import io.github.duckasteroid.cthugha.params.AbstractValue;
 import io.github.duckasteroid.cthugha.params.AnimationBindingView;
 import io.github.duckasteroid.cthugha.params.Node;
+import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
 
 import java.util.Map;
 import java.util.Optional;
@@ -111,13 +112,18 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
      * PerspectiveParams}, etc). An animation directly targeting such an "enabled" flag is
      * unaffected by its own current value, so binding on/off toggles always keep ticking.
      */
+    private static boolean isOff(Node enabledFlag) {
+        if (enabledFlag instanceof BooleanParameter bp) return !bp.value; // common case, no boxing
+        return enabledFlag instanceof AbstractValue av && av.getValue().doubleValue() == 0.0;
+    }
+
     private boolean isTargetActive(Node resolvedTarget) {
         Node current = resolvedTarget.getParent();
         while (current != null) {
             Optional<Node> enabledChild = current.getChild("enabled");
             if (enabledChild.isPresent()) {
                 Node ec = enabledChild.get();
-                if (ec != resolvedTarget && ec instanceof AbstractValue av && av.getValue().doubleValue() == 0.0) {
+                if (ec != resolvedTarget && isOff(ec)) {
                     return false;
                 }
             }

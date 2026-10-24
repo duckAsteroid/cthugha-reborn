@@ -7,7 +7,6 @@ import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import org.joml.Vector2f;
 
 import java.util.function.DoublePredicate;
-import java.util.stream.Stream;
 
 /**
  * A pair of bounded {@code double} parameters representing a 2-D point or vector.
@@ -71,10 +70,7 @@ public class XYParam extends ParamNode {
    * @param test predicate to evaluate against each component
    */
   public boolean is(DoublePredicate test) {
-    return Stream.of(x, y)
-      .map(DoubleParameter::getValue)
-      .mapToDouble(Number::doubleValue)
-      .allMatch(test);
+    return test.test(x.value) && test.test(y.value);
   }
 
   /** Returns the current x/y values as a JOML {@link Vector2f}. */

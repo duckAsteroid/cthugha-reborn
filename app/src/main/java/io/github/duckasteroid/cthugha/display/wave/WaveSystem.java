@@ -87,6 +87,8 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
     private final AbstractAction addWaveAction;
 
     private volatile Runnable onTreeChanged = () -> {};
+    /** Bumped on every add/remove, so per-frame consumers can skip reconciling an unchanged list. */
+    private final AtomicInteger generation = new AtomicInteger();
 
     public WaveSystem() {
         super("Wave");
@@ -133,6 +135,7 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
         ParamNode model = type.newInstance(name);
         model.addChild(deleteAction(model));
         waves.add(model);
+        generation.incrementAndGet();
         addChild(model);
         onTreeChanged.run();
         bumpCounterPast(type, name);
@@ -148,6 +151,7 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
     /** Removes a wave instance from the list and detaches it from the param tree. */
     public void removeWave(ParamNode model) {
         waves.remove(model);
+        generation.incrementAndGet();
         removeChild(model);
         onTreeChanged.run();
     }
@@ -166,6 +170,14 @@ public class WaveSystem extends ParamNode implements DynamicChildList {
     /** The current wave instances, in render order (list/declaration order). */
     public List<ParamNode> instances() {
         return List.copyOf(waves);
+    }
+
+    /**
+     * Changes whenever an instance is added or removed. Read this <em>before</em> {@link
+     * #instances()}: a concurrent change then at worst causes one extra reconcile, never a missed one.
+     */
+    public int generation() {
+        return generation.get();
     }
 
     /** Registers a callback invoked whenever a wave instance is added or removed. */
