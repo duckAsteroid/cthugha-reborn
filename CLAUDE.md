@@ -145,6 +145,39 @@ The `screenconfig/` package implements named, resolution-independent snapshots o
 | SLF4J + Logback | Logging |
 | JUnit 5 + Mockito | Testing |
 
+## Initiatives (tickets / issues)
+Planned work lives in Brindley collections — "initiative", "ticket" and "issue" all mean the same
+thing: folders whose `README.md` front-matter contains
+`brindley: 1`, holding one Markdown file per initiative, named `<number>-<slug>.md`
+(format: https://github.com/duckAsteroid/brindley/blob/main/FORMAT.md). This repo's collection is
+`docs/initiatives/` (name `cthugha`, alias `ct`, e.g. `ct#3`).
+- Never rename or move initiative files or their asset directories. Status is the `status`
+  front-matter field.
+- Dependencies are the links under an initiative's `## Dependencies` heading (non-blocking
+  links go under `## Related`). Implement only an initiative that is `designed` and whose
+  linked initiatives are all `done`. Confirm external (http) dependencies yourself; report any
+  you cannot confirm.
+- Ask about open questions before implementing; `(implementation)` questions are yours to
+  settle — record the decision in the initiative.
+- If, while building, you reach a decision the initiative doesn't settle and that matters to
+  what you build, don't guess: add it as an ordinary open question and stop to ask. The
+  initiative stays in-progress, and readiness checks fail until it is resolved. Mark a question
+  `(implementation)` only when the choice is genuinely yours to make.
+- When discussing open questions with the user: one at a time, in open chat (no form or
+  multiple-choice prompts), grounded in the actual code (cite `path:line`; say "unclear from
+  code" rather than guess), with concrete examples from the real domain. Record each decision
+  in the initiative as it is made.
+- On completion, in the same commit as the code: update the project docs to describe the code
+  as it now is — present tense, no history, no rejected alternatives, no links to initiatives —
+  and record `docs_impact` (files updated, or `none: <reason>`); settle the initiative's
+  wording, moving rejected alternatives into `## Appendix: Rejected alternatives`; set
+  `status: done` and `updated`.
+- A spike (`type: spike`) measures what its `## Measures` section asks and records
+  `## Findings`; its code stays on its own branch and may become the basis of the real
+  implementation, so write it to be built on.
+- New initiative: next number in the collection, filename `<number>-<slug>.md`,
+  `status: draft`, and a `type` (e.g. `feature`, `bug`, `refactor`).
+
 ## Current Branch Context
 
 Branch `render_phase` is active — extracted `RenderPhase` interface and five phase implementations (`WavePhase`, `FlashPhase`, `QuotePhase`, `NotifPhase`, `QrPhase`) from the `CthughaWindow` monolith. Wave renderers now write directly to the R16 indexed buffer (`displayTex`/`renderTex` upgraded from R8 to GL_R16); the RGBA wave overlay FBO and `WaveIndexBakeRenderer` have been deleted. `ActionTreeBuilder.Callbacks` shrunk from 11 to 7 methods; phases register their own actions via `registerActions()`.
