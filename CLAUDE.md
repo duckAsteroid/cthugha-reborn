@@ -8,7 +8,9 @@ Cthugha Reborn is a Java port of the 1990s DOS music visualization software Cthu
 
 ## Build & Run Commands
 
-Requires Java 17. This is a Gradle multi-project build (`:app` + `:remote-ui`).
+This is a Gradle multi-project build (`:app` + `:remote-ui`). The Java toolchain is Java 25 from Amazon Corretto; the foojay resolver (`settings.gradle`) downloads it when no matching JDK is installed.
+
+The packaged distribution (`installDist`, `distZip`, `distTar`) bundles a trimmed Corretto 25 runtime under `runtime/`, linked by the `jlinkRuntime` task from the toolchain JDK using the module list `runtimeModules` in `app/build.gradle`. A library that needs a JDK module not on that list fails only at runtime on the bundled JVM, so add the module there. `bin/cthugha-reborn` runs on the bundled runtime and ignores `JAVA_HOME`/`PATH`. Set `CTHUGHA_JAVA_HOME` to run on a different JVM instead (e.g. to benchmark another one).
 
 ```bash
 # Build (also builds the remote-ui React SPA and bundles it into the jar)

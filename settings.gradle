@@ -1,2 +1,7 @@
+plugins {
+	// Lets the Java toolchain (app/build.gradle) download Corretto 25 when no matching JDK is installed
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'cthugha-reborn'
 include ':app', ':remote-ui'

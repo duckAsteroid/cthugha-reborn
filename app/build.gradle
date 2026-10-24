@@ -78,7 +78,37 @@ tasks.register('usbStickify', Copy) {
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(25)
+		vendor = JvmVendorSpec.AMAZON
 	}
+}
+
+// The JDK modules the app and its libraries need on the classpath. jdeps cannot derive this list
+// automatically (javacv's module descriptor requires javafx/libfreenect modules that aren't
+// shipped), so it's taken from the libraries' module descriptors and jdeps -s per jar:
+// java.desktop for javax.sound capture and AWT font rasterisation, jdk.unsupported for
+// LWJGL/javacpp, java.naming/java.instrument/java.xml for Jetty and Logback, and the optional
+// java.sql/java.management/java.prefs integrations Jackson, Jetty and Logback probe for.
+def runtimeModules = [
+	'java.base', 'java.desktop', 'java.instrument', 'java.logging', 'java.management',
+	'java.naming', 'java.prefs', 'java.sql', 'java.xml', 'jdk.unsupported',
+]
+
+// A trimmed runtime linked from the toolchain's own JDK (Corretto 25), shipped in every
+// distribution under runtime/ so bin/cthugha-reborn doesn't depend on the machine's Java.
+def jlinkRuntime = tasks.register('jlinkRuntime', Exec) {
+	group = 'distribution'
+	description = 'Links a trimmed Java runtime from the toolchain JDK for the packaged distribution.'
+	def launcher = javaToolchains.launcherFor(java.toolchain)
+	def outDir = layout.buildDirectory.dir('jlink/runtime')
+	inputs.property('modules', runtimeModules)
+	inputs.property('jdkVersion', launcher.map { it.metadata.javaRuntimeVersion })
+	outputs.dir(outDir)
+	executable = launcher.get().metadata.installationPath.file('bin/jlink').asFile
+	args '--add-modules', runtimeModules.join(','),
+		'--strip-debug', '--no-header-files', '--no-man-pages',
+		'--output', outDir.get().asFile
+	// jlink refuses to write into an existing directory
+	doFirst { outDir.get().asFile.deleteDir() }
 }
 
 // installDist/distZip/distTar (application plugin) copy all of src/dist verbatim into the
@@ -102,6 +132,16 @@ distributions {
 			exclude 'tabs/Spiral/**'
 			exclude 'tabs/**/*.tab'
 			exclude 'maps/*.MAP.png'
+			from(jlinkRuntime) {
+				into 'runtime'
+				// distZip/distTar normalise permissions to 0644 (reproducible archives), so mark
+				// the runtime's launchers and process-spawn helper executable explicitly
+				eachFile {
+					if (it.relativeSourcePath.segments[0] == 'bin' || it.name == 'jspawnhelper') {
+						it.permissions { unix('rwxr-xr-x') }
+					}
+				}
+			}
 		}
 	}
 }
@@ -191,6 +231,18 @@ processResources {
 
 startScripts {
 	doLast {
+		// Run on the bundled runtime rather than JAVA_HOME/PATH (sdkman sets JAVA_HOME in every
+		// shell); CTHUGHA_JAVA_HOME overrides it, e.g. to benchmark another JVM. Pointing JAVA_HOME
+		// at the choice just before the stock lookup reuses its validation and error messages.
+		unixScript.text = unixScript.text.replaceFirst(
+			java.util.regex.Pattern.quote('if [ -n "$JAVA_HOME" ] ; then'),
+			java.util.regex.Matcher.quoteReplacement('''if [ -n "$CTHUGHA_JAVA_HOME" ] ; then
+    JAVA_HOME=$CTHUGHA_JAVA_HOME
+elif [ -x "$APP_HOME/runtime/bin/java" ] ; then
+    JAVA_HOME=$APP_HOME/runtime
+fi
+if [ -n "$JAVA_HOME" ] ; then''')
+		)
 		unixScript.text = unixScript.text.replace(
 			'exec "$JAVACMD" "$@"',
 			'''# Parse optional --audio-source=<pactl-source-name> (default: monitor of the current default sink)

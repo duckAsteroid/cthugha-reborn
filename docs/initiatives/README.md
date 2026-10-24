@@ -22,7 +22,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
 | 1 | [Cap the internal render resolution at high window sizes](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
-| 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | designed | ✅ ready | 0 | — |
 | 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | designed | ✅ ready | 0 | — |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | — | 0 | — |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | — | 0 | — |
@@ -31,7 +30,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | draft | — | 0 | — |
 | 9 | [Decouple simulation from display with interpolated presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | draft | — | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
-| 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | designed | ⛔ 2, 3 | 0 | — |
+| 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | designed | ⛔ 3 | 0 | — |
 | 12 | [Global animatable transform applied to the whole render](12-global-animatable-transform-applied-to-the-whole-render.md) | feature | draft | — | 0 | — |
 | 13 | [Gradient-based palette designer](13-gradient-based-palette-designer.md) | feature | draft | — | 0 | — |
 | 14 | [Random saved tab preset action](14-random-saved-tab-preset-action.md) | feature | draft | — | 0 | — |
@@ -52,7 +51,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 ```mermaid
 flowchart RL
   n1["✏️ 1 Cap the internal render resolution at high window sizes"]
-  n2["🟢 2 Bundle a pinned JDK 25 runtime with the app"]
   n3["🟢 3 Update all dependencies to their latest releases"]
   n4["✏️ 4 Fix AudioReader busy-spin upstream in render-core"]
   n5["✏️ 5 Stop render-core wave setters allocating and rebuilding every frame"]
@@ -76,6 +74,7 @@ flowchart RL
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
+  n2["✅ <s>2 Bundle a pinned JDK 25 runtime with the app</s>"]
   n11 --> n2
   n11 --> n3
   n22 --> n3
@@ -83,7 +82,6 @@ flowchart RL
   n24 --> n3
   n25 --> n3
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
-  click n2 href "02-bundle-a-pinned-jdk-25-runtime-with-the-app.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
   click n4 href "04-fix-audioreader-busy-spin-upstream-in-render-core.md"
   click n5 href "05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md"
@@ -107,6 +105,7 @@ flowchart RL
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
+  click n2 href "02-bundle-a-pinned-jdk-25-runtime-with-the-app.md"
 ```
 
 ### Themes
@@ -115,6 +114,8 @@ flowchart RL
 
 ### Completed
 
-_None._
+| # | Initiative | Type | Updated |
+|---|------------|------|---------|
+| 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | 2026-10-24 |
 
 <!-- brindley:generated:end -->
