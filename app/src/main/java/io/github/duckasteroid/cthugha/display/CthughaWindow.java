@@ -128,6 +128,7 @@ public class CthughaWindow extends GLWindow {
     private boolean paletteDirty = false;
 
     private Double desiredUpdatePeriod = null;
+    private FrameTimeStats frameTimeStats;
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final BackgroundWorkQueue workQueue = new BackgroundWorkQueue();
@@ -283,6 +284,10 @@ public class CthughaWindow extends GLWindow {
         double targetFps = CFG.getConfigAs("display", "target_fps", "0", Double::parseDouble);
         if (targetFps > 0) {
             this.desiredUpdatePeriod = 1.0 / targetFps;
+        }
+        double frameStatsInterval = CFG.getConfigAs("display", "frame_stats_interval", "0", Double::parseDouble);
+        if (frameStatsInterval > 0) {
+            frameTimeStats = new FrameTimeStats(frameStatsInterval);
         }
 
         cthugha.init(new Dimension(w, h), getRandom());
@@ -504,6 +509,7 @@ public class CthughaWindow extends GLWindow {
 
     @Override
     public void render() throws IOException {
+        if (frameTimeStats != null) frameTimeStats.frame();
         renderActions.processAll(this);
         workQueue.processAll(this);
 
@@ -556,6 +562,8 @@ public class CthughaWindow extends GLWindow {
 
         // Screen overlays: each phase manages its own blend state
         for (RenderPhase p : phases) p.screenRender(this);
+
+        if (frameTimeStats != null) frameTimeStats.renderEnd();
     }
 
     /**
