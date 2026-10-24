@@ -18,7 +18,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE;
@@ -37,7 +39,20 @@ public class FlashPhase implements RenderPhase {
     private final RandomImageSource imageSource = new RandomImageSource(Paths.get("images"));
     private TextureBakeRenderer textureBaker;
     private Texture flashWhiteTex;
-    private Texture flashImageTex;
+    /**
+     * Uploaded flash textures by image, LRU-evicted (GL thread only). Creating a texture costs a
+     * near-constant ~15ms of driver time regardless of image size — a dropped frame per flash, and
+     * flashes are often beat-triggered — so each image is uploaded once and then reused.
+     */
+    private final Map<Path, Texture> flashCache = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Path, Texture> eldest) {
+            if (size() <= MAX_CACHED_FLASHES) return false;
+            eldest.getValue().dispose();
+            return true;
+        }
+    };
+    private static final int MAX_CACHED_FLASHES = 48;
     private volatile boolean flashPending = false;
     private RenderActionQueue renderActions;
 
@@ -86,40 +101,70 @@ public class FlashPhase implements RenderPhase {
         return imageSource.groupOf(image);
     }
 
-    /** Schedules a one-shot bake of the given image on the GL thread. */
+    /**
+     * Bakes the image's cached texture if it has one; otherwise decodes and converts it on a
+     * background thread and schedules only the texture upload + bake on the GL thread. Decoding a
+     * PNG on the GL thread stalled whole frames for hundreds of ms — very visible when flashes are
+     * beat-triggered by a binding.
+     */
     public void requestFlash(Path image) {
-        renderActions.enqueue("flashImage", rc -> triggerImage(image));
+        renderActions.enqueue("flashImage", rc -> {
+            Texture cached = flashCache.get(image);
+            if (cached != null) {
+                bake(cached);
+            } else {
+                loadInBackground(image);
+            }
+        });
+    }
+
+    private void loadInBackground(Path image) {
+        Thread.ofVirtual().name("flash-load").start(() -> {
+            BufferedImage img;
+            try {
+                img = imageSource.loadImage(image);
+            } catch (IOException e) {
+                LOG.error("Error loading flash image", e);
+                return;
+            }
+            int w = img.getWidth();
+            int h = img.getHeight();
+            ByteBuffer pixels = toIndexedRGBA(img);
+            renderActions.enqueue("flashImageLoaded", rc -> triggerImage(image, w, h, pixels));
+        });
     }
 
     @Override
     public void dispose() {
         if (textureBaker  != null) textureBaker.dispose();
         if (flashWhiteTex != null) flashWhiteTex.dispose();
-        if (flashImageTex != null) flashImageTex.dispose();
+        flashCache.values().forEach(Texture::dispose);
+        flashCache.clear();
     }
 
-    /** GL thread: loads the given image and bakes it. */
-    private void triggerImage(Path image) {
-        try {
-            BufferedImage img = imageSource.loadImage(image);
-            if (flashImageTex != null) flashImageTex.dispose();
-            flashImageTex = new Texture();
-            flashImageTex.setInternalFormat(GL_RGBA);
-            flashImageTex.setImageFormat(GL_RGBA);
-            flashImageTex.setDataType(GL_UNSIGNED_BYTE);
-            flashImageTex.setFilter(Filter.LINEAR);
-            flashImageTex.generate(img.getWidth(), img.getHeight(), toIndexedRGBA(img));
-            textureBaker.setTexture(flashImageTex);
-            flashPending = true;
-        } catch (IOException e) {
-            LOG.error("Error loading flash image", e);
+    /** GL thread: uploads pre-converted pixels, caches the texture, and bakes it. */
+    private void triggerImage(Path image, int width, int height, ByteBuffer pixels) {
+        Texture tex = flashCache.get(image); // a concurrent load of the same image may have won
+        if (tex == null) {
+            tex = new Texture();
+            tex.setInternalFormat(GL_RGBA);
+            tex.setImageFormat(GL_RGBA);
+            tex.setDataType(GL_UNSIGNED_BYTE);
+            tex.setFilter(Filter.LINEAR);
+            tex.generate(width, height, pixels);
+            flashCache.put(image, tex);
         }
+        bake(tex);
+    }
+
+    private void bake(Texture tex) {
+        textureBaker.setTexture(tex);
+        flashPending = true;
     }
 
     /** GL thread: schedules a white-flash bake. */
     private void triggerWhite() {
-        textureBaker.setTexture(flashWhiteTex);
-        flashPending = true;
+        bake(flashWhiteTex);
     }
 
     /** Converts image to RGBA where R = luma (palette index), G=B=0, A=255. */
@@ -127,9 +172,11 @@ public class FlashPhase implements RenderPhase {
         int w = img.getWidth();
         int h = img.getHeight();
         ByteBuffer buf = BufferUtils.createByteBuffer(w * h * 4);
+        int[] row = new int[w];
         for (int y = h - 1; y >= 0; y--) {
+            img.getRGB(0, y, w, 1, row, 0, w); // bulk row read; per-pixel getRGB is far slower
             for (int x = 0; x < w; x++) {
-                int rgb = img.getRGB(x, y);
+                int rgb = row[x];
                 int r = (rgb >> 16) & 0xFF;
                 int g = (rgb >>  8) & 0xFF;
                 int b =  rgb        & 0xFF;
