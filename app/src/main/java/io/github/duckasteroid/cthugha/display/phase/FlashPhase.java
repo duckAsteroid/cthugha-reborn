@@ -43,7 +43,7 @@ public class FlashPhase implements RenderPhase {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        // 1×1 white: R=0xFF (palette index 255), A=0xFF
+        // 1×1 white: R=0xFF (normalised 1.0, the last palette entry), A=0xFF
         ByteBuffer whitePx = BufferUtils.createByteBuffer(4);
         whitePx.put((byte) 0xFF).put((byte) 0).put((byte) 0).put((byte) 0xFF).flip();
         flashWhiteTex = new Texture();

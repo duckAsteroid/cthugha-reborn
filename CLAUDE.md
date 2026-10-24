@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cthugha Reborn is a Java port of the 1990s DOS music visualization software Cthugha. It renders real-time audio-reactive visual effects using a palettized (256-color indexed) pixel buffer rendered via OpenGL, translation tables for distortion, and multiple waveform renderers layered on top. A phone/tablet can control runtime parameters via a browser-based remote UI served from an embedded HTTP server.
+Cthugha Reborn is a Java port of the 1990s DOS music visualization software Cthugha. It renders real-time audio-reactive visual effects using a palettized (colour-indexed; 256 entries by convention) pixel buffer rendered via OpenGL, translation tables for distortion, and multiple waveform renderers layered on top. A phone/tablet can control runtime parameters via a browser-based remote UI served from an embedded HTTP server.
 
 ## Build & Run Commands
 
@@ -43,13 +43,13 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends `render-core`
 3. **`phase.indexedRender()`** for each phase in order — waves, flash effects, and (optionally) baked quote text write palette indices directly into `renderTex`
 
 **Blur** (between passes):
-4. **Two-pass Gaussian blur** (`BlurTextureRenderer` xBlur + yBlur) with fade multiplier — `renderTex` → `flameTex` → `displayTex`, creating the flame spread effect
+4. **Two-pass Gaussian blur** (`BlurTextureRenderer` xBlur + yBlur) with fade multiplier — `renderTex` → `flameTex` → `displayTex`, creating the flame spread effect. This feeds the *next* frame's translate, not this frame's display, so fresh waves appear at full value before they start fading
 
 **Screen pass** (after palette display, renders RGBA overlays):
-5. **Display** (`PaletteRenderer`) — palette-converts `displayTex` (R16 indices) to RGBA for the window using a 256-entry LUT texture
+5. **Display** (`IndexPaletteRenderer`) — palette-converts `renderTex` (R16 indices) to RGBA for the window using a 256×N LUT texture (256×1 for a standard palette)
 6. **`phase.screenRender()`** for each phase in order — quote text overlay, notifications, QR code (each phase manages its own blend state)
 
-**Fixed-role textures**: `displayTex` is always the display/translate source; `renderTex` is the translate output/indexed-render target. Both are R16 format (GL_R16, 16-bit single-channel; palette index stored as `index/paletteSize` normalised to `[0, 1]`). `flameTex` is a GRAY intermediate used only between the two blur passes.
+**Fixed-role textures**: `displayTex` is always the blur output/translate source; `renderTex` is the translate output/indexed-render target/display source. Both are R16 format (GL_R16, 16-bit single-channel; palette index stored as `index/(paletteSize-1)` normalised to `[0, 1]`, so 1.0 is the last entry — `IndexPaletteRenderer` rounds to the nearest entry, unlike render-core's `PaletteRenderer`, whose `floor` decode wraps 1.0 to entry 0). `flameTex` is a GRAY intermediate used only between the two blur passes.
 
 ### Render Phase Components
 
@@ -66,7 +66,7 @@ Five implementations live in `display/phase/`:
 ### Core Data Structures
 
 - **`TabBuffer`** (`tab/TabBuffer.java`) — holds the pre-allocated RG16UI translation map as a direct `ByteBuffer` viewed as a `ShortBuffer`. Filled by `TabMapping.compute()` and uploaded to `translateMapTex` via `glTexSubImage2D`. Replaces the former `ScreenBuffer`.
-- **`PaletteMap`** (`map/PaletteMap.java`) — 256-entry RGB lookup table. Held by `JCthugha`; uploaded to GPU as a texture each frame when dirty.
+- **`PaletteMap`** (`map/PaletteMap.java`) — RGB lookup table (256 entries for every shipped `.MAP`, but any count is accepted). Held by `JCthugha`; uploaded to GPU as a texture each frame when dirty.
 - **`AudioSample`** (`audio/AudioSample.java`) — a batch of audio data with built-in downsampling support. Waveform models receive this each frame.
 - **Translation tables** (`tab/`) — `TabMapping` holds pre-computed RG16UI pixel displacement data. `TabGenerator` implementations (`Spiral`, `Hurricane`, `Smoke`, etc. in `tab/generators/`) generate these mappings. `TabStore` saves/loads named presets to `tabs/` directory. `GeneratorRegistry` manages the set of active generators.
 

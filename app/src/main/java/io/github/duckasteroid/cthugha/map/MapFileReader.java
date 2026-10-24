@@ -24,7 +24,7 @@ import javax.imageio.ImageIO;
  */
 public class MapFileReader {
 
-  /** Height (px) of a generated palette preview PNG; width is always 256 (one column per entry). */
+  /** Height (px) of a generated palette preview PNG; width is one column per entry (256 for a standard palette). */
   public static final int PREVIEW_HEIGHT = 32;
 
   private final Path paletteDir;

@@ -12,8 +12,9 @@ import java.io.IOException;
  * <ol>
  *   <li>{@link #indexedRender} — called while {@code renderFBO} is bound; writes palette indices
  *       directly into the R16 indexed buffer (waves, flash effects, in-buffer text). The red
- *       channel value {@code index/paletteSize} encodes the palette entry; PaletteRenderer
- *       resolves it as {@code pixelIndex = sampledValue * totalEntries}.</li>
+ *       channel value {@code index/(paletteSize-1)} encodes the palette entry (0.0 = first,
+ *       1.0 = last); IndexPaletteRenderer resolves it as
+ *       {@code round(sampledValue * (paletteSize-1))}.</li>
  *   <li>{@link #screenRender} — called after palette conversion to the screen FBO; renders RGBA
  *       overlays on top of the palette-converted image (text, QR code).</li>
  * </ol>

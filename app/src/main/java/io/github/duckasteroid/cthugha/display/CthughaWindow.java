@@ -8,7 +8,6 @@ import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
 
-import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
 import com.asteroid.duck.opengl.util.resources.io.PathBasedLoader;
@@ -85,12 +84,12 @@ public class CthughaWindow extends GLWindow {
     /** Mirrors the GL-thread-confirmed fullscreen state, so redundant sets don't re-flip it. */
     private boolean actualFullscreen = false;
 
-    // Palette LUT (256×1 RGBA)
+    // Palette LUT (256×N RGBA; 256×1 for a standard 256-entry palette)
     private Texture paletteTex;
 
     // Fixed-role R16 textures (GL_R16, uint16 normalised to [0,1]):
-    //   displayTex = blur output / translate source / display source (always)
-    //   renderTex  = translate output / indexed-render target / blur input (always)
+    //   displayTex = blur output / translate source (always) — the next frame's feedback input
+    //   renderTex  = translate output / indexed-render target / blur input / display source (always)
     private Texture displayTex;
     private Texture renderTex;
     private FrameBuffer displayFBO;
@@ -117,11 +116,12 @@ public class CthughaWindow extends GLWindow {
     private final DoubleParameter blurFade = new DoubleParameter("Softening", 0.0, 1.0, 0.99)
             {{ withUiHint(UiHint.SCALE, UiHint.SCALE_LOG); }};
 
-    // Pass 4 (default FBO): palette-convert displayTex to RGBA for display
-    private PaletteRenderer paletteRenderer;
+    // Pass 4 (default FBO): palette-convert renderTex to RGBA for display
+    private IndexPaletteRenderer paletteRenderer;
     private TextureUnit paletteUploadUnit;
 
-    // Palette LUT upload buffer — sized for the current palette; recreated if palette size changes
+    // Palette LUT upload buffer — palWidth × palHeight texels (padded past the last entry);
+    // recreated if the row count changes
     private ByteBuffer palBuf;
     private int palWidth;
     private int palHeight;
@@ -406,7 +406,7 @@ public class CthughaWindow extends GLWindow {
         int palSize = cthugha.paletteMap.size();
         palWidth  = 256;
         palHeight = (palSize + 255) / 256;
-        palBuf = BufferUtils.createByteBuffer(palSize * 4);
+        palBuf = BufferUtils.createByteBuffer(palWidth * palHeight * 4);
         paletteTex = new Texture();
         paletteTex.setInternalFormat(GL_RGBA);
         paletteTex.setImageFormat(GL_RGBA);
@@ -450,8 +450,10 @@ public class CthughaWindow extends GLWindow {
             yBlur.setKernelSize(blurKernelSize.value);
         });
 
-        // Pass 4: palette-convert displayTex → RGBA for display (default FBO)
-        paletteRenderer = new PaletteRenderer("displayTex");
+        // Pass 4: palette-convert renderTex → RGBA for display (default FBO). Reads renderTex,
+        // not the blurred displayTex, so this frame's waves/flashes show at full value and
+        // only start blurring/fading on the next trip round the feedback loop.
+        paletteRenderer = new IndexPaletteRenderer("renderTex", palSize);
         paletteRenderer.init(this);
         paletteUploadUnit = getResourceManager().nextTextureUnit();
         paletteUploadUnit.bind(paletteTex);
@@ -511,7 +513,8 @@ public class CthughaWindow extends GLWindow {
         // Upload palette LUT only when changed
         if (paletteDirty) {
             paletteDirty = false;
-            int newSize   = cthugha.paletteMap.size();
+            PaletteMap pm = cthugha.paletteMap;
+            int newSize   = pm.size();
             int newWidth  = 256;
             int newHeight = (newSize + 255) / 256;
             paletteUploadUnit.activate();
@@ -519,13 +522,14 @@ public class CthughaWindow extends GLWindow {
             if (newWidth != palWidth || newHeight != palHeight) {
                 palWidth  = newWidth;
                 palHeight = newHeight;
-                palBuf = BufferUtils.createByteBuffer(newSize * 4);
+                palBuf = BufferUtils.createByteBuffer(palWidth * palHeight * 4);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, palWidth, palHeight, 0,
-                        GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(cthugha.paletteMap));
+                        GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(pm));
             } else {
                 glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, palWidth, palHeight,
-                        GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(cthugha.paletteMap));
+                        GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(pm));
             }
+            paletteRenderer.setEntries(newSize);
         }
 
         java.awt.Rectangle win = getWindow();
@@ -537,7 +541,7 @@ public class CthughaWindow extends GLWindow {
         for (RenderPhase p : phases) p.indexedRender(this);
         renderFBO.unbind();
 
-        // Flame: two-pass Gaussian blur with fade
+        // Flame: two-pass Gaussian blur with fade — feeds the next frame's translate, not this frame's display
         flameFBO.bind();
         xBlur.doRender(this);
         flameFBO.unbind();
@@ -546,7 +550,7 @@ public class CthughaWindow extends GLWindow {
         yBlur.doRender(this);
         displayFBO.unbind();
 
-        // Display: displayTex (R16) → RGBA via palette LUT → default FBO (window viewport)
+        // Display: renderTex (R16) → RGBA via palette LUT → default FBO (window viewport)
         glViewport(0, 0, win.width, win.height);
         paletteRenderer.doRender(this);
 
@@ -623,6 +627,8 @@ public class CthughaWindow extends GLWindow {
             palBuf.put((byte) (c & 0xFF));
             palBuf.put((byte) 0xFF);
         }
+        // Zero-pad the rest of the last row; the shader never addresses past the last entry
+        while (palBuf.hasRemaining()) palBuf.put((byte) 0);
         palBuf.flip();
         return palBuf;
     }

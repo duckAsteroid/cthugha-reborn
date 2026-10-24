@@ -5,10 +5,12 @@ import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 /**
- * A 256-entry RGB colour lookup table loaded from a {@code .MAP} file.
+ * An RGB colour lookup table loaded from a {@code .MAP} file — 256 entries for every shipped
+ * palette (the original Cthugha format), though any count ≥ 1 is accepted.
  *
  * Each entry is a packed {@code 0xRRGGBB} integer. The active palette is held by
- * {@code JCthugha} and uploaded to the GPU as a 256×1 RGBA texture ({@code paletteTex})
+ * {@code JCthugha} and uploaded to the GPU as a 256-wide × {@code ceil(size/256)}-tall RGBA
+ * texture ({@code paletteTex})
  * whenever {@code paletteDirty} is set. {@code PaletteRenderer} uses this texture to
  * convert R16 palette-index values in {@code displayTex} to on-screen RGBA colours.
  *
