@@ -1,7 +1,9 @@
 ---
 type: docs
-status: designed
+status: done
 updated: 2026-10-24
+docs_impact:
+  - CLAUDE.md
 ---
 # Bring CLAUDE.md up to date with the current codebase
 
@@ -25,8 +27,16 @@ _None._
 
 ## Acceptance criteria
 
-- [ ] Build & Run states Java 25 (Corretto, bundled runtime), matching ct#2 as built, and describes the `CTHUGHA_JAVA_HOME` override.
-- [ ] The Key Dependencies table has no version numbers, covers every library the app relies on directly (including janino and javacv), and points to `app/build.gradle` / `remote-ui/package.json` for versions.
-- [ ] The "Current Branch Context" section is gone.
-- [ ] Every class, file, path, task and command named in CLAUDE.md has been checked against the code and either exists as described or has been corrected or removed (e.g. the `smokeTest` task, `src/dist/` contents, the phase list, package locations).
-- [ ] Wording is present tense, describes the code as it is, and has no history and no links to initiatives.
+- [x] Build & Run states Java 25 (Corretto, bundled runtime), matching ct#2 as built, and describes the `CTHUGHA_JAVA_HOME` override.
+- [x] The Key Dependencies table has no version numbers, covers every library the app relies on directly (including janino and javacv), and points to `app/build.gradle` / `remote-ui/package.json` for versions.
+- [x] The "Current Branch Context" section is gone.
+- [x] Every class, file, path, task and command named in CLAUDE.md has been checked against the code and either exists as described or has been corrected or removed. Corrections made:
+  - Binding System no longer describes a "Bindings" tab, `UiHint.TARGET_PICKER`, the `paired-value-field` hint or the "Add Trigger" form. It now describes the `/animation` and `/triggers` sub-resource routes and `TriggerEditor`.
+  - The phase list adds `VideoPhase`, `DebugBeatsPhase` and `WorkPhase`.
+  - Wave Models covers all five types (adding `RadialClockModel`) and `RenderMode`.
+  - Names that don't exist in this repo are corrected: `TranslateTextureRenderer`, `BlurTextureRenderer`, `SpectrumAnalyser` and `RadialSpectrumAnalyser` are render-core's, and `AudioSample` no longer exists.
+  - `Action` moves to `params/action/`, and the tab names are corrected.
+  - The doc paths move to `docs/`, the render-core skill reference no longer names a version, and the tab generator families are listed.
+  - The single-test example now uses `JCthughaTest`; `TabBufferTest` has no tests, so `--tests` fails on it.
+  - New sections cover session state and defaults, other packages, CLI flags, `smokeTest`, `dependencyUpdates` and the full `src/dist/` contents.
+- [x] Wording is present tense, describes the code as it is, and has no history and no links to initiatives. The "now is" / "rejected alternatives" wording that remains is in the Initiatives section, where it instructs how docs are written.

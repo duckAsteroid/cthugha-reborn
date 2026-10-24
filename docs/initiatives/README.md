@@ -29,7 +29,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | draft | — | 0 | — |
 | 9 | [Decouple simulation from display with interpolated presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | draft | — | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
-| 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | designed | ✅ ready | 0 | — |
 | 12 | [Global animatable transform applied to the whole render](12-global-animatable-transform-applied-to-the-whole-render.md) | feature | draft | — | 0 | — |
 | 13 | [Gradient-based palette designer](13-gradient-based-palette-designer.md) | feature | draft | — | 0 | — |
 | 14 | [Random saved tab preset action](14-random-saved-tab-preset-action.md) | feature | draft | — | 0 | — |
@@ -59,7 +58,6 @@ flowchart RL
   n8["✏️ 8 Make the flame simulation independent of display frame rate"]
   n9["✏️ 9 Decouple simulation from display with interpolated presentation"]
   n10["✏️ 10 Make primitive parameter values safe to read across threads"]
-  n11["🟢 11 Bring CLAUDE.md up to date with the current codebase"]
   n12["✏️ 12 Global animatable transform applied to the whole render"]
   n13["✏️ 13 Gradient-based palette designer"]
   n14["✏️ 14 Random saved tab preset action"]
@@ -76,10 +74,7 @@ flowchart RL
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
   n26["✏️ 26 Fix render-core's Agent-Docs manifest artifact name upstream"]
   n27["✏️ 27 Move the agent-docs Gradle plugin to 3.x"]
-  n2["✅ <s>2 Bundle a pinned JDK 25 runtime with the app</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
-  n11 --> n2
-  n11 --> n3
   n22 --> n3
   n23 --> n3
   n24 --> n3
@@ -93,7 +88,6 @@ flowchart RL
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
   click n10 href "10-make-primitive-parameter-values-safe-to-read-across-threads.md"
-  click n11 href "11-bring-claude-md-up-to-date-with-the-current-codebase.md"
   click n12 href "12-global-animatable-transform-applied-to-the-whole-render.md"
   click n13 href "13-gradient-based-palette-designer.md"
   click n14 href "14-random-saved-tab-preset-action.md"
@@ -110,7 +104,6 @@ flowchart RL
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
   click n26 href "26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md"
   click n27 href "27-move-the-agent-docs-gradle-plugin-to-3-x.md"
-  click n2 href "02-bundle-a-pinned-jdk-25-runtime-with-the-app.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
 ```
 
@@ -124,5 +117,6 @@ flowchart RL
 |---|------------|------|---------|
 | 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | 2026-10-24 |
 | 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | 2026-10-24 |
+| 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
 
 <!-- brindley:generated:end -->
