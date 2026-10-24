@@ -136,13 +136,13 @@ The `screenconfig/` package implements named, resolution-independent snapshots o
 
 | Library | Purpose |
 |---|---|
-| render-core 0.0.1 | OpenGL window, shaders, textures, wave renderers, font/string rendering |
-| LWJGL 3.4.1 | OpenGL / GLFW bindings |
+| render-core 1.0.0-RC5 | OpenGL window, shaders, textures, wave renderers, font/string rendering |
+| LWJGL 3.4.3 | OpenGL / GLFW bindings |
 | JOML 1.10.9 | Vector/matrix types for render-core API |
-| Javalin 6.6.0 | Embedded HTTP server for remote control |
-| Jackson 2.17.2 | JSON serialization of parameter tree |
+| Javalin 6.7.0 | Embedded HTTP server for remote control |
+| Jackson 2.22.4 | JSON serialization of parameter tree |
 | QR code gen 1.8.0 | QR code generation for remote URL |
-| JTransforms 3.1 | FFT for spectrum analysis |
+| JTransforms 3.2 | FFT for spectrum analysis |
 | ini4j | INI config file parsing |
 | SLF4J + Logback | Logging |
 | JUnit 5 + Mockito | Testing |

@@ -1,8 +1,9 @@
 ---
 type: chore
-status: in-progress
+status: done
 updated: 2026-10-24
-branch: develop
+docs_impact:
+  - CLAUDE.md
 ---
 # Update all dependencies to their latest releases
 
@@ -45,5 +46,16 @@ _None._
 - [x] The build emits no "multi-string dependency notation" deprecation warning (every dependency uses `group:artifact:version` string notation), and `--warning-mode all` shows no Gradle deprecations.
 - [x] `./gradlew build` and `./gradlew test` pass on Gradle 9.8.2 (172 tests).
 - [x] `./gradlew smokeTest` passes on Gradle 9.8.2.
-- [ ] A FrameTimeStats benchmark run shows no regression against a baseline taken before the update.
-- [ ] The remote UI, served from the rebuilt jar, loads and controls the app from a phone.
+- [x] A FrameTimeStats benchmark run shows no regression against a baseline taken before the update. Each build ran for 75 s fullscreen on DP-4, back to back (seven 10 s windows each):
+
+  | | Pre-update | Updated |
+  |---|---|---|
+  | Mean frame time (average of windows) | 17.67 ms | 17.25 ms |
+  | p50 | 16.67–16.79 ms | 16.66–16.84 ms |
+  | p99 (median of windows) | 22.56 ms | 22.73 ms |
+  | Average fps | 56.7 | 58.0 |
+  | Janky frames (total) | 22 | 18 |
+  | Worst single frame | 596 ms | 423 ms |
+
+  Both builds show the same occasional 200–600 ms stalls, which come from the full-4K render buffer plus the PRIME copy (ct#1), not from this update.
+- [x] The remote UI, served from the rebuilt jar, loads and controls the app from a phone (confirmed by the user on 2026-10-24).
