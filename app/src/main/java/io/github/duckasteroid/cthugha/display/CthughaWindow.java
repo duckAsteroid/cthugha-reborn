@@ -363,6 +363,8 @@ public class CthughaWindow extends GLWindow {
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
             cthugha.waveSystem.setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
+            io.github.duckasteroid.cthugha.params.transform.animation.AnimationList.setOnTreeChanged(
+                    () -> broadcaster.broadcastAll("treeChanged", "{}"));
             treeBuilder.getConfigsGroup().setOnTreeChanged(
                     () -> broadcaster.broadcastAll("treeChanged", "{}"));
 

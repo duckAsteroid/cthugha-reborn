@@ -5,6 +5,8 @@ import io.github.duckasteroid.cthugha.params.UiHint;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.GeometricDoubleParameter;
+import io.github.duckasteroid.cthugha.params.transform.animation.AnimationList;
+import io.github.duckasteroid.cthugha.params.transform.animation.TransformOffsets;
 import org.joml.Matrix4f;
 
 import java.util.function.DoublePredicate;
@@ -24,7 +26,12 @@ import java.util.function.DoublePredicate;
  *   <li>{@link #pivot} – the rotation centre in NDC space (origin = screen centre).</li>
  *   <li>{@link #translate} – X/Y offset in NDC units.</li>
  *   <li>{@link #shear} – X/Y shear factors.</li>
- *   <li>{@link #perspective} – optional perspective projection (disabled by default).</li>
+ *   <li>{@link #perspective} – optional perspective projection, with Turn and Tip (and their
+ *       spins) rotating the element in depth; used automatically when one of those, or a 3-D
+ *       animation package, is active.</li>
+ *   <li>{@link #animations} – a stack of animation packages (Breathe, Coin Spin, …) whose
+ *       per-frame effect {@code applyTo()} combines with the values above: zoom-like factors
+ *       multiply, angles and positions add, so the values above are never overwritten.</li>
  * </ul>
  *
  * <p>{@link #applyTo(Matrix4f, float)} applies them to the geometry in a fixed order: rotate
@@ -63,10 +70,17 @@ public class TransformParams extends ParamNode {
   /** Optional perspective projection applied around the affine components. */
   public final PerspectiveParams perspective = new PerspectiveParams();
 
-  /** Angle {@link #spin} has turned through, in degrees within {@code [0, 360)}. GL thread only. */
+  /** Animation packages stacked on top of the values above. */
+  public final AnimationList animations = new AnimationList();
+
+  /** Angles {@link #spin} and the perspective spins have turned through, in degrees within {@code [0, 360)}. GL thread only. */
   private double spinDegrees;
+  private double turnSpinDegrees;
+  private double tipSpinDegrees;
   /** {@link System#nanoTime()} of the last {@link #applyTo}; {@code -1} before the first. */
   private long lastApplyNanos = -1;
+  /** This frame's combined animation effect; reused every frame. GL thread only. */
+  private final TransformOffsets offsets = new TransformOffsets();
 
   /**
    * @param name display name for this transform parameter group
@@ -74,7 +88,8 @@ public class TransformParams extends ParamNode {
   public TransformParams(String name) {
     super(name);
     rotation.withUiHint(UiHint.ICON, "rotate-cw");
-    initChildren(zoom, rotation, spin, stretch, pivot, translate, shear, perspective);
+    initChildren(zoom, rotation, spin, stretch, pivot, translate, shear, perspective, animations);
+    animations.withUiHint(UiHint.DEFAULT_OPEN, "true");
 
     zoom.withDescription("Uniform size: 1 is normal, 0.25 a quarter, 4 four times. Multiplies "
         + "Stretch X/Y. Animating it with sine() pulses evenly around normal size.");
@@ -125,17 +140,31 @@ public class TransformParams extends ParamNode {
 
   /** As {@link #applyTo(Matrix4f, float)}, at an explicit time ({@link System#nanoTime()} scale). */
   Matrix4f applyTo(Matrix4f matrix, float aspect, long nowNanos) {
-    advanceSpin(nowNanos);
-    if (perspective.enabled.value) {
-      float fovY = (float) Math.toRadians(perspective.fovY.value);
-      float zDist = (float) perspective.zDistance.value;
-      matrix.perspective(fovY, 1.0f, 0.1f, 10.0f).translate(0f, 0f, -zDist);
+    double dt = advance(nowNanos);
+    offsets.reset();
+    animations.apply(offsets, dt, aspect);
+    double turn = perspective.turn.value + turnSpinDegrees + offsets.turn;
+    double tip = perspective.tip.value + tipSpinDegrees + offsets.tip;
+    boolean threeD = offsets.threeD || !ZERO.test(turn % 360.0) || !ZERO.test(tip % 360.0)
+        || perspective.turnSpin.value != 0 || perspective.tipSpin.value != 0;
+    if (perspective.enabled.value || threeD) {
+      double fovY = Math.toRadians(perspective.fovY.value);
+      // While enabled, the configured distance; otherwise the one at which the z = 0 plane
+      // projects at its normal size, so switching depth on doesn't resize the element.
+      double distance = (perspective.enabled.value ? perspective.zDistance.value
+          : 1.0 / Math.tan(fovY / 2)) * offsets.distance;
+      matrix.perspective((float) fovY, 1.0f, 0.1f, (float) Math.max(10.0, distance * 4))
+          .translate(0f, 0f, (float) -distance)
+          .rotateY((float) Math.toRadians(turn))
+          .rotateX((float) Math.toRadians(tip));
     }
-    if (!translate.is(ZERO)) {
-      matrix.translate((float) translate.x.value, (float) translate.y.value, 0f);
+    double translateX = translate.x.value + offsets.translateX;
+    double translateY = translate.y.value + offsets.translateY;
+    if (!ZERO.test(translateX) || !ZERO.test(translateY)) {
+      matrix.translate((float) translateX, (float) translateY, 0f);
     }
-    double scaleX = zoom.value * stretch.x.value;
-    double scaleY = zoom.value * stretch.y.value;
+    double scaleX = zoom.value * offsets.zoom * stretch.x.value * offsets.stretchX;
+    double scaleY = zoom.value * offsets.zoom * stretch.y.value * offsets.stretchY;
     if (!UNITY.test(scaleX) || !UNITY.test(scaleY)) {
       matrix.scale((float) scaleX, (float) scaleY, 1f);
     }
@@ -151,7 +180,7 @@ public class TransformParams extends ParamNode {
           0f, 0f, 0f, 1f
       ));
     }
-    double degrees = (rotation.value + spinDegrees) % 360.0;
+    double degrees = (rotation.value + spinDegrees + offsets.rotation) % 360.0;
     if (!ZERO.test(degrees)) {
       float cx = (float) pivot.x.value;
       float cy = (float) pivot.y.value;
@@ -168,14 +197,25 @@ public class TransformParams extends ParamNode {
     return matrix;
   }
 
-  /** Turns {@link #spinDegrees} by {@link #spin} over the time since the last call. */
-  private void advanceSpin(long nowNanos) {
+  /**
+   * Seconds since the previous call (0 on the first, at most {@value #MAX_SPIN_STEP_SECONDS}),
+   * after turning the spin angles by their speeds over that time.
+   */
+  private double advance(long nowNanos) {
+    double seconds = 0;
     if (lastApplyNanos >= 0) {
-      double seconds = Math.min(MAX_SPIN_STEP_SECONDS, Math.max(0, (nowNanos - lastApplyNanos) / 1e9));
-      double turned = (spinDegrees + spin.value * 360.0 * seconds) % 360.0;
-      spinDegrees = turned < 0 ? turned + 360.0 : turned;
+      seconds = Math.min(MAX_SPIN_STEP_SECONDS, Math.max(0, (nowNanos - lastApplyNanos) / 1e9));
+      spinDegrees = wrapDegrees(spinDegrees + spin.value * 360.0 * seconds);
+      turnSpinDegrees = wrapDegrees(turnSpinDegrees + perspective.turnSpin.value * 360.0 * seconds);
+      tipSpinDegrees = wrapDegrees(tipSpinDegrees + perspective.tipSpin.value * 360.0 * seconds);
     }
     lastApplyNanos = nowNanos;
+    return seconds;
+  }
+
+  private static double wrapDegrees(double degrees) {
+    double d = degrees % 360.0;
+    return d < 0 ? d + 360.0 : d;
   }
 
   /** The angle {@link #spin} has accumulated, in degrees within {@code [0, 360)}. */

@@ -167,4 +167,60 @@ class TransformParamsTest {
     assertEquals(0f, v.x, EPS); // 45 + 45 = 90 degrees
     assertEquals(1f, v.y, EPS);
   }
+
+  // Animation packages: modifiers on top of the transform's own values.
+
+  @Test
+  void animationsNeverWriteTheTransformsValues() {
+    TransformParams transform = new TransformParams("Transform");
+    transform.zoom.setValue(1.5);
+    transform.rotation.setValue(10.0);
+    transform.animations.add(io.github.duckasteroid.cthugha.params.transform.animation.AnimationType.BREATHE);
+    transform.animations.add(io.github.duckasteroid.cthugha.params.transform.animation.AnimationType.TUMBLE);
+    for (long t = 0; t <= 500_000_000L; t += 16_000_000L) transform.applyTo(new Matrix4f(), 1f, t);
+    assertEquals(1.5, transform.zoom.value, 0);
+    assertEquals(10.0, transform.rotation.value, 0);
+  }
+
+  @Test
+  void intensityZeroReturnsExactlyToTheTransformsValues() {
+    TransformParams plain = new TransformParams("Transform");
+    plain.zoom.setValue(1.5);
+    plain.translate.x.setValue(0.2);
+    TransformParams animated = new TransformParams("Transform");
+    animated.zoom.setValue(1.5);
+    animated.translate.x.setValue(0.2);
+    var drift = animated.animations.add(io.github.duckasteroid.cthugha.params.transform.animation.AnimationType.DRIFT);
+    var breathe = animated.animations.add(io.github.duckasteroid.cthugha.params.transform.animation.AnimationType.BREATHE);
+    drift.intensity.setValue(0);
+    breathe.intensity.setValue(0);
+    for (long t = 0; t <= 300_000_000L; t += 16_000_000L) animated.applyTo(new Matrix4f(), 1f, t);
+    assertEquals(plain.applyTo(new Matrix4f(), 1f, 0L), animated.applyTo(new Matrix4f(), 1f, 316_000_000L));
+  }
+
+  @Test
+  void depthAtZeroTurnKeepsAFlatElementItsNormalSize() {
+    TransformParams transform = new TransformParams("Transform");
+    var coin = transform.animations.add(io.github.duckasteroid.cthugha.params.transform.animation.AnimationType.COIN_SPIN);
+    coin.intensity.setValue(0); // asks for perspective, turns nothing
+    Matrix4f m = transform.applyTo(new Matrix4f(), 1f, 0L);
+    Vector4f v = new Vector4f(0.5f, -0.25f, 0f, 1f);
+    m.transform(v);
+    assertEquals(0.5f, v.x / v.w, EPS);
+    assertEquals(-0.25f, v.y / v.w, EPS);
+  }
+
+  @Test
+  void turnRotatesInDepth() {
+    TransformParams transform = new TransformParams("Transform");
+    transform.perspective.turn.setValue(60.0);
+    Matrix4f m = transform.applyTo(new Matrix4f(), 1f, 0L);
+    Vector4f v = new Vector4f(0.5f, 0f, 0f, 1f);
+    m.transform(v);
+    // Turned 60 degrees about the vertical axis: x shrinks to 0.5 cos 60 = 0.25 and the point
+    // moves 0.5 sin 60 further from the camera (at 1/tan 30), so it projects to
+    // 0.25 × 1.732 / (1.732 + 0.433) = 0.2.
+    assertEquals(0.2f, v.x / v.w, 1e-3f);
+    assertEquals(0f, v.y / v.w, EPS);
+  }
 }

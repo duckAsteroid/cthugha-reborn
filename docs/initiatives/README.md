@@ -37,14 +37,13 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 17 | [Browsable documentation of the parameter tree](17-browsable-documentation-of-the-parameter-tree.md) | feature | draft | — | 0 | — |
 | 18 | [MCP interface for agent control and scripting](18-mcp-interface-for-agent-control-and-scripting.md) | feature | draft | — | 0 | — |
 | 19 | [Live quotes from an external source](19-live-quotes-from-an-external-source.md) | feature | draft | — | 0 | — |
-| 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | designed | ✅ ready | 0 | — |
 | 22 | [Migrate to Jackson 3](22-migrate-to-jackson-3.md) | chore | draft | — | 0 | — |
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
 | 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | — | 0 | — |
 | 33 | [Choose the GPU and windowing platform, with native Wayland support](33-choose-the-gpu-and-windowing-platform-with-native-wayland-su.md) | feature | draft | — | 1 | — |
-| 34 | [Save animation stacks as named, reusable packages](34-save-animation-stacks-as-named-reusable-packages.md) | feature | draft | ⛔ 20 | 0 | — |
+| 34 | [Save animation stacks as named, reusable packages](34-save-animation-stacks-as-named-reusable-packages.md) | feature | draft | — | 0 | — |
 
 ### Dependencies
 
@@ -60,7 +59,6 @@ flowchart RL
   n17["✏️ 17 Browsable documentation of the parameter tree"]
   n18["✏️ 18 MCP interface for agent control and scripting"]
   n19["✏️ 19 Live quotes from an external source"]
-  n20["🟢 20 Named animation packages with their own dials"]
   n22["✏️ 22 Migrate to Jackson 3"]
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
@@ -72,6 +70,7 @@ flowchart RL
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
   n28["✅ <s>28 Morph between translation maps: two slots and an animatable Mix</s>"]
+  n20["✅ <s>20 Named animation packages with their own dials</s>"]
   n9 --> n1
   n9 --> n8
   n22 --> n3
@@ -90,7 +89,6 @@ flowchart RL
   click n17 href "17-browsable-documentation-of-the-parameter-tree.md"
   click n18 href "18-mcp-interface-for-agent-control-and-scripting.md"
   click n19 href "19-live-quotes-from-an-external-source.md"
-  click n20 href "20-named-animation-packages-with-their-own-dials.md"
   click n22 href "22-migrate-to-jackson-3.md"
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
@@ -102,6 +100,7 @@ flowchart RL
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
   click n28 href "28-blend-between-two-translation-maps-over-time.md"
+  click n20 href "20-named-animation-packages-with-their-own-dials.md"
 ```
 
 ### Themes
@@ -111,7 +110,7 @@ flowchart RL
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 1 open, 5 closed or deferred
 - **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 2 open, 9 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 3 closed or deferred
-- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 1 closed or deferred
+- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 2 open, 2 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
 ### Completed
@@ -127,6 +126,7 @@ flowchart RL
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | 2026-10-25 |
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | 2026-10-25 |
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
+| 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | 2026-10-25 |
 | 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | 2026-10-25 |
 | 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | 2026-10-25 |
 | 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | 2026-10-25 |

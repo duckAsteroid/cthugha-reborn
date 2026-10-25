@@ -7,6 +7,7 @@ import { ActionButton } from './ActionButton';
 import { StringLeaf } from './StringLeaf';
 import { NodeIcon } from './NodeIcon';
 import { TabsContainer } from './TabsContainer';
+import { AddListTab } from './AddListTab';
 import { XYPadParam } from './XYPadParam';
 import { ColorParam } from './ColorParam';
 import { useSSEState } from '../SSEContext';
@@ -38,6 +39,8 @@ export function ParamContainer({ node, path, defaultOpen, currentPreview }: Para
   const isTabs = node.uiHints?.['control-type'] === 'TABS';
   const isXYPad = node.uiHints?.['control-type'] === 'XY_PAD';
   const isColor = node.uiHints?.['control-type'] === 'COLOR';
+  // A nested add-list (e.g. a Transform's Animations): its items, then an "add" button.
+  const isAddList = node.uiHints?.['control-type'] === 'ADD_LIST';
   // Live state comes from the single app-wide SSE connection (see SSEContext) — no
   // per-container subscription needed.
   const sseState = useSSEState();
@@ -146,7 +149,8 @@ export function ParamContainer({ node, path, defaultOpen, currentPreview }: Para
             chapterControl={chapterControl}
           />
         )}
-        {visibleChildren.map((child) => {
+        {isAddList && <AddListTab node={node} path={path} />}
+        {!isAddList && visibleChildren.map((child) => {
           const childPath = path ? `${path}/${child.name}` : child.name;
 
           if (child.type === 'CONTAINER') {

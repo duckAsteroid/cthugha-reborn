@@ -384,7 +384,7 @@ general REST API shape.
 |---|---|
 | `ScreenConfigParams` | Static capture/apply tree-walking utility; `Snapshot` record pairs the leaf-value map, the dynamic-child-list map, and the `structureHash` |
 | `EnumParameter` (`params/values/`) | "Pick one of a list" leaf; `getSelectedLabel()`/`selectByLabel()` give screen configs a reorder-safe key in place of the raw index |
-| `DynamicChildList` (`params/`) | Opt-in contract (`describe()`/`recreate()`/`ChildSpec`/`pruneOrphaned()`) for a subtree with runtime-created children; implemented by `BindingSystem` and `WaveSystem`; opaque to `structureHash` by default |
+| `DynamicChildList` (`params/`) | Opt-in contract (`describe()`/`recreate()`/`ChildSpec`/`pruneOrphaned()`) for a subtree with runtime-created children; implemented by `BindingSystem`, `WaveSystem` and each transform's `AnimationList`; opaque to `structureHash` by default |
 | `ScreenConfig` | Plain JSON-serialisable snapshot (name + ordered param map + dynamic-children map + `structureHash`) |
 | `ScreenConfigStore` | Disk I/O: `list()`, `save()`, `load()`, `delete()` |
 | `ScreenConfigNode` | Per-saved-config tree node (Load / Delete actions) |

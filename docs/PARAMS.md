@@ -32,6 +32,7 @@ Sub-packages:
 | `params.values` | Concrete typed leaf nodes |
 | `params.action` | Action system: `Action`, `AbstractAction`, `ActionContext` |
 | `params.transform` | 2-D transform composites: `XYParam`, `PerspectiveParams`, `TransformParams` |
+| `params.transform.animation` | Animation packages stacked on a transform: `AnimationList`, `AnimationPackage`, `AnimationType`, `TransformOffsets` |
 
 ---
 

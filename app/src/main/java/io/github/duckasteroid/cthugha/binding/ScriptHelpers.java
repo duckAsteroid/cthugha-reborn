@@ -118,6 +118,15 @@ public abstract class ScriptHelpers {
      * name is unknown, rather than throwing — a typo shouldn't break the whole script.
      */
     protected double beat(String band) {
+        return beatStrength(band);
+    }
+
+    /**
+     * As {@link #beat(String)}, for code outside binding scripts (e.g. the Beat Pulse animation
+     * package): the strength in [0,1] of the named band on the shared beat detector, or 0.0 if
+     * detection isn't ready or the band is unknown.
+     */
+    public static double beatStrength(String band) {
         BeatDetector bd = beatDetector;
         if (bd == null) return 0.0;
         try {
