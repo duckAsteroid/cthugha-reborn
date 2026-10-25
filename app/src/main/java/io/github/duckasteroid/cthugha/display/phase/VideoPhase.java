@@ -26,7 +26,6 @@ import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 import org.joml.Matrix4f;
-import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,20 +35,35 @@ import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL14.GL_FUNC_ADD;
 import static org.lwjgl.opengl.GL14.GL_MAX;
 import static org.lwjgl.opengl.GL14.GL_MIN;
 import static org.lwjgl.opengl.GL14.glBlendEquation;
+import static org.lwjgl.opengl.GL15.glBindBuffer;
+import static org.lwjgl.opengl.GL15.glDeleteBuffers;
+import static org.lwjgl.opengl.GL15.glGenBuffers;
+import static org.lwjgl.opengl.GL21.GL_PIXEL_UNPACK_BUFFER;
+import static org.lwjgl.opengl.GL30.GL_MAP_WRITE_BIT;
+import static org.lwjgl.opengl.GL30.glMapBufferRange;
+import static org.lwjgl.opengl.GL32.GL_ALREADY_SIGNALED;
+import static org.lwjgl.opengl.GL32.GL_CONDITION_SATISFIED;
+import static org.lwjgl.opengl.GL32.GL_SYNC_GPU_COMMANDS_COMPLETE;
+import static org.lwjgl.opengl.GL32.glClientWaitSync;
+import static org.lwjgl.opengl.GL32.glDeleteSync;
+import static org.lwjgl.opengl.GL32.glFenceSync;
+import static org.lwjgl.opengl.GL44.GL_MAP_COHERENT_BIT;
+import static org.lwjgl.opengl.GL44.GL_MAP_PERSISTENT_BIT;
+import static org.lwjgl.opengl.GL44.glBufferStorage;
 
 /**
  * Screen-overlay phase that plays a single, randomly-chosen video file on loop, alpha-blended
  * full-screen (stretch-to-fill) on top of the core visualisation. Decoding happens on a
- * background thread; the GL thread only ever does a raw {@code glTexSubImage2D} against a
- * texture allocated once, matching {@code CthughaWindow.rebuildTranslateMap()}'s pattern for
- * {@code translateMapTex}. Not part of {@link #indexedRender} — video is real RGBA colour, not
+ * background thread, which writes each frame straight into a slot of a persistently mapped
+ * pixel-unpack buffer ({@link UploadRing}); the GL thread only issues a GPU-side
+ * {@code glTexSubImage2D} from that slot into a texture allocated per video, so no pixel data
+ * passes through it. Not part of {@link #indexedRender} — video is real RGBA colour, not
  * a palette index, so it belongs in the RGBA screen pass, not the R16 indexed buffer.
  *
  * <p>Playback rate is paced against each frame's PTS ({@link #speed}), not free-running decode
@@ -158,17 +172,12 @@ public class VideoPhase implements RenderPhase {
 
     private int videoWidth;
     private int videoHeight;
-    private int videoStride;
 
-    // Producer (decode thread) publishes the latest fully-copied frame here; consumer (GL
-    // thread) does getAndSet(null) each screenRender() to consume-and-clear — same handoff
-    // primitive QrOverlay already uses for its own pendingUrl.
-    private final AtomicReference<ByteBuffer> pendingFrame = new AtomicReference<>();
-    // Two alternating app-owned buffers the decode thread copies into, so publishing a frame
-    // never allocates — sized lazily on the first successful grab, once videoStride is known.
-    private ByteBuffer copyBufA;
-    private ByteBuffer copyBufB;
-    private boolean useA = true;
+    // Frames pass from the decode thread to the GL thread through this ring of pixel-unpack
+    // buffer slots (see UploadRing). Replaced only while no decode thread is running.
+    private volatile UploadRing uploadRing;
+    // Set by the decode thread when a frame doesn't fit a slot, so it is only logged once.
+    private volatile boolean oversizeLogged;
 
     // language=GLSL
     private static final String VERT = """
@@ -293,6 +302,7 @@ public class VideoPhase implements RenderPhase {
         // GPU storage allocated once here on the GL thread; every later frame reuses it via
         // glTexSubImage2D (see screenRender), never reallocating.
         videoTex.generate(videoWidth, videoHeight, (ByteBuffer) null);
+        uploadRing = new UploadRing(UploadRing.slotSizeFor(videoWidth, videoHeight));
 
         running = true;
         decodeThread = Thread.ofVirtual()
@@ -332,6 +342,7 @@ public class VideoPhase implements RenderPhase {
         if (entry == null || entry.equals(currentEntry)) return;
 
         stopPlayback();
+        boolean oldDecodeStopped = decodeThread == null || !decodeThread.isAlive();
 
         FFmpegFrameGrabber newGrabber = newGrabber(entry);
         try {
@@ -357,15 +368,18 @@ public class VideoPhase implements RenderPhase {
                 videoHeight = newHeight;
                 videoTex.generate(videoWidth, videoHeight, (ByteBuffer) null);
             }
-            // Sized lazily off the new stream's stride on its first decoded frame.
-            copyBufA = null;
-            copyBufB = null;
-            // Drop any frame the old decode thread published but the GL thread hadn't consumed
-            // yet — it's sized/strided for the old video, and videoWidth/videoHeight/videoStride
-            // above now (or shortly will) describe the new one. Uploading it against the new
-            // dimensions reads past the buffer's end, which segfaults the GL driver rather than
-            // Java, so this can't be caught — see hs_err_pid crash logs.
-            pendingFrame.set(null);
+            // A fresh ring drops any frame the old decode thread published but the GL thread
+            // hadn't taken: it is strided for the old video, and uploading it against the new
+            // dimensions could read past the slot, which crashes the GL driver rather than Java.
+            // The old ring is only freed once its decode thread has stopped writing to it.
+            UploadRing old = uploadRing;
+            if (oldDecodeStopped) {
+                if (old != null) old.dispose();
+            } else {
+                LOG.warn("Previous video decode thread still running; leaking its upload buffer");
+            }
+            uploadRing = new UploadRing(UploadRing.slotSizeFor(videoWidth, videoHeight));
+            oversizeLogged = false;
 
             running = true;
             decodeThread = Thread.ofVirtual()
@@ -456,19 +470,10 @@ public class VideoPhase implements RenderPhase {
                 // may be wherever the previous consumer (us) left them — always reset to the
                 // full extent before reading, rather than trusting incoming position/limit.
                 ((Buffer) src).clear();
-
-                if (copyBufA == null) {
-                    videoStride = frame.imageStride;
-                    int cap = src.remaining();
-                    copyBufA = BufferUtils.createByteBuffer(cap);
-                    copyBufB = BufferUtils.createByteBuffer(cap);
+                if (!uploadRing.write(src, frame.imageStride) && !oversizeLogged) {
+                    oversizeLogged = true;
+                    LOG.warn("Video frame of {} bytes doesn't fit an upload slot; frames dropped", src.remaining());
                 }
-                ByteBuffer dst = useA ? copyBufA : copyBufB;
-                useA = !useA;
-                dst.clear();
-                dst.put(src);
-                dst.flip();
-                pendingFrame.set(dst);
             }
         } catch (Throwable t) {
             LOG.error("Video decode loop terminated unexpectedly", t);
@@ -534,16 +539,8 @@ public class VideoPhase implements RenderPhase {
     public void screenRender(RenderContext ctx) {
         if (shader == null || !enabled.value) return;
 
-        ByteBuffer frame = pendingFrame.getAndSet(null);
-        if (frame != null) {
-            texUnit.bind(videoTex);
-            // Row length may exceed the frame width in pixels (swscale alignment padding);
-            // tell GL the true row stride so it doesn't read the padding bytes as pixel data.
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, videoStride / 4);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, videoWidth, videoHeight,
-                    GL_RGBA, GL_UNSIGNED_BYTE, frame);
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        }
+        texUnit.bind(videoTex);
+        uploadRing.uploadNewest(videoWidth, videoHeight);
         // No new frame ready yet (decode thread hasn't kept up) — just redraw the last upload;
         // this is also how playback naturally throttles to whatever the decoder can sustain.
 
@@ -671,6 +668,96 @@ public class VideoPhase implements RenderPhase {
         if (quad != null) quad.destroy();
         if (shader != null) shader.dispose();
         if (videoTex != null) videoTex.dispose();
+        if (uploadRing != null) uploadRing.dispose();
         if (texUnit != null) texUnit.dispose();
+    }
+
+    /**
+     * Pixel-unpack buffer of {@link #SLOTS} frame slots, created with {@code glBufferStorage}
+     * and mapped persistent + coherent (as render-core's {@code PboAudioSink} does), so the
+     * decode thread writes decoded pixels straight into GPU-visible memory and the GL thread's
+     * {@code glTexSubImage2D} is a GPU-side copy from a buffer offset: no pixel data passes
+     * through the GL thread. Each upload is fenced; its slot is written again only once the
+     * fence has signalled. Create and dispose on the GL thread.
+     */
+    static final class UploadRing {
+        static final int SLOTS = 3;
+
+        private final int slotSize;
+        private final int buffer;
+        private final ByteBuffer mapped;
+        private final FrameSlots slots = new FrameSlots(SLOTS);
+        /** Row stride in bytes of the frame in each slot; written before the slot is published. */
+        private final int[] strides = new int[SLOTS];
+        /** Fence after each in-flight slot's upload. GL thread only. */
+        private final long[] fences = new long[SLOTS];
+
+        /**
+         * Bytes needed for one RGBA frame. javacv's grabber pads each row to a multiple of
+         * 64 pixels at most, so this fits any stride it hands back.
+         */
+        static int slotSizeFor(int width, int height) {
+            return ((width + 63) & ~63) * 4 * height;
+        }
+
+        UploadRing(int slotSize) {
+            this.slotSize = slotSize;
+            long size = (long) slotSize * SLOTS;
+            int flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+            buffer = glGenBuffers();
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, buffer);
+            glBufferStorage(GL_PIXEL_UNPACK_BUFFER, size, flags);
+            mapped = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, size, flags);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        }
+
+        /**
+         * Decode thread: copies a frame into a free slot and publishes it.
+         *
+         * @return false if the frame is larger than a slot (dropped); a frame dropped because
+         *         every slot is busy still returns true
+         */
+        boolean write(ByteBuffer frame, int stride) {
+            if (frame.remaining() > slotSize) return false;
+            int slot = slots.acquire();
+            if (slot == FrameSlots.NONE) return true;
+            mapped.slice(slot * slotSize, frame.remaining()).put(frame);
+            strides[slot] = stride;
+            slots.publish(slot);
+            return true;
+        }
+
+        /**
+         * GL thread: frees slots whose uploads have completed, then uploads the newest
+         * published frame, if any, into the texture bound to the active unit.
+         */
+        void uploadNewest(int width, int height) {
+            for (int slot = slots.oldestInFlight(); slot != FrameSlots.NONE; slot = slots.oldestInFlight()) {
+                int state = glClientWaitSync(fences[slot], 0, 0);
+                if (state != GL_ALREADY_SIGNALED && state != GL_CONDITION_SATISFIED) break;
+                glDeleteSync(fences[slot]);
+                slots.release(slot);
+            }
+            int slot = slots.takePending();
+            if (slot == FrameSlots.NONE) return;
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, buffer);
+            // Row length may exceed the frame width in pixels (swscale alignment padding);
+            // tell GL the true row stride so it doesn't read the padding bytes as pixel data.
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, strides[slot] / 4);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+                    (long) slot * slotSize);
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+            fences[slot] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+        }
+
+        /** GL thread: deletes the fences and the buffer, which also unmaps it. */
+        void dispose() {
+            for (int slot = slots.oldestInFlight(); slot != FrameSlots.NONE; slot = slots.oldestInFlight()) {
+                glDeleteSync(fences[slot]);
+                slots.release(slot);
+            }
+            glDeleteBuffers(buffer);
+        }
     }
 }

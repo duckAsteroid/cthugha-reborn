@@ -333,15 +333,22 @@ action, calling `videoPhase.loadVideo(entry)` on selection.
 directly to `AV_PIX_FMT_RGBA` so no colour-space conversion happens on the Java side.
 Each active video gets one virtual decode thread (`decodeLoop()`), paced against each
 decoded frame's PTS (scaled by the `speed` parameter) rather than running flat-out, so
-playback matches the file's real rate and can be slowed/sped/paused live. Frame
-hand-off to the GL thread is a lock-free single-slot `AtomicReference<ByteBuffer>`
-(`pendingFrame`, consumed via `getAndSet(null)` — the same primitive `QrOverlay` uses
-for its own pending-URL handoff), backed by two alternating pre-allocated copy buffers
-so publishing a frame never allocates.
+playback matches the file's real rate and can be slowed/sped/paused live. Frames pass
+to the GL thread through `VideoPhase.UploadRing`: a pixel-unpack buffer of three frame
+slots, created with `glBufferStorage` and mapped persistent + coherent, so the decode
+thread copies each decoded frame straight into GPU-visible memory. `FrameSlots` tracks
+each slot as free, being written, pending or in flight without locks: the decoder takes
+a free slot (dropping the frame when none is free), fills it and publishes it, which
+recycles any pending frame the GL thread never took, so only the newest frame is shown.
+Each slot holds a whole frame at javacv's padded row stride (rows padded to at most a
+multiple of 64 pixels), sized from the video's width and height.
 
-**Upload/render**: `screenRender()` consumes the pending frame (if any) via a plain
-`glTexSubImage2D` against a `videoTex` allocated once in `init()` (never reallocated
-except across a resolution change on `loadVideo`), then draws a full-screen quad with a
+**Upload/render**: `screenRender()` first releases in-flight slots whose fences have
+signalled (zero-timeout `glClientWaitSync`), then, if a frame is pending, binds the
+buffer and issues `glTexSubImage2D` from that slot's offset into `videoTex` (with
+`GL_UNPACK_ROW_LENGTH` set to the frame's stride) and fences it. The copy runs on the
+GPU, so no pixel data passes through the GL thread. `videoTex` is allocated in `init()`
+and reallocated only across a resolution change on `loadVideo`. It then draws a full-screen quad with a
 GLSL shader supporting colour mode (colour / greyscale / black-and-white), invert, a
 vignette, the same `TransformParams` translate/scale/shear/rotate/perspective
 convention used by `QuotePhase`/wave models, and a `BlendMode` (`NORMAL`, `ADD`,
@@ -352,8 +359,9 @@ instead).
 
 **Switching videos**: `loadVideo(VideoEntry)` is callable from any thread — it blocks
 to tear down the old decode thread/grabber off the GL thread, then marshals only the
-(fast) texture reallocation onto the GL thread via `RenderActionQueue`, so switching
-videos never stalls the render loop.
+texture reallocation and a fresh `UploadRing` onto the GL thread via `RenderActionQueue`
+(the old ring is freed there once its decode thread has stopped), so switching videos
+never blocks the render loop on decoding.
 
 > **Native-image caveat**: `docs/NATIVE_IMAGE.md`'s "known gaps" list explicitly calls
 > out video overlay playback as not yet exercised under the GraalVM native-image build

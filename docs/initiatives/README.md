@@ -27,7 +27,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
-| 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | designed | ✅ ready | 0 | — |
 | 9 | [Cross-fade between simulation steps for smooth presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | designed | ✅ ready | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
 | 12 | [Global animatable transform applied to the whole render](12-global-animatable-transform-applied-to-the-whole-render.md) | feature | draft | — | 0 | — |
@@ -52,7 +51,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 ```mermaid
 flowchart RL
-  n7["🟢 7 Upload video frames asynchronously via pixel buffer objects"]
   n9["🟢 9 Cross-fade between simulation steps for smooth presentation"]
   n10["✏️ 10 Make primitive parameter values safe to read across threads"]
   n12["✏️ 12 Global animatable transform applied to the whole render"]
@@ -85,7 +83,6 @@ flowchart RL
   n25 --> n3
   n30 --> n28
   n31 --> x1
-  click n7 href "07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md"
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
   click n10 href "10-make-primitive-parameter-values-safe-to-read-across-threads.md"
   click n12 href "12-global-animatable-transform-applied-to-the-whole-render.md"
@@ -117,7 +114,7 @@ flowchart RL
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 2 open, 3 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 4 open, 6 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 3 open, 7 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 3 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
@@ -132,6 +129,7 @@ flowchart RL
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | 2026-10-25 |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | 2026-10-25 |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | 2026-10-25 |
+| 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | 2026-10-25 |
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | 2026-10-25 |
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
 | 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | 2026-10-25 |
