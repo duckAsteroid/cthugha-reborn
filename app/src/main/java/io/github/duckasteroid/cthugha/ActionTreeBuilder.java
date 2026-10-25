@@ -117,6 +117,7 @@ public class ActionTreeBuilder {
 
         cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx ->
                 cthugha.translateSource.requestRandomise()));
+        cthugha.translateSource.addChild(cthugha.tableMorph);
         AbstractAction randomSource = action("Random Source", "dice-5", ctx ->
                 cthugha.translateSource.selectRandom(ctx.rng()));
         randomSource.withDescription("Pick a random tab generator effect.");

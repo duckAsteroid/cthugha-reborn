@@ -66,6 +66,7 @@ public class GeneratorRegistry extends ParamNode implements RestoreAware {
     private final AbstractAction saveAction;
 
     private Runnable onRegenerateNeeded;
+    private Runnable onRestored;
     private Runnable onNewGeneratorSelected;
     private Runnable onTreeChanged;
 
@@ -143,6 +144,8 @@ public class GeneratorRegistry extends ParamNode implements RestoreAware {
     public void setOnRegenerateNeeded(Runnable r)    { this.onRegenerateNeeded = r; }
     public void setOnNewGeneratorSelected(Runnable r) { this.onNewGeneratorSelected = r; }
     public void setOnTreeChanged(Runnable r)          { this.onTreeChanged = r; }
+    /** Fired by {@link #endRestore()} instead of {@link #setOnRegenerateNeeded}'s callback, if set. */
+    public void setOnRestored(Runnable r)             { this.onRestored = r; }
 
     /**
      * Suppresses per-parameter regeneration callbacks during bulk param writes.
@@ -164,7 +167,8 @@ public class GeneratorRegistry extends ParamNode implements RestoreAware {
      */
     @Override public void endRestore() {
         endBatch();
-        if (onRegenerateNeeded != null) onRegenerateNeeded.run();
+        Runnable callback = onRestored != null ? onRestored : onRegenerateNeeded;
+        if (callback != null) callback.run();
     }
 
     /** Generates a translation map using the current generator after randomising its params. */

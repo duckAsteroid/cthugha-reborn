@@ -27,9 +27,10 @@ to `[0, 1]` when sampled. `IndexPaletteRenderer` resolves a pixel's palette entr
 whatever the palette size. Wave renderers and flash effects write `1.0` (the maximum
 normalised value) to target the last palette entry.
 
-The translate map is a separate RG16UI texture (`translateMap`): each texel holds the
-absolute (x, y) pixel coordinates to *read from* in `displayTex`, so it encodes an
-arbitrary per-pixel displacement field.
+A translation map is an RG16UI texture: each texel holds the absolute (x, y) pixel
+coordinates to *read from* in `displayTex`, so it encodes an arbitrary per-pixel
+displacement field. There are two live maps, slots A and B, which the translate pass
+blends (see [Morphing between tables](#morphing-between-tables)), plus a spare.
 
 ---
 
@@ -77,10 +78,12 @@ phase.frameUpdate() × N ──────────────────�
 
 ### Translate step
 
-`TranslateTextureRenderer` (render-core) runs a fragment shader that reads the RG16UI
-translation map: for every pixel in `renderTex` it looks up the coordinate stored in
-`translateMap` and samples that pixel from `displayTex`. This is the *displacement* or
-*warping* effect — the image never stops moving even when no audio is playing.
+`MorphTranslateRenderer` (`display/`) runs a fragment shader that reads the two RG16UI
+map slots: for every pixel in `renderTex` it looks up the source coordinate each slot
+stores, blends them by the morph's Mix, and samples that pixel from `displayTex` with
+`texelFetch`. This is the *displacement* or *warping* effect — the image never stops
+moving even when no audio is playing. At Mix 0 or 1 it reads exactly one slot's
+coordinate.
 
 ### Phase indexedRender()
 
@@ -341,9 +344,10 @@ videos never stalls the render loop.
 ## Translation tables
 
 The displacement field is held CPU-side in a `TabBuffer` (a direct `ByteBuffer` viewed
-as a `ShortBuffer` of RG16UI pairs) and mirrored GPU-side in `translateMap`. When the
-table is rebuilt `CthughaWindow.rebuildTranslateMap()` calls `glTexSubImage2D` to
-upload the new data without re-allocating the texture.
+as a `ShortBuffer` of RG16UI pairs); the newest table is `JCthugha.getTabBuffer()`, and
+the GPU holds it in one of the morph's map slots. When the table changes
+`CthughaWindow.rebuildTranslateMap()` hands it to `TableMorph`, which uploads it with
+`glTexSubImage2D` into a pre-allocated texture and morphs to it.
 
 Regeneration runs off the GL thread, on a virtual thread with no on-screen work
 indicator, through `TranslationRegenerator` (`tab/`), which coalesces requests: at most one regeneration runs at a time, and any changes made while it
@@ -358,6 +362,39 @@ A table loaded from elsewhere (a saved preset, `JCthugha.loadTabBuffer`) bumps a
 so a run computed against the previous table is discarded instead of overwriting it.
 The generator's name is shown as a notification only after a generator pick or
 "Randomise", not after a regeneration from a parameter change.
+
+### Morphing between tables
+
+A new table never replaces the live one instantly: `TableMorph` (`tab/`, the Tab tab's
+"Morph" group under `Translate Source`) morphs to it. There are two map slots, A and B,
+and a **Mix** parameter (0 = all A, 1 = all B) that the translate shader reads each step.
+For each destination pixel the shader takes each slot's *displacement* (source −
+destination) the shorter way round the toroidal buffer, blends the two by Mix, adds it
+back and wraps the result, so the flow bends from one shape to the other and a pixel whose
+source wraps across an edge in one map never sweeps across the middle of the screen.
+
+Every map change — a preset load, a generator pick, "Randomise", or a regeneration after a
+parameter change — goes through `TableMorph.onNewTable`:
+
+- The new table is uploaded into the **less visible** slot (the one Mix is further from),
+  and Mix moves to it over **Duration** (None, 0.25–8 s; default 1 s) with **Easing**
+  (Smooth = smoothstep, or Linear), in wall-clock time. With Duration None, Mix jumps.
+- If Mix is strictly between 0 and 1 when a table arrives (mid-morph, or set there by
+  hand), the current mixed look is first **baked** into the nearer slot: a second shader
+  (`MorphTranslateRenderer.Bake`) writes the blended source coordinates into an RG16UI
+  framebuffer as a plain table, Mix is set to that slot's end, and the morph starts from
+  there. Nothing on screen jumps, so a burst of tables (a slider drag on a generator
+  parameter) glides continuously.
+- While a continuous binding drives Mix (`isControlled()`), the binding owns it: a new table
+  doesn't move Mix, but waits in the spare texture until the less visible slot is at most
+  5% visible (or the Duration, or 1 s with None, has passed) and then replaces it, so a
+  breathing morph (e.g. two presets loaded one after the other plus `sine(0.05)` on Mix)
+  carries on into the new table.
+
+The three map textures rotate roles: slot A, slot B, and a spare that new tables are
+uploaded or baked into before being promoted into a slot, whose old texture becomes the
+spare. A restored screen config (or the saved session at startup) fills both slots with its
+regenerated table at once, rather than morphing to it.
 
 Generator parameters (every value under each `TabGenerator`, and the `Generator` picker)
 are marked `withNoAnimate()`: a per-tick continuous binding would regenerate the whole
@@ -407,10 +444,10 @@ directory and exposes palette switching through the remote UI.
 CthughaWindow
   ├── displayTex / renderTex             (R16, owned by window)
   ├── flameTex                           (GRAY, owned by window — blur intermediate)
-  ├── translateMapTex                    (RG16UI, owned by window)
+  ├── mapTex[3] + mapFBO[3]              (RG16UI map slots A/B + spare, owned by window)
   ├── paletteTex                         (256×N RGBA, owned by window)
   ├── displayFBO / renderFBO / flameFBO  (owned by window)
-  ├── TranslateTextureRenderer      (owned by window)
+  ├── MorphTranslateRenderer (+ Bake) (owned by window)
   ├── BlurTextureRenderer ×2        (owned by window)
   ├── IndexPaletteRenderer          (owned by window)
   └── List<RenderPhase>

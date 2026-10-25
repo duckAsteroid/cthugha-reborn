@@ -32,6 +32,11 @@ currently active via the existing `TabGenerator.generate(width, height, rng)` pa
 same config at 1280×720 and at 4000×2000 produces the same *shape*, scaled to the buffer — there
 is no cached, resolution-bound binary the way `TabStore`'s `.tab` files work.
 
+The morph between translation tables (`Tab/Translate Source/Morph`: Duration, Easing, Mix) is
+captured as ordinary leaf values, but only one table is: on load the regenerated table fills
+both morph slots at once, so a breathing morph between two tables has to be set up again after
+loading.
+
 ---
 
 ## Capturing and applying the tree

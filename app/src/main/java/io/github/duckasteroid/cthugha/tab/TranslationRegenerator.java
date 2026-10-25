@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  *
  * <p>Requests merge by strength: a pending {@link Request#RANDOMISE} is not downgraded by a later
  * {@link Request#REGENERATE}, since the randomise would overwrite the parameters that regenerate
- * would read anyway.
+ * would read anyway, and a pending {@link Request#RESTORE} outranks both.
  */
 public final class TranslationRegenerator {
 
@@ -27,7 +27,9 @@ public final class TranslationRegenerator {
         /** Regenerate from the current generator's current parameter values. */
         REGENERATE,
         /** Randomise the current generator's parameters, then regenerate. */
-        RANDOMISE
+        RANDOMISE,
+        /** Regenerate from just-restored parameters (a screen config or the saved session). */
+        RESTORE
     }
 
     private final Consumer<Runnable> starter;

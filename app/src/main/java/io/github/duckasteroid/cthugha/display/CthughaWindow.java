@@ -1,7 +1,6 @@
 package io.github.duckasteroid.cthugha.display;
 
 import com.asteroid.duck.opengl.util.GLWindow;
-import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
@@ -23,6 +22,8 @@ import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.phase.QrPhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.display.phase.WorkPhase;
+import io.github.duckasteroid.cthugha.tab.TabBuffer;
+import io.github.duckasteroid.cthugha.tab.TableMorph;
 import io.github.duckasteroid.cthugha.tab.TranslationRegenerator;
 import io.github.duckasteroid.cthugha.work.BackgroundWorkQueue;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
@@ -67,6 +68,8 @@ import java.util.stream.Collectors;
 import com.asteroid.duck.opengl.util.Monitor;
 
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
+import static org.lwjgl.opengl.GL13.glActiveTexture;
 import static org.lwjgl.opengl.GL30.GL_R16;
 import static org.lwjgl.opengl.GL30.GL_RG16UI;
 import static org.lwjgl.opengl.GL30.GL_RG_INTEGER;
@@ -100,11 +103,18 @@ public class CthughaWindow extends GLWindow {
     private FrameBuffer renderFBO;
 
     // RG16UI translation map (x, y coords per pixel as uint16)
-    private Texture translateMapTex;
-    private TextureUnit translateMapUnit;
+    // Translation maps for TableMorph: three RG16UI textures whose roles rotate between slot A,
+    // slot B and a spare that new tables are uploaded or baked into before being promoted.
+    private final Texture[] mapTex = new Texture[3];
+    private final FrameBuffer[] mapFBO = new FrameBuffer[3];
+    private final int[] slotMap = {0, 1};
+    private int spareMap = 2;
+    private TextureUnit mapAUnit;
+    private TextureUnit mapBUnit;
+    private MorphTranslateRenderer.Bake mapBaker;
 
     // Pass 1 (renderFBO): translate displayTex → renderTex
-    private TranslateTextureRenderer translateRenderer;
+    private MorphTranslateRenderer translateRenderer;
 
     // Pass 3 (displayFBO): GPU flame — two-pass separable Gaussian blur with fade
     private BlurTextureRenderer xBlur;
@@ -320,6 +330,8 @@ public class CthughaWindow extends GLWindow {
                 () -> regenerator.request(TranslationRegenerator.Request.REGENERATE));
         cthugha.translateSource.setOnNewGeneratorSelected(
                 () -> regenerator.request(TranslationRegenerator.Request.RANDOMISE));
+        cthugha.translateSource.setOnRestored(
+                () -> regenerator.request(TranslationRegenerator.Request.RESTORE));
 
         // Remote setup: create QrPhase and add to phase list before tree build
         if (remoteConfig != null && remoteConfig.enabled) {
@@ -399,10 +411,15 @@ public class CthughaWindow extends GLWindow {
         renderTex.generate(w, h, 0L);
         getResourceManager().putTexture("renderTex", renderTex);
 
-        // Translation map (RG16UI: absolute pixel coords per texel)
-        translateMapTex = buildTranslateMapTexture(cthugha.getTranslateBuffer(), w, h);
-        getResourceManager().putTexture("translateMap", translateMapTex);
-        translateMapUnit = getResourceManager().nextTextureUnit();
+        // Translation maps (RG16UI: absolute pixel coords per texel), two slots plus a spare
+        for (int i = 0; i < mapTex.length; i++) {
+            mapTex[i] = buildTranslateMapTexture(cthugha.getTranslateBuffer(), w, h);
+            mapFBO[i] = new FrameBuffer(mapTex[i]);
+        }
+        mapAUnit = getResourceManager().nextTextureUnit();
+        mapBUnit = getResourceManager().nextTextureUnit();
+        mapAUnit.bind(mapTex[slotMap[0]]);
+        mapBUnit.bind(mapTex[slotMap[1]]);
 
         // Palette LUT: 256-wide × (size/256)-tall RGBA texture; width stays 256 for all palette sizes
         int palSize = cthugha.paletteMap.size();
@@ -421,9 +438,14 @@ public class CthughaWindow extends GLWindow {
         displayFBO = new FrameBuffer(displayTex);
         renderFBO = new FrameBuffer(renderTex);
 
-        // Pass 1: translate displayTex → renderTex (via renderFBO)
-        translateRenderer = new TranslateTextureRenderer("displayTex", "translateMap");
+        // Pass 1: translate displayTex → renderTex (via renderFBO), morphing between the two map slots
+        translateRenderer = new MorphTranslateRenderer("displayTex", mapAUnit, mapBUnit,
+                () -> cthugha.tableMorph.mix.value);
         translateRenderer.init(this);
+        mapBaker = new MorphTranslateRenderer.Bake("displayTex", mapAUnit, mapBUnit);
+        mapBaker.init(this);
+        cthugha.tableMorph.setSlots(new MapSlots());
+        cthugha.tableMorph.fillBoth(cthugha.getTabBuffer());
 
         // Pass 3: GPU flame — two-pass separable Gaussian blur with fade
         TextureOptions flameOpts = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
@@ -536,6 +558,7 @@ public class CthughaWindow extends GLWindow {
         }
 
         for (RenderPhase p : phases) p.frameUpdate(this);
+        cthugha.tableMorph.frame(System.nanoTime());
 
         // Simulation steps at a fixed rate (Render/Speed), independent of the refresh rate: a frame
         // runs zero or more steps; with none, renderTex still holds the last step and is re-presented.
@@ -584,6 +607,9 @@ public class CthughaWindow extends GLWindow {
         if (paletteRenderer   != null) paletteRenderer.dispose();
         if (paletteUploadUnit != null) paletteUploadUnit.dispose();
         if (translateRenderer != null) translateRenderer.dispose();
+        if (mapBaker          != null) mapBaker.dispose();
+        for (FrameBuffer fbo : mapFBO) if (fbo != null) fbo.dispose();
+        for (Texture t : mapTex) if (t != null) t.dispose();
         if (displayFBO        != null) displayFBO.dispose();
         if (renderFBO         != null) renderFBO.dispose();
         if (stdinInjector     != null) stdinInjector.close();
@@ -642,7 +668,12 @@ public class CthughaWindow extends GLWindow {
                     if (request == TranslationRegenerator.Request.RANDOMISE) {
                         cthugha.notify(cthugha.translateSource.getLastGenerated());
                     }
-                    rebuildTranslateMap();
+                    if (request == TranslationRegenerator.Request.RESTORE) {
+                        // A restored config shows its own table at once, in both slots.
+                        cthugha.tableMorph.fillBoth(cthugha.getTabBuffer());
+                    } else {
+                        rebuildTranslateMap();
+                    }
                 }
             } finally {
                 adopted.complete(null);
@@ -657,15 +688,39 @@ public class CthughaWindow extends GLWindow {
         }
     }
 
+    /** The active translation table changed (GL thread): morph to it. */
     private void rebuildTranslateMap() {
-        int w = cthugha.bufferWidth;
-        int h = cthugha.bufferHeight;
-        ByteBuffer data = cthugha.getTranslateBuffer();
-        translateMapUnit.activate();
-        translateMapUnit.bind(translateMapTex);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
-                GL_RG_INTEGER, GL_UNSIGNED_SHORT, data);
-        data.rewind();
+        cthugha.tableMorph.onNewTable(cthugha.getTabBuffer(), System.nanoTime());
+    }
+
+    /** {@link TableMorph.Slots} over {@link #mapTex}. GL thread only. */
+    private final class MapSlots implements TableMorph.Slots {
+        @Override
+        public void uploadSpare(TabBuffer table) {
+            ByteBuffer data = table.getBuffer();
+            // Unit 0 is render-core's unmanaged scratch unit, so this leaves the slot units alone.
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, mapTex[spareMap].getId());
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, table.width, table.height,
+                    GL_RG_INTEGER, GL_UNSIGNED_SHORT, data);
+            data.rewind();
+        }
+
+        @Override
+        public void bakeIntoSpare(double mix) {
+            mapFBO[spareMap].bind();
+            mapBaker.setMix(mix);
+            mapBaker.doRender(CthughaWindow.this);
+            mapFBO[spareMap].unbind();
+        }
+
+        @Override
+        public void promoteSpare(int slot) {
+            int old = slotMap[slot];
+            slotMap[slot] = spareMap;
+            spareMap = old;
+            (slot == 0 ? mapAUnit : mapBUnit).bind(mapTex[slotMap[slot]]);
+        }
     }
 
     // -------------------------------------------------------------------------

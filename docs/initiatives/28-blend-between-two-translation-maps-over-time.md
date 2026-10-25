@@ -1,8 +1,9 @@
 ---
 type: feature
-status: designed
+status: in-progress
 tags: [tab-generators, smoothness]
 updated: 2026-10-25
+branch: develop
 ---
 # Morph between translation maps: two slots and an animatable Mix
 
@@ -37,7 +38,9 @@ _None._
 - **A continuous binding on Mix owns it.** While Mix has an active continuous binding (`AbstractValue.getAnimationBinding()`), a map change does not move Mix: the new table replaces the less visible slot once that slot is at most ~5% visible (a breathing sine reaches that every half-cycle), so the swap is invisible and the breathing carries on into the new table. If the binding holds Mix mid-way and never nears an end, the swap happens after a timeout of about the Morph duration, accepting a small jump. Setting Mix by hand is a one-off value, not ownership: the next map change morphs as normal. Suspending the binding during a morph is rejected: the binding's value on resume would not match, causing a jump. (Owner, 2026-10-25.)
 - **Screen configs restore one table.** A config keeps capturing the active generator and its parameters, plus Mix and the Morph settings as ordinary parameters; on load the regenerated table fills both slots, so a breathing pair has to be set up again. Saving both slots is ct#30. (Owner, 2026-10-25.)
 - (implementation) The morph and bake run in wall-clock time from the Morph duration, independent of frame rate and of ct#8's step rate; Mix is read once per simulation step. On a buffer size change (ct#1) both slots are rebuilt from the current table, with Mix kept.
-- (implementation) An app-side translate renderer replaces render-core's `TranslateTextureRenderer` in `CthughaWindow`: its shader (under `app/src/dist/glsl/`) samples both slot map textures and the Mix uniform. The bake is a second small app-side pass rendering into an RG16UI FBO. render-core's renderer has a single map sampler, and the morph logic is specific to this app, so no upstream change is needed.
+- (implementation) `MorphTranslateRenderer` (`display/`) replaces render-core's `TranslateTextureRenderer` in `CthughaWindow`; its shader, inline like `IndexPaletteRenderer`'s, samples both slot map textures and the Mix uniform and reads `displayTex` with `texelFetch`. `MorphTranslateRenderer.Bake` shares the blend function and renders into an RG16UI FBO. Both derive the destination texel from `texCoords`, not `gl_FragCoord`: a shader that ignores `texCoords` lets the linker drop the `texturePosition` attribute, which render-core's `VertexBufferObject.setup()` then configures at location -1 (that hung the app at startup). render-core's renderer has a single map sampler, and the morph logic is specific to this app, so no upstream change is needed.
+- (implementation) `TableMorph` (`tab/`) is the "Morph" group, mounted under `Translate Source` (the remote UI flattens the Tab tab's sole container, so a sibling group would break its layout): Duration (None, 0.25, 0.5, 1, 2, 4, 8 s; default 1 s), Easing (default Smooth) and Mix. Duration and Easing are not animatable; Mix is. The GL work is behind `TableMorph.Slots`: three RG16UI textures rotate roles as slot A, slot B and a spare that new tables are uploaded or baked into before being promoted, so a pending table for a binding-owned Mix waits in the spare.
+- (implementation) A restore goes through a new `TranslationRegenerator.Request.RESTORE` (fired by `GeneratorRegistry.endRestore()` via `setOnRestored`), whose result fills both slots instead of morphing.
 
 ## Open questions
 
@@ -45,11 +48,11 @@ _None._
 
 ## Acceptance criteria
 
-- [ ] With Morph duration "none", every map change swaps instantly, as today.
-- [ ] With a duration set, a preset load, a new generator, randomise and a parameter-driven regeneration each morph from the current table to the new one over that duration, with the chosen easing.
-- [ ] A map that wraps around the screen edge morphs without pixels sweeping across the middle of the screen.
-- [ ] A new table arriving mid-morph (or while Mix is held mid-way by hand) produces no visible jump; a slider drag on a generator parameter glides.
-- [ ] With `sine(0.05)` on Mix, loading two presets in turn breathes between them; a further map change replaces the less visible slot without disturbing the breathing.
-- [ ] Mix and the Morph settings appear on the Tab tab, are animatable (Mix) and round-trip through screen configs.
-- [ ] The translate pass with the morph adds no CPU work per frame and no frame-time regression in a fullscreen benchmark on DP-4 (unlocked session).
-- [ ] Project docs (`CLAUDE.md` rendering pipeline and translation tables, `docs/RENDERING_PIPELINE.md`, `docs/SCREEN_CONFIGS.md`) describe the morph.
+- [x] With Morph duration "none", every map change swaps instantly, as today (`TableMorphTest`).
+- [x] With a duration set, a preset load, a new generator, randomise and a parameter-driven regeneration each morph from the current table to the new one over that duration, with the chosen easing (all go through `rebuildTranslateMap()` → `TableMorph.onNewTable`; `TableMorphTest`; checked live: "Randomise" with Duration 4 s moves Mix 1 → 0 along a smoothstep curve in 4 s).
+- [x] A map that wraps around the screen edge morphs without pixels sweeping across the middle of the screen (shortest-way displacement in the shader; mid-morph screenshots show a coherent field).
+- [x] A new table arriving mid-morph (or while Mix is held mid-way by hand) produces no visible jump; a slider drag on a generator parameter glides (bake-then-morph unit-tested in `TableMorphTest`).
+- [x] With `sine(0.05)` on Mix, loading two presets in turn breathes between them; a further map change replaces the less visible slot without disturbing the breathing (`TableMorphTest`).
+- [x] Mix and the Morph settings appear on the Tab tab, are animatable (Mix) and round-trip through screen configs (`Tab/Translate Source/Morph/*`, captured in `.current.json`).
+- [ ] The translate pass with the morph adds no CPU work per frame and no frame-time regression in a fullscreen benchmark on DP-4 (unlocked session). Pending: DP-4 is at 24 Hz (2026-10-25), so a like-for-like benchmark waits for it to be back at 60 Hz. The per-frame CPU work is one uniform write.
+- [x] Project docs (`CLAUDE.md` rendering pipeline and translation tables, `docs/RENDERING_PIPELINE.md`, `docs/SCREEN_CONFIGS.md`) describe the morph.

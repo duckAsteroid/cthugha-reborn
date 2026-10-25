@@ -45,7 +45,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
-| 28 | [Morph between translation maps: two slots and an animatable Mix](28-blend-between-two-translation-maps-over-time.md) | feature | designed | ✅ ready | 0 | — |
+| 28 | [Morph between translation maps: two slots and an animatable Mix](28-blend-between-two-translation-maps-over-time.md) | feature | in-progress<br><sub>on develop</sub> | — | 0 | — |
 | 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | ⛔ 28 | 0 | — |
 | 31 | [Make beat decay and spectrum peaks frame-rate independent](31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md) | bug | draft | ext: [github.com/…/32](https://github.com/duckAsteroid/opengl-jogl-template/issues/32) | 0 | — |
 
@@ -71,7 +71,7 @@ flowchart RL
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
-  n28["🟢 28 Morph between translation maps: two slots and an animatable Mix"]
+  n28["🚧 28 Morph between translation maps: two slots and an animatable Mix"]
   n30["✏️ 30 Save both morph slots in screen configs"]
   n31["✏️ 31 Make beat decay and spectrum peaks frame-rate independent"]
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]

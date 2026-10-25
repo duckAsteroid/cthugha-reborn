@@ -31,6 +31,7 @@ import io.github.duckasteroid.cthugha.screenconfig.ScreenConfigStore;
 import io.github.duckasteroid.cthugha.tab.GeneratorRegistry;
 import io.github.duckasteroid.cthugha.tab.TabBuffer;
 import io.github.duckasteroid.cthugha.tab.TabStore;
+import io.github.duckasteroid.cthugha.tab.TableMorph;
 import java.awt.Dimension;
 import java.io.Closeable;
 import java.io.IOException;
@@ -53,6 +54,9 @@ public class JCthugha extends ParamNode implements Closeable {
 	/** How often the "current" state is flushed to disk; see {@link CurrentStatePersister}. */
 	private static final Duration CURRENT_STATE_WRITE_INTERVAL = Config.singleton().getConfigAs(
 		"session", "current_state_interval", "PT5S", Duration::parse);
+
+	/** Morphs the translation table between two slots on every map change (the Tab tab's "Morph" group). */
+	public final TableMorph tableMorph = new TableMorph();
 
 	/**
 	 * Flame simulation rate in steps per second (translate + in-buffer drawing + blur/fade per
