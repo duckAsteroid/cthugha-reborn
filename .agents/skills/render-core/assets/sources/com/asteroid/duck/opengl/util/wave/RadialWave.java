@@ -5,7 +5,6 @@ import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.renderaction.PendingValue;
-import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -82,17 +81,20 @@ public class RadialWave implements RenderedItem, Transformable {
     private volatile float currentAspect = 1.0f;
     private volatile boolean clearBeforeRender = true;
 
-    private static final String ACTION_LINE_WIDTH   = "lineWidth";
-    private static final String ACTION_CHANNEL_MODE = "channelMode";
-    private static final String ACTION_RADIUS       = "radius";
-    private static final String ACTION_CENTER       = "center";
-    private final RenderActionQueue renderActions = new RenderActionQueue(
-            ACTION_LINE_WIDTH, ACTION_CHANNEL_MODE, ACTION_RADIUS, ACTION_CENTER);
-
-    // Colour and transform are typically set every frame, so they bypass the action queue: each
-    // call copies into a preallocated slot (no-op when unchanged), applied at the next frame.
+    // Setters may be called every frame from any thread, so none of them allocate: scalars are
+    // volatile fields read at the next frame, and vectors and matrices are copied into a
+    // preallocated slot (no-op when unchanged). The gl* fields are the GL thread's last-applied
+    // values, so unchanged state isn't re-sent.
+    private volatile float lineWidth = 1.0f;
+    private volatile int channelMode = CHANNEL_BLEND;
+    private volatile float radius = 0.5f;
+    private final PendingValue<Vector2f> center     = new PendingValue<>(new Vector2f(), (src, dst) -> dst.set(src));
     private final PendingValue<Vector4f> lineColour = new PendingValue<>(new Vector4f(1.0f), (src, dst) -> dst.set(src));
     private final PendingValue<Matrix4f> transform  = new PendingValue<>(new Matrix4f(), (src, dst) -> dst.set(src));
+    private float glLineWidth = 1.0f;                         // GL thread only
+    private int glChannelMode = CHANNEL_BLEND;                // GL thread only
+    private float glRadius = 0.5f;                            // GL thread only
+    private final Vector2f glCenter     = new Vector2f();     // GL thread only
     private final Vector4f glLineColour = new Vector4f(1.0f); // GL thread only
     private final Matrix4f glTransform  = new Matrix4f();     // GL thread only
 
@@ -222,7 +224,24 @@ public class RadialWave implements RenderedItem, Transformable {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         shader.use(ctx);
-        renderActions.processAll(ctx);
+        float width = lineWidth;
+        if (width != glLineWidth) {
+            glLineWidth(width);
+            glLineWidth = width;
+        }
+        int mode = channelMode;
+        if (mode != glChannelMode) {
+            uChannel.set(mode);
+            glChannelMode = mode;
+        }
+        float r = radius;
+        if (r != glRadius) {
+            uRadius.set(r);
+            glRadius = r;
+        }
+        if (center.takeIfChanged(glCenter)) {
+            uCenter.set(glCenter);
+        }
         if (lineColour.takeIfChanged(glLineColour)) {
             uColour.set(glLineColour);
         }
@@ -245,13 +264,13 @@ public class RadialWave implements RenderedItem, Transformable {
     }
 
     /**
-     * Set the GL line width used when drawing the waveform circle.
-     * Enqueued as a render action so it takes effect at the start of the next frame.
+     * Set the GL line width used when drawing the waveform circle, applied at the start of the next
+     * frame. Cheap to call every frame (a no-op when unchanged).
      *
      * @param v line width in pixels; values &gt; 1.0 produce thicker strokes
      */
     public void setLineWidth(float v) {
-        renderActions.enqueue(ACTION_LINE_WIDTH, ctx -> glLineWidth(v));
+        this.lineWidth = v;
     }
 
     /**
@@ -265,21 +284,21 @@ public class RadialWave implements RenderedItem, Transformable {
     }
 
     /**
-     * Select which channel(s) to visualise. Enqueued as a render action.
+     * Select which channel(s) to visualise from the next frame. Cheap to call every frame.
      *
      * @param mode one of {@link #CHANNEL_BLEND}, {@link #CHANNEL_LEFT}, or {@link #CHANNEL_RIGHT}
      */
     public void setChannelMode(int mode) {
-        renderActions.enqueue(ACTION_CHANNEL_MODE, ctx -> uChannel.set(mode));
+        this.channelMode = mode;
     }
 
     /**
-     * Set the base radius of the circle in NDC units. Enqueued as a render action.
+     * Set the base radius of the circle in NDC units from the next frame. Cheap to call every frame.
      *
      * @param r the base circle radius; 0.5 fills roughly half the shorter screen dimension
      */
     public void setRadius(float r) {
-        renderActions.enqueue(ACTION_RADIUS, ctx -> uRadius.set(r));
+        this.radius = r;
     }
 
     /**
@@ -311,14 +330,13 @@ public class RadialWave implements RenderedItem, Transformable {
     }
 
     /**
-     * Set the centre of the circle in NDC coordinates. Enqueued as a render action; the vector
-     * is copied so the caller may reuse it after this call.
+     * Set the centre of the circle in NDC coordinates from the next frame. The vector is copied so
+     * the caller may reuse it; cheap to call every frame (a no-op when unchanged).
      *
      * @param center the circle centre in NDC ({@code (0,0)} is the screen centre)
      */
     public void setCenter(Vector2f center) {
-        Vector2f copy = new Vector2f(center);
-        renderActions.enqueue(ACTION_CENTER, ctx -> uCenter.set(copy));
+        this.center.offer(center);
     }
 
     /**

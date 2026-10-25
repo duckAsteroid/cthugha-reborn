@@ -38,15 +38,16 @@ public class JavaImageLoader implements TextureDataLoader {
 			var dims = new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight());
 			var texImage = options.dataFormat().apply(dims);
 
-			// copy the source image into the produced image
-			Graphics2D g = (Graphics2D) texImage.getGraphics();
-			g.setColor(new Color(0f, 0f, 0f, 0f)); // transparent
-			g.fillRect(0, 0, bufferedImage.getWidth(), bufferedImage.getHeight());
+			// copy the source image into the produced image (which starts transparent/black);
+			// the staging image types (see DataFormat.apply) have fast Java2D loops from
+			// ImageIO's image types, so this is a native blit, not a per-pixel conversion
+			Graphics2D g = texImage.createGraphics();
 			if (options.flipY()) {
 				g.scale(1, -1);
 				g.translate(0, -bufferedImage.getHeight());
 			}
 			g.drawImage(bufferedImage, 0, 0, null);
+			g.dispose();
 
 
 			ByteBuffer imageBuffer = options.dataFormat().pixelData(texImage);

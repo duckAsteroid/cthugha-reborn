@@ -25,16 +25,32 @@ public interface RenderContext {
 	KeyRegistry getKeyRegistry();
 
 	/**
-	 * The current position and size of the GLFW window in screen coordinates.
-	 * On high-DPI displays these values may differ from the GL framebuffer dimensions.
-	 * For pixel-accurate projection use {@link #ortho()} rather than these dimensions.
+	 * The current position and size of the GLFW window in <em>screen coordinates</em>, not pixels.
+	 * On scaled displays (e.g. native Wayland at 200%, or macOS Retina) the GL framebuffer is
+	 * larger than this: don't use it for {@code glViewport} or for sizing offscreen buffers. Use
+	 * {@link #getFramebufferSize()} for those, and {@link #ortho()} for a pixel-space projection.
 	 * @return window position and size in screen coordinates
 	 */
 	Rectangle getWindow();
 
 	/**
-	 * Returns the {@link Monitor} that currently contains the largest area of this window.
-	 * Falls back to the primary monitor if no overlap is found.
+	 * The size of the window's GL framebuffer in pixels: what the default viewport covers, and the
+	 * size to give offscreen render targets that should match the window. Equal to
+	 * {@link #getWindow()}'s size only on unscaled displays.
+	 *
+	 * <p>The default implementation returns {@link #getWindow()}'s size; {@link GLWindow}
+	 * overrides it with the real framebuffer size.</p>
+	 *
+	 * @return a new {@link Dimension} with the framebuffer width and height in pixels
+	 */
+	default Dimension getFramebufferSize() {
+		return getWindow().getSize();
+	}
+
+	/**
+	 * Returns the {@link Monitor} this window is on: the fullscreen monitor while fullscreen,
+	 * otherwise the one containing the largest area of the window. Falls back to the primary
+	 * monitor if no overlap is found.
 	 */
 	default Monitor getCurrentMonitor() {
 		return Monitor.primary();

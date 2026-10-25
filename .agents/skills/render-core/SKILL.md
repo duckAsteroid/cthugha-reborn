@@ -1,10 +1,10 @@
 ---
 name: render-core
-description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.0.0-RC9). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
+description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.0.0-RC10). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
 metadata:
   group: io.github.duckasteroid
   artifact: render-core
-  version: 1.0.0-RC9
+  version: 1.0.0-RC10
   sources: assets/sources/
 ---
 
@@ -74,6 +74,7 @@ double t = ctx.getClock().elapsed();          // seconds since start (double)
 
 // Viewport
 Rectangle win = ctx.getWindow();              // window size in screen coordinates (not framebuffer pixels)
+Dimension fb = ctx.getFramebufferSize();      // framebuffer size in pixels: use for glViewport and FBO sizing
 Matrix4f proj = ctx.ortho();                  // orthographic projection sized to the GL framebuffer (viewport pixels)
 
 // Resources

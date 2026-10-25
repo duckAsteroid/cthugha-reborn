@@ -44,7 +44,8 @@ internal state directly. This keeps all key bindings in one place while GLWindow
 | `exit()` | Request a clean shutdown |
 | `toggleClock()` | Pause/unpause the render clock |
 | `stepClock(double seconds)` | Advance (+) or rewind (−) the clock by N seconds |
-| `toggleFullscreen()` | Toggle between windowed and fullscreen |
+| `toggleFullscreen()` | Toggle between windowed and fullscreen on `getCurrentMonitor()` |
+| `toggleFullscreen(Monitor)` | Toggle fullscreen on a specific monitor (use under native Wayland, where the window's monitor can't be detected) |
 | `resetWindowSize()` | Restore the window to its original size |
 | `scaleWindowUp()` | Double the window size |
 | `scaleWindowDown()` | Halve the window size |

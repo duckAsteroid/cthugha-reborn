@@ -10,9 +10,11 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -29,6 +31,9 @@ public class FontTextureDataFactory {
 	private final boolean antialias;
 	private final Padding padding;
 	private FontMetrics fontMetrics;
+	/** Reused by {@link #createCharacterImage} for every glyph; sized for the font's largest. */
+	private BufferedImage scratch;
+	private Graphics2D scratchGraphics;
 	/**
 	 * If non-{@code null}, the combined glyph strip image is written as {@code font.png} under
 	 * this directory after each {@link #createFontTextureData()} call. Useful for verifying glyph
@@ -157,7 +162,12 @@ public class FontTextureDataFactory {
 	}
 
 	/**
-	 * Create a glyph image (image with data) for a given character
+	 * Create a glyph image (image with data) for a given character.
+	 *
+	 * <p>The glyph is drawn into a scratch image reused for every glyph of this factory, then
+	 * cropped to its drawn pixels, so the returned image is exactly {@link GlyphImage#bounds()}
+	 * in size and the bounds start at 0,0.</p>
+	 *
 	 * @param c the character
 	 * @return a glyph image (if the character renders) or null
 	 */
@@ -170,57 +180,67 @@ public class FontTextureDataFactory {
 			return null;
 		}
 
-		final String charStr = String.valueOf(c);
-		/* Create image for holding the char */
-		// this is not using the native storage raster buffer
-		// as it's just going to be painted onto the actual image
-		int imageWidth = metrics.getMaxAdvance() + padding.width();
-		int imageHeight = metrics.getMaxAscent() + metrics.getMaxDescent() + padding.height();
+		BufferedImage image = scratchImage();
+		int[] pixels = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+		Arrays.fill(pixels, 0); // clear the previous glyph
 		// the baseline is enough for the biggest font ascent plus the padding
 		// it is the same for all glyphs in the font
 		int baseline = metrics.getMaxAscent() + padding.top();
-		BufferedImage image = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
-
-		Graphics2D g = image.createGraphics();
-		if (antialias) {
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		}
-		g.setFont(font);
-		g.setPaint(java.awt.Color.WHITE);
 		// the position for the glyph to be rendered onto the image
 		int x = padding.left();
 		int y = baseline;
-		g.drawString(charStr, x, y);
+		scratchGraphics.drawString(String.valueOf(c), x, y);
 
 		// find the bounding box
-		Rectangle bounds = findPixelBounds(image, 1);
+		Rectangle bounds = findPixelBounds(pixels, image.getWidth(), image.getHeight(), 1);
 		if (bounds.width < 0 || bounds.height < 0) {
 			// we did not have any pixel bounds (empty image - e.g. space character)
 			// make some up using metrics
 			int width = metrics.charWidth(c);
 			bounds = new Rectangle(x, y, width, 1);
 		}
-		g.dispose();
-		return new GlyphImage(image, new Point(x, y), bounds);
+		// crop to the bounds; the scratch image is overwritten by the next glyph
+		BufferedImage glyph = new BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_ARGB);
+		int[] glyphPixels = ((DataBufferInt) glyph.getRaster().getDataBuffer()).getData();
+		int copyWidth = Math.min(bounds.width, image.getWidth() - bounds.x);
+		for (int row = 0; row < bounds.height && bounds.y + row < image.getHeight(); row++) {
+			System.arraycopy(pixels, (bounds.y + row) * image.getWidth() + bounds.x,
+					glyphPixels, row * bounds.width, Math.max(copyWidth, 0));
+		}
+		return new GlyphImage(glyph, new Point(x - bounds.x, y - bounds.y),
+				new Rectangle(0, 0, bounds.width, bounds.height));
+	}
+
+	private BufferedImage scratchImage() {
+		if (scratch == null) {
+			FontMetrics metrics = getFontMetrics();
+			int imageWidth = metrics.getMaxAdvance() + padding.width();
+			int imageHeight = metrics.getMaxAscent() + metrics.getMaxDescent() + padding.height();
+			scratch = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
+			scratchGraphics = scratch.createGraphics();
+			if (antialias) {
+				scratchGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			}
+			scratchGraphics.setFont(font);
+			scratchGraphics.setPaint(java.awt.Color.WHITE);
+		}
+		return scratch;
 	}
 
 	/**
 	 * Attempts to find the smallest rectangle in an image (from the border)
 	 * that contains some opaque pixel data (according to some alpha threshold).
-	 * @param image the image to search
+	 * @param argb the image's packed ARGB pixels, row by row
+	 * @param width the image width
+	 * @param height the image height
 	 * @param alphaThreshold the threshold of transparency
 	 * @return the rectangle in the image outside which is only transparent pixels
 	 */
-	private Rectangle findPixelBounds(BufferedImage image, int alphaThreshold) {
-		int left = image.getWidth(), right = 0, top = image.getHeight(), bottom = 0;
-		for(int y = 0; y < image.getHeight(); y++) {
-			for(int x = 0; x < image.getWidth(); x++) {
-				int rgbaColor = image.getRGB(x, y);
-				//int red = (rgbaColor >> 24) & 0xFF;
-				//int green = (rgbaColor >> 16) & 0xFF;
-				//int blue = (rgbaColor >> 8) & 0xFF;
-				int alpha = rgbaColor & 0xFF;
-
+	private static Rectangle findPixelBounds(int[] argb, int width, int height, int alphaThreshold) {
+		int left = width, right = 0, top = height, bottom = 0;
+		for(int y = 0; y < height; y++) {
+			for(int x = 0; x < width; x++) {
+				int alpha = argb[y * width + x] >>> 24;
 				if (alpha >= alphaThreshold) {
 					left = Math.min(left, x);
 					right = Math.max(right, x);

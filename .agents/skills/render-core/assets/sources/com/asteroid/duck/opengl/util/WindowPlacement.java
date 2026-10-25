@@ -59,6 +59,15 @@ public final class WindowPlacement {
     }
 
     /**
+     * The monitor this placement targets, or {@code null} for {@link #defaultPlacement()}.
+     * {@link GLWindow} remembers it as the window's monitor on platforms (native Wayland) that
+     * don't report window positions.
+     */
+    Monitor monitor() {
+        return monitor;
+    }
+
+    /**
      * Applies this placement to an existing GLFW window. Called by {@link GLWindow} after
      * {@code glfwCreateWindow} and before {@code glfwShowWindow}.
      *
@@ -76,6 +85,6 @@ public final class WindowPlacement {
             px = monitor.x() + offsetX;
             py = monitor.y() + offsetY;
         }
-        glfwSetWindowPos(windowHandle, px, py);
+        glfwSetWindowPos(windowHandle, px, py); // ignored by native Wayland compositors
     }
 }

@@ -1,8 +1,6 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.resources.bound.BindingException;
-import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
@@ -152,7 +150,6 @@ public class WavePhase implements RenderPhase {
         for (WaveEntry entry : entries.values()) {
             if (entry.mode() != RenderMode.OVERLAY) entry.render(ctx, false);
         }
-        resetVertexArrayBinding(ctx);
     }
 
     /**
@@ -170,26 +167,6 @@ public class WavePhase implements RenderPhase {
             if (entry.mode() != RenderMode.BUFFER) entry.render(ctx, true);
         }
         glDisable(GL_BLEND);
-        resetVertexArrayBinding(ctx);
-    }
-
-    /**
-     * The spectrum analysers (render-core's {@code SpectrumAnalyser} and
-     * {@code RadialSpectrumAnalyser}, and {@link RadialClockAnalyser}) bind an attribute-less
-     * vertex array with a raw {@code glBindVertexArray}, behind the back of render-core's
-     * vertex-array {@code ExclusivityGroup}. The group then still records the last array it
-     * bound as current, so the next {@code bind()} of that array is skipped and its draw runs
-     * against the analyser's array, which has no element buffer: {@code glDrawElements} reads
-     * indices from address 0 and the JVM crashes (e.g. the palette pass after an overlay
-     * spectrum and a frame with no simulation step). Unbinding through the group binds 0 and
-     * clears its record, so the next {@code bind()} is issued.
-     */
-    private static void resetVertexArrayBinding(RenderContext ctx) {
-        try {
-            ctx.getResourceManager().exclusivityGroup(VertexArrayObject.class).unbind(null);
-        } catch (BindingException e) {
-            throw new IllegalStateException("Could not reset the vertex array binding", e);
-        }
     }
 
     @Override

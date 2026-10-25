@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.display.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
@@ -207,7 +208,7 @@ public class RadialClockAnalyser extends FrequencyRenderer {
 
     // ── GL resources ────────────────────────────────────────────────────────────
     /** Empty VAO -- all geometry is procedural (gl_VertexID only). */
-    private int emptyVaoId;
+    private VertexArrayObject emptyVao;
 
     private ShaderProgram shader;
     private Uniform<Float> uAspect;
@@ -396,7 +397,7 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         int binStartClamped = clampedBinStart();
         int binCount = activeBinCount();
 
-        glBindVertexArray(emptyVaoId);
+        emptyVao.bind(ctx);
         shader.use(ctx);
         uAspect.set(currentAspect);
         uRepeatsUniform.set(repeats);
@@ -414,16 +415,20 @@ public class RadialClockAnalyser extends FrequencyRenderer {
     @Override
     public void dispose() {
         if (shader != null) { shader.dispose(); shader = null; }
-        if (emptyVaoId != 0) { glDeleteVertexArrays(emptyVaoId); emptyVaoId = 0; }
+        if (emptyVao != null) { emptyVao.dispose(); emptyVao = null; }
         disposeFftTexture();
     }
 
     // ── Initialisation helpers ───────────────────────────────────────────────────
 
     private void initVao(RenderContext ctx) {
-        // No vertex data -- all geometry computed in the vertex shader from gl_VertexID.
-        emptyVaoId = glGenVertexArrays();
-        ctx.getResourceManager().register(() -> glDeleteVertexArrays(emptyVaoId));
+        // No vertex data -- all geometry computed in the vertex shader from gl_VertexID. Bound
+        // through render-core's VAO exclusivity group (never a raw glBindVertexArray), so the
+        // group's record of the bound VAO stays true for the renderers drawn after this one.
+        VertexArrayObject vao = new VertexArrayObject();
+        vao.init(ctx);
+        emptyVao = vao;
+        ctx.getResourceManager().register(vao::dispose);
     }
 
     private void initShaders(RenderContext ctx) {

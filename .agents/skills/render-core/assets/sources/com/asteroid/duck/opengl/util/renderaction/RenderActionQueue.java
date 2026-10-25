@@ -67,6 +67,9 @@ public class RenderActionQueue {
     public List<Action> drain() {
         try {
             lock.lock();
+            if (queue.isEmpty() && latestByType.isEmpty()) {
+                return List.of(); // the usual case when polled every frame: don't allocate
+            }
             // create a copy to avoid concurrent modification issues, then clear the original queue and latestByType map
             List<Action> actions = new ArrayList<>(queue);
             // clear the queue

@@ -310,7 +310,8 @@ public class VertexArrayObject  implements RenderedItem {
      *   <li>The EBO if present (via {@link ElementBufferObject#dispose()})</li>
      * </ul>
      * <p>
-     * After calling dispose(), this VAO cannot be used and should be discarded.
+     * After calling dispose(), this VAO cannot be used and should be discarded. Calling it again
+     * does nothing.
      * Should be called during application shutdown or cleanup.
      */
     @Override
@@ -324,7 +325,11 @@ public class VertexArrayObject  implements RenderedItem {
             ebo = null;
         }
         if (vao != null) {
+            if (binding != null) {
+                binding.forget(this);
+            }
             glDeleteVertexArrays(vao);
+            vao = null;
         }
     }
 

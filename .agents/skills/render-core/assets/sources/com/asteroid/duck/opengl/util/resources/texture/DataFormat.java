@@ -3,11 +3,9 @@ package com.asteroid.duck.opengl.util.resources.texture;
 import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 
 import java.awt.*;
-import java.awt.color.ColorSpace;
-import java.awt.image.*;
+import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Hashtable;
 
 import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11C.GL_RGBA8;
@@ -19,16 +17,14 @@ import static org.lwjgl.opengl.GL30.*;
  * e.g. RGBA etc.
  */
 public enum DataFormat implements TextureFactory.FormatHelper {
-	/** Red, Green, Blue &amp; Alpha - 4 bytes per pixel */
+	/**
+	 * Red, Green, Blue &amp; Alpha - 4 bytes per pixel.
+	 * <p>The staging image is {@link BufferedImage#TYPE_INT_ARGB}, which Java2D has fast loops to
+	 * and from; {@link #pixelData} swizzles it to RGBA bytes in bulk.</p>
+	 */
 	RGBA(GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE, 4) {
 		public BufferedImage apply(Dimension d) {
-			var glAlphaColorModel = new ComponentColorModel(ColorSpace
-							.getInstance(ColorSpace.CS_sRGB), new int[] { 8, 8, 8, 8 },
-							true, false, Transparency.TRANSLUCENT, DataBuffer.TYPE_BYTE);
-			var raster = Raster.createInterleavedRaster(DataBuffer.TYPE_BYTE,
-							d.width, d.height, 4, null);;
-			return new BufferedImage(glAlphaColorModel, raster, true,
-							new Hashtable<>());
+			return new BufferedImage(d.width, d.height, BufferedImage.TYPE_INT_ARGB);
 		}
 	},
 	/** 1 channel greyscale using 32bit float per pixel */
@@ -40,9 +36,11 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 		public ByteBuffer pixelData(BufferedImage img) {
 			ByteBuffer buffer = ByteBuffer.allocateDirect(img.getWidth() * img.getHeight() * 4);
 			buffer.order(ByteOrder.nativeOrder());
+			int[] row = new int[img.getWidth()];
 			for (int y = 0; y < img.getHeight(); y++) {
-				for (int x = 0; x < img.getWidth(); x++) {
-					buffer.putFloat(luminance(new Color(img.getRGB(x, y))));
+				argbRow(img, y, row);
+				for (int argb : row) {
+					buffer.putFloat(luminance(argb));
 				}
 			}
 			buffer.flip();
@@ -58,10 +56,12 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 		public ByteBuffer pixelData(BufferedImage img) {
 			ByteBuffer buffer = ByteBuffer.allocateDirect(img.getWidth() * img.getHeight() * 2);
 			buffer.order(ByteOrder.nativeOrder());
+			int[] row = new int[img.getWidth()];
 			for (int y = 0; y < img.getHeight(); y++) {
-				for (int x = 0; x < img.getWidth(); x++) {
+				argbRow(img, y, row);
+				for (int argb : row) {
 					// scale luminance 0.0-1.0 → 0-65535 for GL_R16 unsigned normalized
-					buffer.putShort((short)(luminance(new Color(img.getRGB(x, y))) * 65535f));
+					buffer.putShort((short)(luminance(argb) * 65535f));
 				}
 			}
 			buffer.flip();
@@ -110,23 +110,42 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 		}
 	}
 
+	/**
+	 * Converts any image to tightly packed RGBA bytes (one byte per channel, rows top to bottom).
+	 * Fastest for {@link BufferedImage#TYPE_INT_ARGB} images, as produced by {@link #RGBA}'s
+	 * {@link #apply}.
+	 */
 	@Override
 	public ByteBuffer pixelData(BufferedImage img) {
-		// build a byte buffer from the image data
-		// that OpenGL can use to produce a texture.
-		byte[] data = ((DataBufferByte) img.getRaster().getDataBuffer())
-						.getData();
-
-		ByteBuffer imageBuffer = ByteBuffer.allocateDirect(data.length);
-		imageBuffer.order(ByteOrder.nativeOrder());
-		imageBuffer.put(data, 0, data.length);
+		int width = img.getWidth();
+		// big-endian so each putInt lays the bytes down as R, G, B, A
+		ByteBuffer imageBuffer = ByteBuffer.allocateDirect(width * img.getHeight() * 4).order(ByteOrder.BIG_ENDIAN);
+		int[] row = new int[width];
+		for (int y = 0; y < img.getHeight(); y++) {
+			argbRow(img, y, row);
+			for (int argb : row) {
+				imageBuffer.putInt((argb << 8) | (argb >>> 24));
+			}
+		}
 		imageBuffer.flip();
-		return imageBuffer;
+		return imageBuffer.order(ByteOrder.nativeOrder());
 	}
 
-	static float luminance(Color color) {
-		return 0.2126f * (color.getRed() / 255f)
-			+ 0.7152f * (color.getGreen() / 255f)
-			+ 0.0722f * (color.getBlue() / 255f);
+	/**
+	 * Reads one row of {@code img} as packed, non-premultiplied sRGB ARGB ints into {@code row},
+	 * in bulk rather than through a per-pixel {@code getRGB(x, y)}.
+	 */
+	static void argbRow(BufferedImage img, int y, int[] row) {
+		if (img.getType() == BufferedImage.TYPE_INT_ARGB) {
+			img.getRaster().getDataElements(0, y, img.getWidth(), 1, row); // already ARGB: straight copy
+		} else {
+			img.getRGB(0, y, img.getWidth(), 1, row, 0, img.getWidth());
+		}
+	}
+
+	static float luminance(int argb) {
+		return 0.2126f * (((argb >> 16) & 0xFF) / 255f)
+			+ 0.7152f * (((argb >> 8) & 0xFF) / 255f)
+			+ 0.0722f * ((argb & 0xFF) / 255f);
 	}
 }

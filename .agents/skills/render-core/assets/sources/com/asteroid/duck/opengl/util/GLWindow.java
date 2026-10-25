@@ -75,6 +75,11 @@ public abstract class GLWindow implements RenderContext {
 	private final KeyRegistry keyRegistry = new KeyRegistry();
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
+	/**
+	 * The monitor the window was last placed on (via {@link WindowPlacement} or
+	 * {@link #moveToMonitor}), or {@code null}. Used where the window position is unknown.
+	 */
+	private Monitor placedMonitor;
 	private Rectangle window;
 	private int viewportWidth;
 	private int viewportHeight;
@@ -220,6 +225,7 @@ public abstract class GLWindow implements RenderContext {
 
         // Apply requested monitor placement before showing the window
         placement.apply(windowHandle, width, height);
+        placedMonitor = placement.monitor();
 
         // Enable v-sync
         glfwSwapInterval(1);
@@ -752,19 +758,29 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	/**
-	 * Toggle between windowed and fullscreen mode on the monitor that currently contains the
-	 * largest area of this window.
+	 * Toggle between windowed and fullscreen mode on {@link #getCurrentMonitor()}.
 	 *
 	 * <p>When entering fullscreen the current windowed rectangle is saved so it can be restored
 	 * exactly when toggling back. Uses the native monitor's video mode to set resolution and
 	 * refresh rate.</p>
+	 *
+	 * @see #toggleFullscreen(Monitor)
 	 */
 	public void toggleFullscreen() {
+		toggleFullscreen(getCurrentMonitor());
+	}
+
+	/**
+	 * Toggle between windowed mode and fullscreen on the given monitor. When already fullscreen,
+	 * returns to windowed mode and {@code monitor} is ignored.
+	 *
+	 * @param monitor the monitor to go fullscreen on, at its current video mode
+	 */
+	public void toggleFullscreen(Monitor monitor) {
 		if (windowed == null) {
 			windowed = readWindow();
-			long monitor = glfwGetCurrentMonitor(windowHandle);
-			GLFWVidMode mode = glfwGetVideoMode(monitor);
-			glfwSetWindowMonitor(windowHandle, monitor, 0, 0, mode.width(), mode.height(), mode.refreshRate());
+			GLFWVidMode mode = glfwGetVideoMode(monitor.handle());
+			glfwSetWindowMonitor(windowHandle, monitor.handle(), 0, 0, mode.width(), mode.height(), mode.refreshRate());
 		} else {
 			glfwSetWindowMonitor(windowHandle, NULL, windowed.x, windowed.y, windowed.width, windowed.height, 0 );
 			windowed = null;
@@ -772,26 +788,60 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	/**
-	 * Returns the {@link Monitor} that currently contains the largest area of this window.
-	 * Falls back to the primary monitor if no overlap is found (e.g. the window is off-screen).
+	 * Returns the {@link Monitor} this window is on.
+	 *
+	 * <ul>
+	 *   <li>While fullscreen, the fullscreen monitor (exact on every platform).</li>
+	 *   <li>Under native Wayland, which never tells a client its window position, the monitor the
+	 *       window was last placed on with a {@link WindowPlacement} or {@link #moveToMonitor},
+	 *       if it is still connected; otherwise the primary monitor.</li>
+	 *   <li>Otherwise the monitor containing the largest area of the window, or the primary
+	 *       monitor if none does (e.g. the window is off-screen).</li>
+	 * </ul>
 	 */
 	@Override
 	public Monitor getCurrentMonitor() {
+		long fullscreen = glfwGetWindowMonitor(windowHandle);
+		if (fullscreen != NULL) {
+			return Monitor.fromHandle(fullscreen);
+		}
+		if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
+			if (placedMonitor != null && isConnected(placedMonitor.handle())) {
+				return Monitor.fromHandle(placedMonitor.handle()); // re-read: the video mode may have changed
+			}
+			return Monitor.primary();
+		}
 		return Monitor.fromHandle(glfwGetCurrentMonitor(windowHandle));
 	}
 
+	private static boolean isConnected(long monitor) {
+		PointerBuffer monitors = glfwGetMonitors();
+		if (monitors != null) {
+			while (monitors.hasRemaining()) {
+				if (monitors.get() == monitor) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	/**
-	 * Move the window to the centre of the given monitor.
+	 * Move the window to the centre of the given monitor. Under native Wayland the compositor
+	 * decides window positions, so this only records {@code monitor} as the window's monitor for
+	 * {@link #getCurrentMonitor()} and {@link #toggleFullscreen()}.
 	 *
 	 * @param monitor the target monitor
 	 */
 	protected void moveToMonitor(Monitor monitor) {
 		WindowPlacement.centeredOn(monitor).apply(windowHandle, window.width, window.height);
+		this.placedMonitor = monitor;
 		this.window = readWindow();
 	}
 
 	/**
-	 * Move the window to a pixel offset relative to the given monitor's top-left corner.
+	 * Move the window to a pixel offset relative to the given monitor's top-left corner. Under
+	 * native Wayland this only records the monitor, as for {@link #moveToMonitor(Monitor)}.
 	 *
 	 * @param monitor the target monitor
 	 * @param x       horizontal offset in screen coordinates from the monitor's left edge
@@ -799,6 +849,7 @@ public abstract class GLWindow implements RenderContext {
 	 */
 	protected void moveToMonitor(Monitor monitor, int x, int y) {
 		WindowPlacement.at(monitor, x, y).apply(windowHandle, window.width, window.height);
+		this.placedMonitor = monitor;
 		this.window = readWindow();
 	}
 
@@ -808,6 +859,9 @@ public abstract class GLWindow implements RenderContext {
 	 * <p>Iterates all connected monitors and computes the intersection area with the window
 	 * rectangle; returns the monitor with the largest overlap. Falls back to the primary monitor
 	 * if no overlap is found (e.g. window is off-screen).</p>
+	 *
+	 * <p>Meaningless under native Wayland, where {@code glfwGetWindowPos} always reports 0,0;
+	 * {@link #getCurrentMonitor()} handles that case.</p>
 	 *
 	 * @param window the GLFW window handle
 	 * @return the GLFW monitor handle that best contains the window
@@ -887,8 +941,19 @@ public abstract class GLWindow implements RenderContext {
 		return window.getWidth()+"x"+window.getHeight();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Note: screen coordinates, not pixels. See {@link #getFramebufferSize()}.</p>
+	 */
+	@Override
 	public Rectangle getWindow() {
 		return window;
+	}
+
+	@Override
+	public Dimension getFramebufferSize() {
+		return new Dimension(viewportWidth, viewportHeight);
 	}
 
 	@Override
@@ -904,7 +969,8 @@ public abstract class GLWindow implements RenderContext {
 	/**
 	 * Returns the current window dimensions as a 2D float vector.
 	 *
-	 * @return {@code (width, height)} in pixels; same values as {@link #getWindow()}.width/height
+	 * @return {@code (width, height)} in screen coordinates, not pixels; same values as
+	 *         {@link #getWindow()}.width/height. See {@link #getFramebufferSize()} for pixels.
 	 */
 	public Vector2f getWindowDimensions() {
 		return new Vector2f(window.width, window.height);

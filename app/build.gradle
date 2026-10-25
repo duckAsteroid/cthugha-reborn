@@ -33,7 +33,7 @@ dependencies {
 	// Logging API
 	implementation 'org.slf4j:slf4j-api:2.0.20'
 	// OpenGL utils
-	implementation 'io.github.duckasteroid:render-core:1.0.0-RC9'
+	implementation 'io.github.duckasteroid:render-core:1.0.0-RC10'
 	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
 	implementation platform('org.lwjgl:lwjgl-bom:3.4.3')
 	implementation 'org.lwjgl:lwjgl'

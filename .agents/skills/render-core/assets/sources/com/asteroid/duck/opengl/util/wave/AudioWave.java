@@ -5,7 +5,6 @@ import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.renderaction.PendingValue;
-import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -90,18 +89,17 @@ public class AudioWave implements RenderedItem, Transformable {
     private Uniform<Vector4f> uColour;
     private Uniform<Matrix4f> uTransform;
 
-    private static final String ACTION_LINE_WIDTH   = "lineWidth";
-    private static final String ACTION_CHANNEL_MODE = "channelMode";
-    private final RenderActionQueue renderActions = new RenderActionQueue(ACTION_LINE_WIDTH, ACTION_CHANNEL_MODE);
-
-    // Colour and transform are typically set every frame, so they bypass the action queue: each
-    // call copies into a preallocated slot (no-op when unchanged), applied at the next frame.
+    // Setters may be called every frame from any thread, so none of them allocate: scalars are
+    // volatile fields read at the next frame, and colour and transform are copied into a
+    // preallocated slot (no-op when unchanged).
     private final PendingValue<Vector4f> lineColour = new PendingValue<>(new Vector4f(1.0f), (src, dst) -> dst.set(src));
     private final PendingValue<Matrix4f> transform  = new PendingValue<>(new Matrix4f(), (src, dst) -> dst.set(src));
     private final Vector4f glLineColour = new Vector4f(1.0f); // GL thread only
     private final Matrix4f glTransform  = new Matrix4f();     // GL thread only
 
-    private int channelMode = CHANNEL_BLEND;
+    private volatile int channelMode = CHANNEL_BLEND;
+    private volatile float lineWidth = 1.0f;
+    private float glLineWidth = 1.0f; // GL thread only: last width passed to glLineWidth
 
     private volatile boolean clearBeforeRender = true;
 
@@ -241,7 +239,11 @@ public class AudioWave implements RenderedItem, Transformable {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         shader.use(ctx);
-        renderActions.processAll(ctx);
+        float width = lineWidth;
+        if (width != glLineWidth) {
+            glLineWidth(width);
+            glLineWidth = width;
+        }
         if (lineColour.takeIfChanged(glLineColour)) {
             uColour.set(glLineColour);
         }
@@ -254,7 +256,8 @@ public class AudioWave implements RenderedItem, Transformable {
         uStart.set(Math.floorMod(audioSink.getHead() - SCREEN_WIDTH, audioSink.getStereoFrames()));
 
         vao.bind(ctx);
-        if (channelMode == CHANNEL_STEREO) {
+        int mode = channelMode;
+        if (mode == CHANNEL_STEREO) {
             uChannel.set(CHANNEL_LEFT);
             uYOffset.set(0.5f);
             vao.doRender(ctx);
@@ -262,7 +265,7 @@ public class AudioWave implements RenderedItem, Transformable {
             uYOffset.set(-0.5f);
             vao.doRender(ctx);
         } else {
-            uChannel.set(channelMode);
+            uChannel.set(mode);
             uYOffset.set(0.0f);
             vao.doRender(ctx);
         }
@@ -275,23 +278,23 @@ public class AudioWave implements RenderedItem, Transformable {
     }
 
     /**
-     * Set the GL line width used when drawing the waveform strip.
-     * Enqueued as a render action so it takes effect at the start of the next frame.
+     * Set the GL line width used when drawing the waveform strip, applied at the start of the next
+     * frame. Cheap to call every frame (a no-op when unchanged).
      *
      * @param v line width in pixels; values &gt; 1.0 produce thicker strokes
      */
     public void setLineWidth(float v) {
-        renderActions.enqueue(ACTION_LINE_WIDTH, ctx -> glLineWidth(v));
+        this.lineWidth = v;
     }
 
     /**
-     * Select which channel(s) to visualise. Enqueued as a render action.
+     * Select which channel(s) to visualise from the next frame. Cheap to call every frame.
      *
      * @param mode one of {@link #CHANNEL_BLEND}, {@link #CHANNEL_LEFT}, {@link #CHANNEL_RIGHT},
      *             or {@link #CHANNEL_STEREO}
      */
     public void setChannelMode(int mode) {
-        renderActions.enqueue(ACTION_CHANNEL_MODE, ctx -> this.channelMode = mode);
+        this.channelMode = mode;
     }
 
     /**

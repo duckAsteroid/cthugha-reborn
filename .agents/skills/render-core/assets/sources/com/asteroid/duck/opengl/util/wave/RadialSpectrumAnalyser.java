@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.wave;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import org.joml.Matrix4f;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
@@ -227,7 +228,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
 
     // ── GL resources ────────────────────────────────────────────────────────────
     /** Empty VAO — all geometry is procedural (gl_VertexID only). */
-    private int         emptyVaoId;
+    private VertexArrayObject emptyVao;
 
     private ShaderProgram fillShader;
     private ShaderProgram peakShader;
@@ -412,7 +413,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
 
         float aspect = currentAspect;
         Matrix4f t = currentTransform();
-        glBindVertexArray(emptyVaoId);
+        emptyVao.bind(ctx);
 
         int currentRepeats = repeats;
 
@@ -436,7 +437,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
     public void dispose() {
         if (fillShader != null) { fillShader.dispose(); fillShader = null; }
         if (peakShader != null) { peakShader.dispose(); peakShader = null; }
-        if (emptyVaoId != 0) { glDeleteVertexArrays(emptyVaoId); emptyVaoId = 0; }
+        if (emptyVao != null) { emptyVao.dispose(); emptyVao = null; }
         disposeFftTexture();
     }
 
@@ -444,9 +445,12 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
 
     private void initVao(RenderContext ctx) {
         // No vertex data — all geometry computed in the vertex shader from gl_VertexID.
-        // An empty VAO is required by Core Profile even with no vertex attributes.
-        emptyVaoId = glGenVertexArrays();
-        ctx.getResourceManager().register(() -> glDeleteVertexArrays(emptyVaoId));
+        // An empty VAO is required by Core Profile even with no vertex attributes. Bound through
+        // the VAO exclusivity group (never raw glBindVertexArray) so the group stays in sync.
+        VertexArrayObject vao = new VertexArrayObject();
+        vao.init(ctx);
+        emptyVao = vao;
+        ctx.getResourceManager().register(vao::dispose);
     }
 
     private void initShaders(RenderContext ctx) {

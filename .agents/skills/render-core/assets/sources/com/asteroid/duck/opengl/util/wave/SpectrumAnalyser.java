@@ -349,7 +349,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
     // FILLED mode
     private ShaderProgram fillShader;
     private ShaderProgram peakLineShader;
-    private int emptyFillVaoId;
+    private VertexArrayObject emptyFillVao;
 
     // ── Runtime uniforms (direction and transform are updated each frame) ────────
 
@@ -676,11 +676,12 @@ public class SpectrumAnalyser extends FrequencyRenderer {
     // ── FILLED mode ──────────────────────────────────────────────────────────────
 
     private void initFillVao(RenderContext ctx) {
-        // Procedural geometry — no vertex data, just a VAO required by Core Profile.
-        emptyFillVaoId = glGenVertexArrays();
-        ctx.getResourceManager().register(() -> {
-            if (emptyFillVaoId != 0) glDeleteVertexArrays(emptyFillVaoId);
-        });
+        // Procedural geometry — no vertex data, just a VAO required by Core Profile. Bound through
+        // the VAO exclusivity group (never raw glBindVertexArray) so the group stays in sync.
+        VertexArrayObject vao = new VertexArrayObject();
+        vao.init(ctx);
+        emptyFillVao = vao;
+        ctx.getResourceManager().register(vao::dispose);
     }
 
     private void initFillShaders(RenderContext ctx) {
@@ -722,7 +723,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
     private void renderFilled(RenderContext ctx) {
         int dir = direction.ordinal();
         Matrix4f t = currentTransform();
-        glBindVertexArray(emptyFillVaoId);
+        emptyFillVao.bind(ctx);
 
         // Smooth filled area: numFillSamples pairs of (base, tip) vertices
         fillShader.use(ctx);
@@ -748,6 +749,6 @@ public class SpectrumAnalyser extends FrequencyRenderer {
     private void disposeFilled() {
         if (fillShader     != null) { fillShader.dispose();     fillShader     = null; }
         if (peakLineShader != null) { peakLineShader.dispose(); peakLineShader = null; }
-        if (emptyFillVaoId != 0)   { glDeleteVertexArrays(emptyFillVaoId); emptyFillVaoId = 0; }
+        if (emptyFillVao   != null) { emptyFillVao.dispose();   emptyFillVao   = null; }
     }
 }

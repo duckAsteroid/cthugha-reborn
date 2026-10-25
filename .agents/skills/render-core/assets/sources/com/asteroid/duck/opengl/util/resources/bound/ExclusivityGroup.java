@@ -51,14 +51,19 @@ public class ExclusivityGroup<T extends Resource> {
      * a new {@link BoundResource} handle is returned without issuing a redundant GL call.
      * Otherwise the previous resource is implicitly displaced by calling {@link Binder#bind}.</p>
      *
+     * <p>Because the GL call is skipped for the recorded resource, binding a resource of this
+     * type with a raw GL call (e.g. {@code glBindVertexArray}) desynchronises the group: a later
+     * {@code bind} of the recorded resource would do nothing and leave the raw binding in place.
+     * Bind through the group, or call {@link #invalidate()} after a raw bind.</p>
+     *
      * @param resource the resource to bind; must not be {@code null}
      * @return a handle that releases the binding when {@link BoundResource#unbind()} is called,
      *         or {@code null} if the binder threw a {@link BindingException}
      */
     public BoundResource<T> bind(T resource) {
         Objects.requireNonNull(resource, "Resource must not be null");
+        lock.lock();
         try {
-            lock.lock();
             // is this the same resource as the currently bound one?
             if(Objects.equals(boundResource, resource)) {
                 return new BoundResource<>(this, resource);
@@ -73,6 +78,40 @@ public class ExclusivityGroup<T extends Resource> {
         }
         catch(BindingException e) {
             return null;
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Forget which resource is bound, without any GL call, so the next {@link #bind} always
+     * issues one. Call this after binding a resource of this type outside the group (a raw GL
+     * bind), which the group can't otherwise see.
+     */
+    public void invalidate() {
+        lock.lock();
+        try {
+            boundResource = null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Forget {@code resource} if it is the one recorded as bound, without any GL call. Call this
+     * when deleting it: GL reverts a deleted object's binding, and its name may be reused.
+     *
+     * @param resource the resource being deleted
+     */
+    public void forget(T resource) {
+        lock.lock();
+        try {
+            if (Objects.equals(boundResource, resource)) {
+                boundResource = null;
+            }
+        } finally {
+            lock.unlock();
         }
     }
 

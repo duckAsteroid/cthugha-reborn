@@ -10,7 +10,8 @@ import java.awt.image.BufferedImage;
 /**
  * An individual generated glyph image with glyph location details (relative to the image)
  *
- * @param image  the BufferedImage (normally MUCH larger than the actual Glyph)
+ * @param image  the BufferedImage; {@link FontTextureDataFactory} crops it to the glyph, so
+ *               {@code bounds} covers the whole image, but other sources may be larger
  * @param datum  the AWT Point coordinates of the character datum in the image
  * @param bounds the drawn area of the glyph in the image
  */
