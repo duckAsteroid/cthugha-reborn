@@ -23,7 +23,7 @@ import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.phase.QrPhase;
 import io.github.duckasteroid.cthugha.display.phase.RenderPhase;
 import io.github.duckasteroid.cthugha.display.phase.WorkPhase;
-import io.github.duckasteroid.cthugha.tab.TabBuffer;
+import io.github.duckasteroid.cthugha.tab.TranslationRegenerator;
 import io.github.duckasteroid.cthugha.work.BackgroundWorkQueue;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import org.lwjgl.BufferUtils;
@@ -58,6 +58,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import com.asteroid.duck.opengl.util.Monitor;
@@ -132,6 +136,8 @@ public class CthughaWindow extends GLWindow {
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final BackgroundWorkQueue workQueue = new BackgroundWorkQueue();
+    /** How long a regeneration waits for the render thread to adopt its result (e.g. at shutdown). */
+    private static final long ADOPT_TIMEOUT_SECONDS = 5;
     private final StdinKeyInjector stdinInjector;
 
     private CthughaActionContext actionContext;
@@ -299,30 +305,16 @@ public class CthughaWindow extends GLWindow {
         phases.add(new WorkPhase(workQueue));
 
         // Wire translation-layer callbacks before starting the remote server so SSE events work.
-        cthugha.translateSource.setOnRegenerateNeeded(() -> {
-            boolean started = workQueue.submit("translateMap", "Tab calculating…", wctx -> {
-                wctx.setStatus("Computing…");
-                TabBuffer newBuf =cthugha.computeRegeneratedTranslation();
-                wctx.enqueueRenderAction(rc -> {
-                    cthugha.loadTabBuffer(newBuf);
-                    cthugha.notify(cthugha.translateSource.getLastGenerated());
-                    rebuildTranslateMap();
-                });
-            });
-            if (!started) cthugha.notify("Tab calculation in progress");
-        });
-        cthugha.translateSource.setOnNewGeneratorSelected(() -> {
-            boolean started = workQueue.submit("translateMap", "Tab calculating…", wctx -> {
-                wctx.setStatus("Computing…");
-                TabBuffer newBuf =cthugha.computeNewTranslation();
-                wctx.enqueueRenderAction(rc -> {
-                    cthugha.loadTabBuffer(newBuf);
-                    cthugha.notify(cthugha.translateSource.getLastGenerated());
-                    rebuildTranslateMap();
-                });
-            });
-            if (!started) cthugha.notify("Tab calculation in progress");
-        });
+        // Requests coalesce: one regeneration runs at a time, and changes made meanwhile cost a
+        // single follow-up run, so the table always catches up with the latest params. Runs
+        // happen quietly, with no work indicator, since they are frequent and brief.
+        TranslationRegenerator regenerator = new TranslationRegenerator(
+                drain -> Thread.ofVirtual().name("translate-regen").start(drain),
+                this::regenerateTranslation);
+        cthugha.translateSource.setOnRegenerateNeeded(
+                () -> regenerator.request(TranslationRegenerator.Request.REGENERATE));
+        cthugha.translateSource.setOnNewGeneratorSelected(
+                () -> regenerator.request(TranslationRegenerator.Request.RANDOMISE));
 
         // Remote setup: create QrPhase and add to phase list before tree build
         if (remoteConfig != null && remoteConfig.enabled) {
@@ -610,6 +602,38 @@ public class CthughaWindow extends GLWindow {
         t.setWrap(Wrap.REPEAT);
         t.generate(w, h, data);
         return t;
+    }
+
+    /**
+     * One {@link TranslationRegenerator} run: computes the table off the GL thread, then waits
+     * until the GL thread has adopted and uploaded it, so the buffer it replaced is free to be
+     * reused as the next run's spare.
+     */
+    private void regenerateTranslation(TranslationRegenerator.Request request) {
+        JCthugha.ComputedTranslation computed =
+                cthugha.computeTranslation(request == TranslationRegenerator.Request.RANDOMISE);
+        CompletableFuture<Void> adopted = new CompletableFuture<>();
+        renderActions.enqueue("adoptTranslation", rc -> {
+            try {
+                if (cthugha.adoptTranslation(computed)) {
+                    // Name the generator only when it (or its params) changed wholesale, not on
+                    // every parameter tweak.
+                    if (request == TranslationRegenerator.Request.RANDOMISE) {
+                        cthugha.notify(cthugha.translateSource.getLastGenerated());
+                    }
+                    rebuildTranslateMap();
+                }
+            } finally {
+                adopted.complete(null);
+            }
+        });
+        try {
+            adopted.get(ADOPT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException | TimeoutException e) {
+            LOG.warn("Translation not adopted by the render thread within {}s", ADOPT_TIMEOUT_SECONDS);
+        }
     }
 
     private void rebuildTranslateMap() {

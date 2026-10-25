@@ -484,6 +484,25 @@ class RemoteServerTest {
     }
 
     @Test
+    void animationOnNonAnimatableTargetIsInactiveButDeletable() throws Exception {
+        // E.g. a binding restored from a config saved before the target was marked withNoAnimate().
+        send("POST", "/api/v1/params/Amplitude/animation", "{\"script\":\"0.5\"}");
+        amplitude.withNoAnimate();
+        amplitude.setValue(2.0);
+        animation.tick();
+
+        assertFalse(amplitude.isControlled());
+        assertEquals(2.0, amplitude.value, 1e-9);
+        JsonNode node = mapper.readTree(get("/api/v1/params/Amplitude").body());
+        assertTrue(node.get("animation").has("compileError"));
+
+        assertEquals(400, send("PATCH", "/api/v1/params/Amplitude/animation", "{\"enabled\":false}").statusCode());
+        HttpResponse<String> del = send("DELETE", "/api/v1/params/Amplitude/animation", null);
+        assertEquals(200, del.statusCode());
+        assertNull(amplitude.getAnimationBinding());
+    }
+
+    @Test
     void badScriptNeverBecomesControlled() throws Exception {
         HttpResponse<String> create = send("POST", "/api/v1/params/Amplitude/animation", "{\"script\":\"not valid java\"}");
         JsonNode created = mapper.readTree(create.body());

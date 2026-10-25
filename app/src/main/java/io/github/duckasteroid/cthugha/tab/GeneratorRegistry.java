@@ -101,6 +101,13 @@ public class GeneratorRegistry extends ParamNode implements RestoreAware {
             + "that generator's own parameters and regenerates the map.");
         generatorSelector.withNoAnimate();
 
+        // A change to any generator value regenerates the whole translation table off the GL
+        // thread, so a per-tick continuous binding would keep a core regenerating for as long as
+        // it runs. Edge-triggered bindings can still set these values one-off.
+        List<AbstractValue> generatorValues = new ArrayList<>();
+        generators.forEach(g -> collectValues(g, generatorValues));
+        generatorValues.forEach(AbstractValue::withNoAnimate);
+
         selected = generators.get(0);
 
         if (tabStore != null) {
@@ -171,6 +178,14 @@ public class GeneratorRegistry extends ParamNode implements RestoreAware {
     /** Generates a translation map using the current generator's current param values (no randomise). */
     public TabMapping generateCurrent(int width, int height, Random rng) {
         return selected.generate(width, height, rng);
+    }
+
+    /**
+     * Requests that the current generator's params be randomised and the map regenerated, via
+     * the same {@link #setOnNewGeneratorSelected} callback a generator pick fires.
+     */
+    public void requestRandomise() {
+        if (onNewGeneratorSelected != null) onNewGeneratorSelected.run();
     }
 
     /** Picks a random generator and fires {@link #setOnNewGeneratorSelected}. */

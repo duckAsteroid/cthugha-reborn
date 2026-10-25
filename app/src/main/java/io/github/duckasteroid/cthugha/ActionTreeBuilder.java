@@ -115,10 +115,8 @@ public class ActionTreeBuilder {
         tabGroup.withUiHint(UiHint.CONTROL_TYPE, UiHint.GENERATOR_TAB);
         tabGroup.addChild(cthugha.translateSource);
 
-        cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx -> {
-            cthugha.newTranslation(ctx.rng());
-            renderActions.enqueue("rebuildTranslateMap", rc -> callbacks.rebuildTranslateMap());
-        }));
+        cthugha.translateSource.addChild(action("Randomise", "shuffle", ctx ->
+                cthugha.translateSource.requestRandomise()));
         AbstractAction randomSource = action("Random Source", "dice-5", ctx ->
                 cthugha.translateSource.selectRandom(ctx.rng()));
         randomSource.withDescription("Pick a random tab generator effect.");

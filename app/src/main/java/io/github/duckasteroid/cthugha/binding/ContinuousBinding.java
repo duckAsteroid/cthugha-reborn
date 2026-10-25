@@ -26,7 +26,11 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
     public final ScriptParameter script;
 
     /** The AbstractValue this binding is currently published on as its AnimationBindingView, or null. */
-    private AbstractValue boundValue;
+    /** Reported in place of a compile error while the resolved target is not animatable. */
+    static final String NOT_ANIMATABLE_ERROR = "This parameter can't be animated; the binding is "
+            + "inactive. Delete it, or use a trigger to set the value instead.";
+
+    private volatile AbstractValue boundValue;
 
     ContinuousBinding(String name, String defaultTargetPath, String defaultScript, Map<String, Object> globalState) {
         super(name, BindingMode.CONTINUOUS, defaultTargetPath);
@@ -74,7 +78,9 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
             return;
         }
         TimeFunction fn = script.getFunction();
-        if (!enabled.value || fn == null) {
+        if (!enabled.value || fn == null || !av.isAnimatable()) {
+            // A non-animatable target can still be resolved by a binding restored from a config
+            // saved before the target was marked withNoAnimate() — leave it under manual control.
             av.setControlled(false);
             return;
         }
@@ -144,6 +150,10 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
 
     @Override
     public String getCompileError() {
+        AbstractValue av = boundValue;
+        if (av != null && !av.isAnimatable()) {
+            return NOT_ANIMATABLE_ERROR;
+        }
         return script.getLastCompileError();
     }
 }

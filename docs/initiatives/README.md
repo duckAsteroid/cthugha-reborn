@@ -28,7 +28,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
 | 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | designed | ✅ ready | 0 | — |
-| 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | designed | ✅ ready | 0 | — |
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | designed | ✅ ready | 0 | — |
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | designed | ✅ ready | 0 | — |
 | 9 | [Cross-fade between simulation steps for smooth presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | designed | ⛔ 1, 8 | 0 | — |
@@ -55,7 +54,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 ```mermaid
 flowchart RL
   n1["🟢 1 Size the internal render buffer from the display at a chosen resolution"]
-  n6["🟢 6 Throttle tab regeneration driven by animation bindings"]
   n7["🟢 7 Upload video frames asynchronously via pixel buffer objects"]
   n8["🟢 8 Make the flame simulation independent of display frame rate"]
   n9["📐 9 Cross-fade between simulation steps for smooth presentation"]
@@ -85,7 +83,6 @@ flowchart RL
   n25 --> n3
   n30 --> n28
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
-  click n6 href "06-throttle-tab-regeneration-driven-by-animation-bindings.md"
   click n7 href "07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md"
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
@@ -114,8 +111,8 @@ flowchart RL
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 0 open, 3 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 6 open, 2 closed or deferred
-- **tab-generators** — Translation-table generators, presets and their regeneration · 5 open, 1 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 3 closed or deferred
+- **tab-generators** — Translation-table generators, presets and their regeneration · 4 open, 2 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
@@ -127,6 +124,7 @@ flowchart RL
 | 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | 2026-10-24 |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | 2026-10-25 |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | 2026-10-25 |
+| 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | 2026-10-25 |
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
 | 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | 2026-10-25 |
 | 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | 2026-10-25 |

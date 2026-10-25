@@ -331,6 +331,24 @@ as a `ShortBuffer` of RG16UI pairs) and mirrored GPU-side in `translateMap`. Whe
 table is rebuilt `CthughaWindow.rebuildTranslateMap()` calls `glTexSubImage2D` to
 upload the new data without re-allocating the texture.
 
+Regeneration runs off the GL thread, on a virtual thread with no on-screen work
+indicator, through `TranslationRegenerator` (`tab/`), which coalesces requests: at most one regeneration runs at a time, and any changes made while it
+runs (a slider drag on a generator parameter, a burst of triggers) cost a single follow-up
+run with the then-current values, so the table always ends up matching the parameters. A
+generator pick or "Randomise" requests a randomising run, which a later plain regenerate
+request does not downgrade. Each run computes into a spare `TabBuffer`
+(`JCthugha.computeTranslation`), hands it to the GL thread to adopt and upload
+(`JCthugha.adoptTranslation`), and waits for that before the next run, so the buffer it
+replaced becomes the next run's spare and no buffer is allocated per run at a fixed size.
+A table loaded from elsewhere (a saved preset, `JCthugha.loadTabBuffer`) bumps an epoch,
+so a run computed against the previous table is discarded instead of overwriting it.
+The generator's name is shown as a notification only after a generator pick or
+"Randomise", not after a regeneration from a parameter change.
+
+Generator parameters (every value under each `TabGenerator`, and the `Generator` picker)
+are marked `withNoAnimate()`: a per-tick continuous binding would regenerate the whole
+table continuously. Edge-triggered bindings can still set them.
+
 `TabGenerator` implementations live in `tab/generators/`, grouped into themed
 subpackages, and are discovered/registered by `GeneratorRegistry` via `@AutoService`:
 

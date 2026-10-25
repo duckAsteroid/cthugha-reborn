@@ -531,8 +531,18 @@ public class RemoteServer {
         return paramRoot.getChild(nodePath.split("/"));
     }
 
-    /** Resolves {@code nodePath} to an {@link AbstractValue}, writing an error response and returning empty on failure. */
+    /** Resolves {@code nodePath} to an animatable {@link AbstractValue}, writing an error response and returning empty on failure. */
     private Optional<AbstractValue> resolveAnimatable(Context ctx, String nodePath) {
+        return resolveAnimationTarget(ctx, nodePath, true);
+    }
+
+    /**
+     * Resolves {@code nodePath} to an {@link AbstractValue}, writing an error response and
+     * returning empty on failure. With {@code requireAnimatable} false a non-animatable value is
+     * accepted too, so a binding restored onto one (e.g. from an older config) can still be deleted.
+     */
+    private Optional<AbstractValue> resolveAnimationTarget(Context ctx, String nodePath,
+                                                           boolean requireAnimatable) {
         Optional<Node> nodeOpt = findNode(nodePath);
         if (nodeOpt.isEmpty()) {
             ctx.status(404).json(Map.of("error", "not_found"));
@@ -543,7 +553,7 @@ public class RemoteServer {
             ctx.status(403).json(Map.of("error", "not_allowed"));
             return Optional.empty();
         }
-        if (!(node instanceof AbstractValue value) || !value.isAnimatable()) {
+        if (!(node instanceof AbstractValue value) || (requireAnimatable && !value.isAnimatable())) {
             ctx.status(400).json(Map.of("error", "not_animatable"));
             return Optional.empty();
         }
@@ -586,7 +596,7 @@ public class RemoteServer {
     }
 
     private void handleDeleteAnimation(Context ctx, String nodePath) {
-        Optional<AbstractValue> targetOpt = resolveAnimatable(ctx, nodePath);
+        Optional<AbstractValue> targetOpt = resolveAnimationTarget(ctx, nodePath, false);
         if (targetOpt.isEmpty()) return;
         Optional<ContinuousBinding> bindingOpt = bindings.findContinuousBindingFor(nodePath);
         if (bindingOpt.isEmpty()) {

@@ -97,6 +97,10 @@ public class JCthugha extends ParamNode implements Closeable {
 	public MapFileReader reader;
 
 	TabBuffer translate;
+	/** A buffer no longer on screen, reused by the next {@link #computeTranslation}; guarded by this. */
+	private TabBuffer spare;
+	/** Bumped whenever the table is replaced from outside {@link #adoptTranslation}; guarded by this. */
+	private long tableEpoch;
 	public Random rng;
 
 	Stats frameRate = StatsFactory.deltaStats("frameRate");
@@ -239,43 +243,67 @@ public class JCthugha extends ParamNode implements Closeable {
 		return null;
 	}
 
-	public ByteBuffer getTranslateBuffer() {
+	public synchronized ByteBuffer getTranslateBuffer() {
 		return translate.getBuffer();
 	}
 
-	public TabBuffer getTabBuffer() {
+	public synchronized TabBuffer getTabBuffer() {
 		return translate;
 	}
 
-	/** Replaces the active translation buffer (e.g. when loading a saved preset). */
-	public void loadTabBuffer(TabBuffer t) {
+	/**
+	 * Replaces the active translation buffer with one built elsewhere (e.g. a saved preset). A
+	 * translation computed off-thread before this call is discarded when it arrives (see
+	 * {@link #adoptTranslation}), so it can't overwrite the newly loaded table.
+	 */
+	public synchronized void loadTabBuffer(TabBuffer t) {
+		tableEpoch++;
+		retire(translate);
 		this.translate = t;
 	}
 
-	/** Randomises the current generator's params and regenerates the translation map. */
-	public void newTranslation(Random rng) {
-		translate.fill(translateSource.generate(bufferWidth, bufferHeight, rng), rng);
-		notify(translateSource.getLastGenerated());
+	/** A translation computed off the GL thread, tagged with the table it was computed against. */
+	public record ComputedTranslation(TabBuffer buffer, long epoch) {}
+
+	/**
+	 * Computes a translation into the spare buffer (safe to call off the GL thread). With
+	 * {@code randomise} the current generator's params are randomised first.
+	 */
+	public ComputedTranslation computeTranslation(boolean randomise) {
+		TabBuffer buf;
+		long epoch;
+		synchronized (this) {
+			buf = (spare != null && spare.width == bufferWidth && spare.height == bufferHeight)
+					? spare : new TabBuffer(new Dimension(bufferWidth, bufferHeight));
+			spare = null;
+			epoch = tableEpoch;
+		}
+		buf.fill(randomise
+				? translateSource.generate(bufferWidth, bufferHeight, rng)
+				: translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
+		return new ComputedTranslation(buf, epoch);
 	}
 
-	/** Regenerates the translation map using the current generator's current param values. */
-	public void regenerateTranslation() {
-		translate.fill(translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
-		notify(translateSource.getLastGenerated());
+	/**
+	 * Makes a computed translation the active one, keeping the previous buffer as the spare for
+	 * the next computation. GL thread only.
+	 *
+	 * @return {@code false} if the table was replaced (e.g. a preset load) after the computation
+	 *         started, in which case the result is discarded
+	 */
+	public synchronized boolean adoptTranslation(ComputedTranslation computed) {
+		if (computed.epoch() != tableEpoch) {
+			retire(computed.buffer());
+			return false;
+		}
+		retire(translate);
+		translate = computed.buffer();
+		return true;
 	}
 
-	/** Computes a randomised translation into a fresh buffer (safe to call off the GL thread). */
-	public TabBuffer computeNewTranslation() {
-		TabBuffer newBuf = new TabBuffer(new Dimension(bufferWidth, bufferHeight));
-		newBuf.fill(translateSource.generate(bufferWidth, bufferHeight, rng), rng);
-		return newBuf;
-	}
-
-	/** Computes a regenerated translation into a fresh buffer (safe to call off the GL thread). */
-	public TabBuffer computeRegeneratedTranslation() {
-		TabBuffer newBuf = new TabBuffer(new Dimension(bufferWidth, bufferHeight));
-		newBuf.fill(translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
-		return newBuf;
+	/** Keeps {@code buf} as the spare if there isn't one yet. Callers hold this object's lock. */
+	private void retire(TabBuffer buf) {
+		if (spare == null && buf != null) spare = buf;
 	}
 
 	public void loadPalette(PaletteMap map) {

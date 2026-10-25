@@ -46,6 +46,20 @@ class ContinuousBindingTest {
     }
 
     @Test
+    void leavesNonAnimatableTargetUnderManualControlAndReportsWhy() {
+        Section section = new Section();
+        section.value.withNoAnimate();
+        section.value.value = 0.2;
+        ContinuousBinding binding = bindingFor(section, "value", "0.75");
+
+        binding.tick();
+
+        assertEquals(0.2, section.value.value, 1e-9);
+        assertFalse(section.value.isControlled());
+        assertEquals(ContinuousBinding.NOT_ANIMATABLE_ERROR, binding.getCompileError());
+    }
+
+    @Test
     void skipsUpdatingValueWhenSectionDisabled() {
         Section section = new Section();
         section.enabled.value = false;
