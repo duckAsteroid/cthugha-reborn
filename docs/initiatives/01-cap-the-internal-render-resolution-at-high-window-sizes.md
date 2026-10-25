@@ -1,14 +1,10 @@
 ---
 type: perf
-status: abandoned
+status: draft
 updated: 2026-10-25
 tags: [smoothness]
-status_note: Dropped by the project owner (2026-10-25).
 ---
 # Size the internal render buffer from the display at a chosen resolution
-
-> [!WARNING]
-> **Abandoned** (2026-10-25): Dropped by the project owner (2026-10-25).
 
 ## Goal
 
@@ -25,14 +21,14 @@ Benchmarked 2026-10-24 (fullscreen on DP-4, FrameTimeStats): `render_width/heigh
 
 _None._
 
-## Outcome
 
-Not pursued. Findings kept for reference: the indexed render buffer is sized at init from the configured windowed size (2000×1000 in cthugha.ini) and fullscreen only stretches it to the display, so fullscreen on a 16:9 monitor distorts the image; `render_width/height = 50%` removed mid-run stalls over 100ms in the 2026-10-24 benchmark and remains available as a manual setting.
+## Decisions
+
+- Yes. The buffer follows the actual output (window, or monitor when fullscreen): toggling fullscreen or resizing rebuilds the R16 textures, FBOs and translation map. A brief stale frame and a restarted flame trail at the moment of switching are accepted. (Owner, 2026-10-25.)
 
 ## Open questions
 
 - What should the default be: a fixed cap on the longest side (e.g. 1920px), a percentage of the window, or keep full window resolution and only document the setting?
-- Should the buffer's aspect ratio (and size) follow the actual output — the window, or the monitor when fullscreen — rebuilding the R16 textures, FBOs and translation map whenever fullscreen is toggled or the window is resized, instead of being fixed at init from cthugha.ini's windowed size?
 
 ## Acceptance criteria
 

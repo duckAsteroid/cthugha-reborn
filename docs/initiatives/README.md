@@ -27,6 +27,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
+| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | ext: [github.com/…/29](https://github.com/duckAsteroid/opengl-jogl-template/issues/29) | 0 | — |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | ext: [github.com/…/30](https://github.com/duckAsteroid/opengl-jogl-template/issues/30) | 0 | — |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
@@ -55,6 +56,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 ```mermaid
 flowchart RL
+  n1["✏️ 1 Size the internal render buffer from the display at a chosen resolution"]
   n4["✏️ 4 Fix AudioReader busy-spin upstream in render-core"]
   n5["✏️ 5 Stop render-core wave setters allocating and rebuilding every frame"]
   n6["✏️ 6 Throttle tab regeneration driven by animation bindings"]
@@ -90,6 +92,7 @@ flowchart RL
   n25 --> n3
   n26 --> x3
   n27 --> n26
+  click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n4 href "04-fix-audioreader-busy-spin-upstream-in-render-core.md"
   click n5 href "05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md"
   click n6 href "06-throttle-tab-regeneration-driven-by-animation-bindings.md"
@@ -124,7 +127,7 @@ flowchart RL
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 3 open, 0 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 6 open, 1 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 7 open, 0 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 0 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 5 open, 0 closed or deferred
@@ -136,9 +139,5 @@ flowchart RL
 | 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | 2026-10-24 |
 | 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | 2026-10-24 |
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
-
-### Closed
-
-- 1 [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) (abandoned — Dropped by the project owner (2026-10-25).)
 
 <!-- brindley:generated:end -->
