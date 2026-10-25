@@ -1,6 +1,6 @@
 ---
 type: perf
-status: draft
+status: designed
 updated: 2026-10-25
 tags: [smoothness]
 ---
@@ -17,19 +17,32 @@ Today the indexed render buffer (translate, two blur passes, palette conversion 
 
 Benchmarked 2026-10-24 (fullscreen on DP-4, FrameTimeStats): `render_width/height = 50%` (1000×500) removed mid-run stalls over 100ms; worst frames fell from 260–440ms to 33–86ms. The final pass is nearest-neighbour (`renderTex` uses `Filter.NEAREST`, `CthughaWindow.java:401`, and `IndexPaletteRenderer` must sample whole palette indices), so a lower buffer resolution shows as visibly blockier pixels — closer to original 320×200 Cthugha, but a change to the look.
 
+## Decisions
+
+- Yes. The buffer follows the actual output (window, or monitor when fullscreen): toggling fullscreen or resizing rebuilds the R16 textures, FBOs and translation map. A brief stale frame and a restarted flame trail at the moment of switching are accepted. (Owner, 2026-10-25.)
+- **Default size: the output's shape, capped at 1920×1080.** With no size keys set, the buffer has the output's aspect ratio and is scaled down evenly to fit within the cap; an output that already fits is used 1:1. At 3840×2160 fullscreen that is 1920×1080 (~2 Mpx, today's cost); a 2000×1000 window gives 1920×960.
+- **The cap is a built-in default, overridable by a new `[display] render_max = WxH` key** in `cthugha.ini`; `render_max = 0` means no cap (full output resolution).
+- **`render_width`/`render_height` override the cap.** Pixel values (`"1280"`, `"1280px"`) fix the buffer size whatever the output; percentage values (`"50%"`) are taken of the *current* output and re-evaluated whenever it changes, instead of the window size at init.
+- (implementation) **Resizes are debounced** (~250 ms after the last framebuffer-size event, from render-core's `ResizeListener`), so dragging a window edge rebuilds once.
+- (implementation) **On a size change** `displayTex`, `renderTex`, `flameTex`, their FBOs, the translation map texture and `JCthugha.bufferWidth/Height` are rebuilt at the new size; an identity translation map is used until the current generator's table is regenerated at the new size off the GL thread (through ct#6's coalesced regeneration when that has landed).
+
 ## Dependencies
 
 _None._
 
+## Related
 
-## Decisions
-
-- Yes. The buffer follows the actual output (window, or monitor when fullscreen): toggling fullscreen or resizing rebuilds the R16 textures, FBOs and translation map. A brief stale frame and a restarted flame trail at the moment of switching are accepted. (Owner, 2026-10-25.)
+- [6 Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md)
 
 ## Open questions
 
-- What should the default be: a fixed cap on the longest side (e.g. 1920px), a percentage of the window, or keep full window resolution and only document the setting?
+_None._
 
 ## Acceptance criteria
 
-_What must be true when this is done._
+- [ ] With no size keys, the buffer is the output's shape fitted within 1920×1080: 1920×1080 at 3840×2160 fullscreen, and 1:1 for a window that already fits.
+- [ ] Toggling fullscreen or resizing the window rebuilds the buffer at the new size; the image is not stretched out of its aspect ratio.
+- [ ] `render_max = WxH` changes the cap, `render_max = 0` removes it, pixel `render_width/height` fix the size, and percentage values follow the current output (unit-tested on the size computation).
+- [ ] Waves, quotes, flashes and tab presets render correctly after a size change.
+- [ ] A fullscreen benchmark on DP-4 (unlocked session) shows no frames over 100 ms in steady state, recorded in this initiative.
+- [ ] `cthugha.ini`'s comments and project docs (`CLAUDE.md`, `docs/RENDERING_PIPELINE.md`) describe the sizing.

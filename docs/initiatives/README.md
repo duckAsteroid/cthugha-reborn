@@ -27,11 +27,11 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
-| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
-| 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
-| 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | draft | — | 0 | — |
-| 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | draft | — | 0 | — |
-| 9 | [Decouple simulation from display with interpolated presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | draft | — | 0 | — |
+| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | designed | ✅ ready | 0 | — |
+| 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | designed | ✅ ready | 0 | — |
+| 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | designed | ✅ ready | 0 | — |
+| 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | designed | ✅ ready | 0 | — |
+| 9 | [Cross-fade between simulation steps for smooth presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | designed | ⛔ 1, 8 | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
 | 12 | [Global animatable transform applied to the whole render](12-global-animatable-transform-applied-to-the-whole-render.md) | feature | draft | — | 0 | — |
 | 13 | [Gradient-based palette designer](13-gradient-based-palette-designer.md) | feature | draft | — | 0 | — |
@@ -47,16 +47,17 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
+| 28 | [Blend between two translation maps over time](28-blend-between-two-translation-maps-over-time.md) | feature | draft | — | 4 (+2 impl.) | — |
 
 ### Dependencies
 
 ```mermaid
 flowchart RL
-  n1["✏️ 1 Size the internal render buffer from the display at a chosen resolution"]
-  n6["✏️ 6 Throttle tab regeneration driven by animation bindings"]
-  n7["✏️ 7 Upload video frames asynchronously via pixel buffer objects"]
-  n8["✏️ 8 Make the flame simulation independent of display frame rate"]
-  n9["✏️ 9 Decouple simulation from display with interpolated presentation"]
+  n1["🟢 1 Size the internal render buffer from the display at a chosen resolution"]
+  n6["🟢 6 Throttle tab regeneration driven by animation bindings"]
+  n7["🟢 7 Upload video frames asynchronously via pixel buffer objects"]
+  n8["🟢 8 Make the flame simulation independent of display frame rate"]
+  n9["📐 9 Cross-fade between simulation steps for smooth presentation"]
   n10["✏️ 10 Make primitive parameter values safe to read across threads"]
   n12["✏️ 12 Global animatable transform applied to the whole render"]
   n13["✏️ 13 Gradient-based palette designer"]
@@ -72,7 +73,10 @@ flowchart RL
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
+  n28["✏️ 28 Blend between two translation maps over time"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
+  n9 --> n1
+  n9 --> n8
   n22 --> n3
   n23 --> n3
   n24 --> n3
@@ -97,6 +101,7 @@ flowchart RL
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
+  click n28 href "28-blend-between-two-translation-maps-over-time.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
 ```
 
@@ -105,8 +110,8 @@ flowchart RL
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 0 open, 3 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 2 closed or deferred
-- **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 0 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 6 open, 2 closed or deferred
+- **tab-generators** — Translation-table generators, presets and their regeneration · 4 open, 0 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
