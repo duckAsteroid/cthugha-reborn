@@ -139,6 +139,10 @@ distributions {
 				eachFile {
 					if (it.relativeSourcePath.segments[0] == 'bin' || it.name == 'jspawnhelper') {
 						it.permissions { unix('rwxr-xr-x') }
+					} else {
+						// jlink writes legal/ files read-only; keep them owner-writable so the next
+						// installDist can overwrite an existing install
+						it.permissions { user { write = true } }
 					}
 				}
 			}
