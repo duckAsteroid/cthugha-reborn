@@ -70,7 +70,8 @@ public class AudioPipeline {
         freqProc = new FrequencyProcessor(4096, 128, 48_000f, 20f, 20_000f, -80f, 0f);
         BeatDetectorConfig.Tuning tuning = BeatDetectorConfig.loadTuning();
         beatDetector = new BeatDetector(BeatDetectorConfig.load(), freqProc.getFftSize(), freqProc.getSampleRate(),
-                tuning.historyLength(), tuning.threshold(), tuning.sensitivity(), tuning.decayPerFrame());
+                tuning.historyLength(), tuning.threshold(), tuning.sensitivity(),
+                BeatDetector.DEFAULT_NOISE_FLOOR, tuning.decayTime());
         freqProc.addSink(beatDetector);
 
         // Always-available fallback so capture works even with no usable hardware line.
@@ -133,7 +134,7 @@ public class AudioPipeline {
     private void rebuildBeatDetector(PendingBeatConfig pending) {
         BeatDetector next = new BeatDetector(pending.bands(), freqProc.getFftSize(), freqProc.getSampleRate(),
                 pending.tuning().historyLength(), pending.tuning().threshold(),
-                pending.tuning().sensitivity(), pending.tuning().decayPerFrame());
+                pending.tuning().sensitivity(), BeatDetector.DEFAULT_NOISE_FLOOR, pending.tuning().decayTime());
         freqProc.removeSink(beatDetector);
         freqProc.addSink(next);
         beatDetector = next;

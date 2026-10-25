@@ -72,7 +72,9 @@ apply(root, snapshot)
       target = root.getChild(path.split("/"))
       if target implements DynamicChildList → target.recreate(specs)
 
-  for each (path, value) in snapshot.values(), IN CAPTURE ORDER:
+  values = LegacyValues.migrate(snapshot.values())               ← renamed/re-scaled params
+
+  for each (path, value) in values, IN CAPTURE ORDER:
       target = root.getChild(path.split("/"))   ← fresh lookup, every time
       if target is EnumParameter and value is String → target.selectByLabel(value)
       if target is EnumParameter and value is Number → target.setValue(value)   ← legacy configs
@@ -80,6 +82,11 @@ apply(root, snapshot)
       if target is StringValue   and value is String → target.setValue(value)
       (unresolved or type-mismatched paths are silently ignored)
 ```
+
+`LegacyValues` rewrites values saved under parameters that have since been renamed and re-scaled,
+so older screen configs, the auto-saved session and beat presets load with the same effect: a beat
+detector `Decay` (per frame, tuned at 60 fps) becomes `Decay Time` in seconds,
+`1 / (perFrame × 60)`, unless the snapshot already has a `Decay Time`.
 
 Dynamic-child recreation always runs to completion before a single leaf value is applied, so by
 the time the leaf-value pass reaches e.g. `Bindings/Trigger 1/condition`, `recreate()` has already

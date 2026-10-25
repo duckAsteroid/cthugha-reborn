@@ -6,6 +6,7 @@ import org.ini4j.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +27,7 @@ import java.util.Optional;
  * [BeatDetector]
  * threshold   = 1.3
  * sensitivity = 2.0
- * decay       = 0.016667
+ * decay_time  = 1.0
  * history     = 43
  * </pre>
  *
@@ -43,12 +44,35 @@ public final class BeatDetectorConfig {
 
     private BeatDetectorConfig() {}
 
-    /** Global, non-band tuning knobs for {@link com.asteroid.duck.opengl.util.audio.analysis.BeatDetector}. */
-    public record Tuning(int historyLength, float threshold, float sensitivity, float decayPerFrame) {
+    /** Shortest and longest beat fade time, in seconds (the Audio tab's "Decay Time" range). */
+    public static final double MIN_DECAY_SECONDS = 0.02;
+    public static final double MAX_DECAY_SECONDS = 5.0;
+
+    /**
+     * Global, non-band tuning knobs for {@link com.asteroid.duck.opengl.util.audio.analysis.BeatDetector}.
+     *
+     * @param decaySeconds how long a full-strength beat takes to fade to zero
+     */
+    public record Tuning(int historyLength, float threshold, float sensitivity, float decaySeconds) {
         /** Matches {@code BeatDetector}'s own convenience-constructor defaults. */
         public static Tuning defaults() {
-            return new Tuning(43, 1.3f, 2.0f, 1f / 60f);
+            return new Tuning(43, 1.3f, 2.0f, 1.0f);
         }
+
+        public Duration decayTime() {
+            return Duration.ofNanos(Math.round(decaySeconds * 1e9));
+        }
+    }
+
+    /**
+     * Converts a per-frame beat decay (the fall per update, tuned at 60 fps) to the equivalent
+     * fade time: {@code 1 / (perFrame × 60)} seconds, clamped to
+     * [{@link #MIN_DECAY_SECONDS}, {@link #MAX_DECAY_SECONDS}]; 0 or less (no decay) gives the
+     * maximum.
+     */
+    public static double decaySecondsFromPerFrame(double perFrame) {
+        if (perFrame <= 0) return MAX_DECAY_SECONDS;
+        return Math.clamp(1.0 / (perFrame * 60.0), MIN_DECAY_SECONDS, MAX_DECAY_SECONDS);
     }
 
     /** Reads the configured bands from {@code cthugha.ini}, or the built-in defaults if unset. */
@@ -96,9 +120,20 @@ public final class BeatDetectorConfig {
                 String.valueOf(defaults.threshold()), Float::parseFloat);
         float sensitivity = cfg.getConfigAs(TUNING_SECTION, "sensitivity",
                 String.valueOf(defaults.sensitivity()), Float::parseFloat);
-        float decayPerFrame = cfg.getConfigAs(TUNING_SECTION, "decay",
-                String.valueOf(defaults.decayPerFrame()), Float::parseFloat);
-        return new Tuning(historyLength, threshold, sensitivity, decayPerFrame);
+        String decayTime = cfg.getConfig(TUNING_SECTION, "decay_time", "");
+        float decaySeconds;
+        if (!decayTime.isBlank()) {
+            decaySeconds = Float.parseFloat(decayTime.trim());
+        } else {
+            // A per-frame "decay" from before decay_time existed: convert at 60 fps.
+            String perFrame = cfg.getConfig(TUNING_SECTION, "decay", "");
+            decaySeconds = perFrame.isBlank() ? defaults.decaySeconds()
+                    : (float) decaySecondsFromPerFrame(Double.parseDouble(perFrame.trim()));
+            if (!perFrame.isBlank()) {
+                LOG.info("[BeatDetector] decay = {} per frame read as decay_time = {} s", perFrame.trim(), decaySeconds);
+            }
+        }
+        return new Tuning(historyLength, threshold, sensitivity, decaySeconds);
     }
 
     private static FrequencyBand parseBand(String name, String range) {

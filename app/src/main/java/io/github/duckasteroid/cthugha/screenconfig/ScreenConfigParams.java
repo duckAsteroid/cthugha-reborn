@@ -194,7 +194,7 @@ public class ScreenConfigParams {
         List<RestoreAware> restoreAware = collectRestoreAware(root);
         restoreAware.forEach(RestoreAware::beginRestore);
         try {
-            int skipped = applyValues(root, snapshot.values());
+            int skipped = applyValues(root, LegacyValues.migrate(snapshot.values()));
             warnIfStructureChanged(root, snapshot.structureHash());
             if (skipped > 0) {
                 LOG.warn("Screen config apply: {} of {} value(s) could not be applied — see "

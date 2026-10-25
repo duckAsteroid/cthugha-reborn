@@ -39,7 +39,7 @@ public class BeatDetectorSettingsNode extends ParamNode {
     private final List<BandNode> bandNodes = new ArrayList<>();
     public final DoubleParameter threshold;
     public final DoubleParameter sensitivity;
-    public final DoubleParameter decay;
+    public final DoubleParameter decayTime;
     public final IntegerParameter history;
 
     private Runnable onChanged;
@@ -75,10 +75,11 @@ public class BeatDetectorSettingsNode extends ParamNode {
             + "higher values reach full strength at a lower peak.");
         sensitivity.addChangeListener(this::onTuningChanged);
 
-        decay = new DoubleParameter("Decay", 0.0, 0.5, tuning.decayPerFrame());
-        decay.withDescription("Per-frame fall rate of the published beat strength (assuming "
-            + "~60fps); e.g. 1/60 causes full scale to decay to zero in one second.");
-        decay.addChangeListener(this::onTuningChanged);
+        decayTime = new DoubleParameter("Decay Time", BeatDetectorConfig.MIN_DECAY_SECONDS,
+                BeatDetectorConfig.MAX_DECAY_SECONDS, tuning.decaySeconds());
+        decayTime.withDescription("Seconds a full-strength beat takes to fade to zero, the same "
+            + "at any display refresh rate; shorter makes beats snappier.");
+        decayTime.addChangeListener(this::onTuningChanged);
 
         history = new IntegerParameter("History", 1, 300, tuning.historyLength());
         history.withDescription("Number of past frames used for the rolling energy average.");
@@ -86,7 +87,7 @@ public class BeatDetectorSettingsNode extends ParamNode {
 
         addChild(threshold);
         addChild(sensitivity);
-        addChild(decay);
+        addChild(decayTime);
         addChild(history);
     }
 
@@ -107,13 +108,13 @@ public class BeatDetectorSettingsNode extends ParamNode {
     /** Reassembles the current global tuning from the four flat fields. */
     public BeatDetectorConfig.Tuning getTuning() {
         return new BeatDetectorConfig.Tuning(history.value, (float) threshold.value,
-                (float) sensitivity.value, (float) decay.value);
+                (float) sensitivity.value, (float) decayTime.value);
     }
 
     private void onTuningChanged() {
         Config.singleton().setConfig(TUNING_SECTION, "threshold", String.valueOf(threshold.value));
         Config.singleton().setConfig(TUNING_SECTION, "sensitivity", String.valueOf(sensitivity.value));
-        Config.singleton().setConfig(TUNING_SECTION, "decay", String.valueOf(decay.value));
+        Config.singleton().setConfig(TUNING_SECTION, "decay_time", String.valueOf(decayTime.value));
         Config.singleton().setConfig(TUNING_SECTION, "history", String.valueOf(history.value));
         fireChanged();
     }
