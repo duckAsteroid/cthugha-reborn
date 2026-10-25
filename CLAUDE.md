@@ -71,6 +71,8 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends render-core's
 5. **Display** (`IndexPaletteRenderer`) — palette-converts `renderTex` (R16 indices) to RGBA for the window using a 256×N LUT texture (256×1 for a standard palette)
 6. **`phase.screenRender()`** for each phase in order — waves and quote text in `OVERLAY`/`BOTH` mode, video, notifications, the work spinner, the beat debug HUD and the QR code (each phase manages its own blend state)
 
+**Render buffer size**: the indexed textures, blur intermediate and map slots share one size, which follows the output (window, or monitor when fullscreen) and is rebuilt in place when it changes (`CthughaWindow.followOutputSize()`, debounced 250 ms): by default the output's shape fitted within `[display] render_max` (default 1920×1080, `0` = no cap), or an explicit `render_width`/`render_height` (pixels, or % of the current output) — computed by `RenderSize` (`display/`).
+
 **Fixed-role textures**: `displayTex` is always the blur output/translate source; `renderTex` is the translate output/indexed-render target/display source. Both are R16 format (GL_R16, 16-bit single-channel; palette index stored as `index/(paletteSize-1)` normalised to `[0, 1]`, so 1.0 is the last entry — `IndexPaletteRenderer` rounds to the nearest entry, unlike render-core's `PaletteRenderer`, whose `floor` decode wraps 1.0 to entry 0). `flameTex` is a GRAY intermediate used only between the two blur passes.
 
 `RenderMode` (`params/RenderMode.java`: `OVERLAY`, `BUFFER`, `BOTH`) is the per-element choice between drawing as a crisp RGBA screen overlay, baking into the indexed buffer (subject to blur/translate), or both. Every wave model and the quote phase have a `mode` parameter of this type.

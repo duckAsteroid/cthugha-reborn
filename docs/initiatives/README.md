@@ -27,7 +27,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
-| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | designed | ✅ ready | 0 | — |
+| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | in-progress<br><sub>on develop</sub> | — | 0 | — |
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | designed | ✅ ready | 0 | — |
 | 9 | [Cross-fade between simulation steps for smooth presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | designed | ⛔ 1 | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
@@ -53,7 +53,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 ```mermaid
 flowchart RL
-  n1["🟢 1 Size the internal render buffer from the display at a chosen resolution"]
+  n1["🚧 1 Size the internal render buffer from the display at a chosen resolution"]
   n7["🟢 7 Upload video frames asynchronously via pixel buffer objects"]
   n9["📐 9 Cross-fade between simulation steps for smooth presentation"]
   n10["✏️ 10 Make primitive parameter values safe to read across threads"]

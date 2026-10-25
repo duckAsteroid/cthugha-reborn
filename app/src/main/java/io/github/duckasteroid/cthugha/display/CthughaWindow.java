@@ -146,6 +146,11 @@ public class CthughaWindow extends GLWindow {
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final BackgroundWorkQueue workQueue = new BackgroundWorkQueue();
+    private TranslationRegenerator regenerator;
+    /** When the last output resize was reported (0 = none pending); GL thread only. */
+    private long resizeRequestedNanos;
+    /** How long resizes must settle before the render buffer is rebuilt, so a drag rebuilds once. */
+    private static final long RESIZE_DEBOUNCE_NANOS = 250_000_000L;
     private final StepClock stepClock = new StepClock();
     /** The current monitor's refresh rate (0 = unknown), re-read every {@link #REFRESH_CHECK_NANOS}. */
     private int refreshHz;
@@ -195,19 +200,6 @@ public class CthughaWindow extends GLWindow {
         return stdinEnabled ? new StdinKeyInjector(renderActions, () -> System.in) : null;
     }
 
-    /** Parses "1280", "1280px", or "30%" into pixels relative to screenDim. */
-    private static int parseDimension(String value, int screenDim) {
-        String v = value.trim();
-        if (v.endsWith("%")) {
-            double pct = Double.parseDouble(v.substring(0, v.length() - 1));
-            return (int) Math.round(screenDim * pct / 100.0);
-        }
-        if (v.endsWith("px")) {
-            return Integer.parseInt(v.substring(0, v.length() - 2).trim());
-        }
-        return Integer.parseInt(v);
-    }
-
     /**
      * Resolves [display] width/height (supporting px/% syntax) against the configured monitor's
      * dimensions using AWT, so the values are available before GLFW is initialised in super().
@@ -217,8 +209,8 @@ public class CthughaWindow extends GLWindow {
         GraphicsDevice[] screens = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
         GraphicsDevice screen = (monIdx >= 0 && monIdx < screens.length) ? screens[monIdx] : screens[0];
         DisplayMode dm = screen.getDisplayMode();
-        int w = parseDimension(CFG.getConfig("display", "width", "1280"), dm.getWidth());
-        int h = parseDimension(CFG.getConfig("display", "height", "720"), dm.getHeight());
+        int w = RenderSize.parseDimension(CFG.getConfig("display", "width", "1280"), dm.getWidth());
+        int h = RenderSize.parseDimension(CFG.getConfig("display", "height", "720"), dm.getHeight());
         return new int[]{w, h};
     }
 
@@ -296,9 +288,10 @@ public class CthughaWindow extends GLWindow {
     @Override
     public void init() throws IOException {
         java.awt.Rectangle win = getWindow();
-        // Render buffer defaults to display size; can be set smaller for a retro low-res look.
-        this.renderWidth  = parseDimension(CFG.getConfig("display", "render_width",  String.valueOf(win.width)),  win.width);
-        this.renderHeight = parseDimension(CFG.getConfig("display", "render_height", String.valueOf(win.height)), win.height);
+        // Render buffer follows the output's shape, capped (see RenderSize); rebuilt on resize.
+        Dimension renderSize = renderSizeFor(win.width, win.height);
+        this.renderWidth  = renderSize.width;
+        this.renderHeight = renderSize.height;
         int w = renderWidth;
         int h = renderHeight;
 
@@ -323,7 +316,7 @@ public class CthughaWindow extends GLWindow {
         // Requests coalesce: one regeneration runs at a time, and changes made meanwhile cost a
         // single follow-up run, so the table always catches up with the latest params. Runs
         // happen quietly, with no work indicator, since they are frequent and brief.
-        TranslationRegenerator regenerator = new TranslationRegenerator(
+        regenerator = new TranslationRegenerator(
                 drain -> Thread.ofVirtual().name("translate-regen").start(drain),
                 this::regenerateTranslation);
         cthugha.translateSource.setOnRegenerateNeeded(
@@ -497,6 +490,9 @@ public class CthughaWindow extends GLWindow {
         cthugha.restoreCurrentStateOrDefaults();
         cthugha.bindings.init(getClock(), cthugha, actionContext);
 
+        // The render buffer follows the output: rebuild it once resizes (incl. fullscreen toggles) settle.
+        addResizeListener((fbWidth, fbHeight) -> resizeRequestedNanos = System.nanoTime());
+
         // The change listener only runs on subsequent toggles (construction doesn't fire it),
         // so apply the loaded initial value once here, then keep actualFullscreen in sync.
         if (fullscreenEnabled.value) {
@@ -555,6 +551,11 @@ public class CthughaWindow extends GLWindow {
                         GL_RGBA, GL_UNSIGNED_BYTE, fillPaletteBuffer(pm));
             }
             paletteRenderer.setEntries(newSize);
+        }
+
+        if (resizeRequestedNanos != 0 && System.nanoTime() - resizeRequestedNanos >= RESIZE_DEBOUNCE_NANOS) {
+            resizeRequestedNanos = 0;
+            followOutputSize();
         }
 
         for (RenderPhase p : phases) p.frameUpdate(this);
@@ -633,6 +634,38 @@ public class CthughaWindow extends GLWindow {
         return t;
     }
 
+    /** The render buffer size for an output of the given size, from the {@code [display]} settings. */
+    private static Dimension renderSizeFor(int outputWidth, int outputHeight) {
+        return RenderSize.compute(outputWidth, outputHeight,
+                CFG.getConfig("display", "render_width", ""),
+                CFG.getConfig("display", "render_height", ""),
+                CFG.getConfig("display", "render_max", ""));
+    }
+
+    /**
+     * Rebuilds the render buffer at the size the current output calls for, if that changed:
+     * the R16 textures, the blur intermediate and the map slots get new storage in place (so
+     * FBOs and renderers keep their references), the table becomes an identity table at the new
+     * size, and the current generator's table is regenerated and morphs in. The flame trail
+     * restarts. GL thread only.
+     */
+    private void followOutputSize() {
+        java.awt.Rectangle win = getWindow();
+        if (win.width <= 0 || win.height <= 0) return; // minimised
+        Dimension size = renderSizeFor(win.width, win.height);
+        if (size.width == renderWidth && size.height == renderHeight) return;
+        LOG.info("Render buffer {}x{} -> {}x{} for output {}x{}", renderWidth, renderHeight,
+                size.width, size.height, win.width, win.height);
+        renderWidth = size.width;
+        renderHeight = size.height;
+        displayTex.generate(renderWidth, renderHeight, 0L);
+        renderTex.generate(renderWidth, renderHeight, 0L);
+        flameTex.generate(renderWidth, renderHeight, 0L);
+        for (Texture t : mapTex) t.generate(renderWidth, renderHeight, 0L);
+        cthugha.tableMorph.fillBoth(cthugha.resizeBuffer(size));
+        regenerator.request(TranslationRegenerator.Request.REGENERATE);
+    }
+
     /** One simulation step: translate, in-buffer drawing, then blur/fade (viewport already set). */
     private void simulationStep() throws IOException {
         // Indexed pass: translate displayTex → renderTex, then phases write directly into renderTex
@@ -697,10 +730,17 @@ public class CthughaWindow extends GLWindow {
     private final class MapSlots implements TableMorph.Slots {
         @Override
         public void uploadSpare(TabBuffer table) {
+            Texture spare = mapTex[spareMap];
+            if (table.width != spare.getWidth() || table.height != spare.getHeight()) {
+                // Built at a size the buffer has since left (e.g. a preset loaded during a resize).
+                LOG.warn("Ignoring a {}x{} translation table for a {}x{} buffer",
+                        table.width, table.height, spare.getWidth(), spare.getHeight());
+                return;
+            }
             ByteBuffer data = table.getBuffer();
             // Unit 0 is render-core's unmanaged scratch unit, so this leaves the slot units alone.
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, mapTex[spareMap].getId());
+            glBindTexture(GL_TEXTURE_2D, spare.getId());
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, table.width, table.height,
                     GL_RG_INTEGER, GL_UNSIGNED_SHORT, data);
             data.rewind();

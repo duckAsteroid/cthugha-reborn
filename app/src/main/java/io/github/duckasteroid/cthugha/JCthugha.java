@@ -274,6 +274,22 @@ public class JCthugha extends ParamNode implements Closeable {
 		this.translate = t;
 	}
 
+	/**
+	 * Changes the buffer size and replaces the table with an identity table at that size (each
+	 * pixel reads itself), until the current generator's table is regenerated. A translation
+	 * computed at the old size is discarded when it arrives. GL thread only.
+	 *
+	 * @return the identity table now active
+	 */
+	public synchronized TabBuffer resizeBuffer(Dimension size) {
+		bufferWidth = size.width;
+		bufferHeight = size.height;
+		TabBuffer identity = TabBuffer.identity(size);
+		loadTabBuffer(identity);
+		spare = null; // the old-size buffer loadTabBuffer kept is no use at the new size
+		return identity;
+	}
+
 	/** A translation computed off the GL thread, tagged with the table it was computed against. */
 	public record ComputedTranslation(TabBuffer buffer, long epoch) {}
 
@@ -284,15 +300,19 @@ public class JCthugha extends ParamNode implements Closeable {
 	public ComputedTranslation computeTranslation(boolean randomise) {
 		TabBuffer buf;
 		long epoch;
+		int w;
+		int h;
 		synchronized (this) {
-			buf = (spare != null && spare.width == bufferWidth && spare.height == bufferHeight)
-					? spare : new TabBuffer(new Dimension(bufferWidth, bufferHeight));
+			w = bufferWidth;
+			h = bufferHeight;
+			buf = (spare != null && spare.width == w && spare.height == h)
+					? spare : new TabBuffer(new Dimension(w, h));
 			spare = null;
 			epoch = tableEpoch;
 		}
 		buf.fill(randomise
-				? translateSource.generate(bufferWidth, bufferHeight, rng)
-				: translateSource.generateCurrent(bufferWidth, bufferHeight, rng), rng);
+				? translateSource.generate(w, h, rng)
+				: translateSource.generateCurrent(w, h, rng), rng);
 		return new ComputedTranslation(buf, epoch);
 	}
 

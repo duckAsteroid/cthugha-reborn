@@ -1,8 +1,9 @@
 ---
 type: perf
-status: designed
+status: in-progress
 updated: 2026-10-25
 tags: [smoothness]
+branch: develop
 ---
 # Size the internal render buffer from the display at a chosen resolution
 
@@ -24,7 +25,8 @@ Benchmarked 2026-10-24 (fullscreen on DP-4, FrameTimeStats): `render_width/heigh
 - **The cap is a built-in default, overridable by a new `[display] render_max = WxH` key** in `cthugha.ini`; `render_max = 0` means no cap (full output resolution).
 - **`render_width`/`render_height` override the cap.** Pixel values (`"1280"`, `"1280px"`) fix the buffer size whatever the output; percentage values (`"50%"`) are taken of the *current* output and re-evaluated whenever it changes, instead of the window size at init.
 - (implementation) **Resizes are debounced** (~250 ms after the last framebuffer-size event, from render-core's `ResizeListener`), so dragging a window edge rebuilds once.
-- (implementation) **On a size change** `displayTex`, `renderTex`, `flameTex`, their FBOs, the translation map texture and `JCthugha.bufferWidth/Height` are rebuilt at the new size; an identity translation map is used until the current generator's table is regenerated at the new size off the GL thread (through ct#6's coalesced regeneration when that has landed).
+- (implementation) **On a size change** `displayTex`, `renderTex`, `flameTex` and the three morph map textures (ct#28) get new storage at the new size in place (`Texture.generate` re-specifies the same GL texture), so their FBOs and the renderers keep their references; `JCthugha.resizeBuffer` sets `bufferWidth/Height` and swaps in an identity table at the new size, which fills both morph slots; then a regeneration is requested through ct#6's coalesced `TranslationRegenerator`, and the real table morphs in from the identity one. A result computed at the old size is discarded by the table epoch, and `uploadSpare` ignores any table whose size doesn't match the textures.
+- (implementation) `RenderSize` (`display/`) holds the sizing rules and `parseDimension`, shared with the initial window sizing. `cthugha.ini` documents `render_max`.
 
 ## Dependencies
 
@@ -40,9 +42,9 @@ _None._
 
 ## Acceptance criteria
 
-- [ ] With no size keys, the buffer is the output's shape fitted within 1920×1080: 1920×1080 at 3840×2160 fullscreen, and 1:1 for a window that already fits.
-- [ ] Toggling fullscreen or resizing the window rebuilds the buffer at the new size; the image is not stretched out of its aspect ratio.
-- [ ] `render_max = WxH` changes the cap, `render_max = 0` removes it, pixel `render_width/height` fix the size, and percentage values follow the current output (unit-tested on the size computation).
-- [ ] Waves, quotes, flashes and tab presets render correctly after a size change.
-- [ ] A fullscreen benchmark on DP-4 (unlocked session) shows no frames over 100 ms in steady state, recorded in this initiative.
-- [ ] `cthugha.ini`'s comments and project docs (`CLAUDE.md`, `docs/RENDERING_PIPELINE.md`) describe the sizing.
+- [x] With no size keys, the buffer is the output's shape fitted within 1920×1080: 1920×1080 at 3840×2160 fullscreen, and 1:1 for a window that already fits (`RenderSizeTest`; live: 2000×1000 window → 1920×960, fullscreen 3840×2160 → 1920×1080).
+- [x] Toggling fullscreen or resizing the window rebuilds the buffer at the new size; the image is not stretched out of its aspect ratio (checked live on DP-4: radial waves stay round fullscreen and windowed).
+- [x] `render_max = WxH` changes the cap, `render_max = 0` removes it, pixel `render_width/height` fix the size, and percentage values follow the current output (unit-tested on the size computation).
+- [x] Waves, quotes, flashes and tab presets render correctly after a size change (screenshots after each toggle; presets load at `resolution()`, the current buffer size).
+- [ ] A fullscreen benchmark on DP-4 (unlocked session) shows no frames over 100 ms in steady state, recorded in this initiative. Pending: DP-4 is at 24 Hz (2026-10-25); benchmark with it back at 60 Hz.
+- [x] `cthugha.ini`'s comments and project docs (`CLAUDE.md`, `docs/RENDERING_PIPELINE.md`) describe the sizing.

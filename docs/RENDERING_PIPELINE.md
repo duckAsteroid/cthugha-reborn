@@ -32,6 +32,27 @@ coordinates to *read from* in `displayTex`, so it encodes an arbitrary per-pixel
 displacement field. There are two live maps, slots A and B, which the translate pass
 blends (see [Morphing between tables](#morphing-between-tables)), plus a spare.
 
+### Render buffer size
+
+The indexed textures, the blur intermediate and the map slots all share one size, the
+*render buffer* (`JCthugha.bufferWidth/Height`), which the palette pass scales to fill the
+output. `RenderSize` (`display/`) derives it from the output (the window, or the monitor
+when fullscreen) and `[display]` in `cthugha.ini`:
+
+- By default the buffer has the output's shape, scaled down evenly to fit within
+  `render_max` (`WxH`, default 1920×1080; `0` = no cap); an output that already fits is
+  used 1:1. A 3840×2160 fullscreen output gives 1920×1080; a 2000×1000 window 1920×960.
+- `render_width` / `render_height` set the size explicitly and override the cap, in pixels
+  (`"1280"`, `"1280px"`) or as a percentage of the current output (`"50%"`); an unset one
+  is 100% of the output.
+
+The buffer follows the output. A framebuffer resize (dragging the window edge, or toggling
+fullscreen) is debounced for 250 ms; then, if the size it calls for changed,
+`CthughaWindow.followOutputSize()` gives the existing textures new storage at that size
+(so FBOs and renderers keep their references), `JCthugha.resizeBuffer` swaps in an
+identity table at the new size (filling both morph slots), and the current generator's
+table is regenerated and morphs in. The flame trail restarts at that moment.
+
 ---
 
 ## Frame sequence

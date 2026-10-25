@@ -40,6 +40,19 @@ public class TabBuffer {
     byteBuffer.rewind();
   }
 
+  /** A table in which every pixel reads itself: no distortion. */
+  public static TabBuffer identity(Dimension size) {
+    TabBuffer t = new TabBuffer(size);
+    for (int y = 0; y < t.height; y++) {
+      for (int x = 0; x < t.width; x++) {
+        int i = (y * t.width + x) * 2;
+        t.shortBuffer.put(i, (short) x);
+        t.shortBuffer.put(i + 1, (short) y);
+      }
+    }
+    return t;
+  }
+
   public ByteBuffer getBuffer() {
     return byteBuffer;
   }
