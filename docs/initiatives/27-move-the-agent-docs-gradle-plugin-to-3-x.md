@@ -1,7 +1,8 @@
 ---
 type: chore
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
+tags: [upgrades]
 ---
 # Move the agent-docs Gradle plugin to 3.x
 

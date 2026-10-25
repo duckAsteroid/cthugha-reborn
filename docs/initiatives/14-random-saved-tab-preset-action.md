@@ -1,7 +1,8 @@
 ---
 type: feature
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
+tags: [tab-generators]
 ---
 # Random saved tab preset action
 

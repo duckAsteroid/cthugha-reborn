@@ -1,7 +1,8 @@
 ---
 type: feature
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
+tags: [smoothness]
 ---
 # Make the flame simulation independent of display frame rate
 

@@ -10,6 +10,12 @@ docs: [CLAUDE.md, docs/*.md, README.MD]
 types: [feature, bug, perf, refactor, docs, chore, build, spike]
 tags:
   transforms: Affine/perspective transforms (TransformParams) and animating them
+  smoothness: "Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost"
+  render-core: Fixes that land upstream in the render-core library, then get picked up here
+  upgrades: Major-version dependency and toolchain migrations
+  tab-generators: Translation-table generators, presets and their regeneration
+  agent-control: "Driving and documenting the app programmatically: parameter-tree docs, MCP, live content"
+  remote-ui: Work mostly in the React remote UI (:remote-ui)
 ---
 # Cthugha Reborn initiatives
 
@@ -109,7 +115,13 @@ flowchart RL
 
 ### Themes
 
+- **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
+- **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
+- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 3 open, 0 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 7 open, 0 closed or deferred
+- **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 0 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
+- **upgrades** — Major-version dependency and toolchain migrations · 5 open, 0 closed or deferred
 
 ### Completed
 

@@ -1,7 +1,8 @@
 ---
 type: bug
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
+tags: [smoothness, render-core]
 ---
 # Fix AudioReader busy-spin upstream in render-core
 

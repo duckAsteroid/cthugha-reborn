@@ -1,7 +1,8 @@
 ---
 type: feature
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
+tags: [remote-ui]
 ---
 # Gradient-based palette designer
 

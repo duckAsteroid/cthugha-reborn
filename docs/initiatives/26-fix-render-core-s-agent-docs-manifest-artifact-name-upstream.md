@@ -1,7 +1,8 @@
 ---
 type: bug
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
+tags: [render-core]
 ---
 # Fix render-core's Agent-Docs manifest artifact name upstream
 
