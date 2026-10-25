@@ -140,11 +140,13 @@ public class WavePhase implements RenderPhase {
     }
 
     @Override
-    public void indexedRender(RenderContext ctx) {
+    public void frameUpdate(RenderContext ctx) {
         audioPipeline.update();
-
         resyncWaves();
+    }
 
+    @Override
+    public void indexedRender(RenderContext ctx) {
         for (WaveEntry entry : entries.values()) {
             if (entry.mode() != RenderMode.OVERLAY) entry.render(ctx, false);
         }

@@ -148,12 +148,18 @@ public class ActionTreeBuilder {
         ContainerNode blurNode = new ContainerNode("Blur");
         blurNode.withUiHint(UiHint.ICON, "wind");
         blurEnabled.withDescription("Turns the flame-spread blur pass on or off.");
-        blurKernelSize.withDescription("Size of the Gaussian blur kernel, in pixels. Larger spreads the flame further per frame.");
-        blurFade.withDescription("How much brightness the blurred image loses each frame. Higher fades trails out faster.");
+        blurKernelSize.withDescription("Size of the Gaussian blur kernel, in pixels. Larger spreads the flame further per step.");
+        blurFade.withDescription("How much brightness the blurred image loses each step. Higher fades trails out faster.");
         blurNode.addChild(blurEnabled);
         blurNode.addChild(blurKernelSize);
         blurNode.addChild(blurFade);
         renderGroup.addChild(blurNode);
+
+        cthugha.simSpeed.withUiHint(UiHint.ICON, "gauge");
+        cthugha.simSpeed.withDescription("How fast the flames move, in simulation steps per second "
+            + "(each step distorts, draws in-buffer waves and text, then blurs and fades). The same "
+            + "on any display: 60 is one step per frame at 60 Hz, lower is slow motion, higher is faster.");
+        renderGroup.addChild(cthugha.simSpeed);
 
         // ---- Configs tab: named whole-tree snapshots ("screen configs") ----
         configsGroup = new ScreenConfigLibraryNode(cthugha.screenConfigStore, cthugha);

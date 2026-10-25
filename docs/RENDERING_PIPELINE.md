@@ -3,8 +3,8 @@
 ## Overview
 
 Cthugha Reborn renders a palettized (colour-indexed) pixel buffer in real time and
-reacts to live audio. Every frame is a fixed sequence of GPU passes separated by a
-two-phase component model that keeps the `CthughaWindow` orchestrator small and ignorant
+reacts to live audio. Every frame is a fixed sequence of GPU passes, organised by a
+component model that keeps the `CthughaWindow` orchestrator small and ignorant
 of what each visual effect does.
 
 ---
@@ -16,7 +16,7 @@ and a RGBA palette LUT:
 
 | Name | Format | Role |
 |---|---|---|
-| `displayTex` | R16 (GL_R16, uint16) | Blur output; translate source (next frame's feedback input) |
+| `displayTex` | R16 (GL_R16, uint16) | Blur output; translate source (next step's feedback input) |
 | `renderTex` | R16 (GL_R16, uint16) | Translate output; indexed-render target; display source; blur input |
 | `flameTex` | GRAY (render-core DataFormat.GRAY) | Intermediate between the two blur passes |
 | `palette` | 256×N RGBA | Colour LUT, one texel per entry, row-major; uploaded when dirty |
@@ -35,10 +35,23 @@ arbitrary per-pixel displacement field.
 
 ## Frame sequence
 
+The flame simulation (indexed pass + blur) runs in *steps* at a fixed rate in wall-clock
+time, the Render tab's "Speed" (`JCthugha.simSpeed`, steps per second, 10–120, default
+60), so motion speed doesn't depend on the display's refresh rate. A translate step moves
+each pixel a whole map displacement, so steps can't be fractional: `StepClock` accumulates
+elapsed time × Speed and each frame runs the whole steps due, 0 or more. Its accumulator
+starts half a step in, so when Speed matches the refresh rate vsync jitter still gives
+exactly one step per frame; after a stall at most `ceil(speed / refresh) + 1` steps run and
+the rest of the time is dropped. A frame that runs no step re-presents `renderTex` as it is.
+In-buffer (`BUFFER`/`BOTH`) waves, flashes and quotes therefore update at the step rate,
+while the screen pass, including `OVERLAY` elements, runs every frame.
+
 ```
 CPU tick ──────────────────────────────────── JCthugha.doRenderCPU()
 Palette upload (if dirty) ─────────────────── glTexSubImage2D palette
+phase.frameUpdate() × N ───────────────────── per-frame work (audio upload, FFT, wave sync)
                                                    │
+╔═══════ Simulation step × 0..k (StepClock) ═══════╗
 ┌──────── Indexed pass (renderFBO bound) ──────────┤
 │  Translate      displayTex ──[tab map]──► renderTex │
 │  phase.indexedRender() × N            (wave/flash/quote-in-buffer write here)
@@ -47,7 +60,8 @@ Palette upload (if dirty) ──────────────────
 ┌──────── Blur / flame pass ───────────────────────┤
 │  xBlur   renderTex ──► flameTex   (horizontal Gaussian + multiplier=1.0)
 │  yBlur   flameTex ──► displayTex  (vertical Gaussian  + multiplier=fade)
-└──────────────────────────────────────────────────┘  (feeds next frame's translate)
+└──────────────────────────────────────────────────┘  (feeds next step's translate)
+╚══════════════════════════════════════════════════╝
                                                    │
 ┌──────── Screen pass (default FBO) ───────────────┤
 │  IndexPaletteRenderer  renderTex ──[palette LUT]──► RGBA window
@@ -112,9 +126,9 @@ value, and only start spreading and fading on the next trip round the feedback l
 1. **xBlur** — horizontal pass, `renderTex` → `flameTex`, multiplier = 1.0
 2. **yBlur** — vertical pass, `flameTex` → `displayTex`, multiplier = `blurFade` (default 0.99)
 
-The fade multiplier slightly darkens the output each frame (it applies even when blur is
+The fade multiplier slightly darkens the output each step (it applies even when blur is
 disabled), so colours drift toward palette index 0 over time. The fade is geometric: a
-pixel is at `fadeⁿ` after n frames, so at the default 0.99 each halving takes ~69 frames
+pixel is at `fadeⁿ` after n steps, so at the default 0.99 each halving takes ~69 steps
 and the top of the palette flashes by much faster than the bottom. Combined with the
 translate warp this creates the classic "flame spread" effect: bright wave pixels bloom outward, shift, and gradually fade.
 
@@ -122,7 +136,7 @@ Blur can be toggled (`blurEnabled`) and the Gaussian kernel size is adjustable
 (`blurKernelSize`). The kernel size must be odd and is bounded by
 `BlurTextureRenderer.MIN_KERNEL_SIZE` / `MAX_KERNEL_SIZE`.
 
-After both blur passes, `displayTex` holds the blurred, faded frame that the next frame
+After both blur passes, `displayTex` holds the blurred, faded image that the next step
 translates from. Because translate and blur don't commute, displaying before the blur
 means translate's nearest-neighbour artefacts (duplicated pixels on zooming/stretching
 tables) are visible for one frame before the blur smooths them.

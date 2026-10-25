@@ -7,10 +7,11 @@ import io.github.duckasteroid.cthugha.params.ParamNode;
 import java.io.IOException;
 
 /**
- * A self-contained rendering component that participates in up to two render phases per frame:
+ * A self-contained rendering component that participates in up to two render phases:
  *
  * <ol>
- *   <li>{@link #indexedRender} — called while {@code renderFBO} is bound; writes palette indices
+ *   <li>{@link #indexedRender} — called once per simulation step while {@code renderFBO} is
+ *       bound; writes palette indices
  *       directly into the R16 indexed buffer (waves, flash effects, in-buffer text). The red
  *       channel value {@code index/(paletteSize-1)} encodes the palette entry (0.0 = first,
  *       1.0 = last); IndexPaletteRenderer resolves it as
@@ -26,7 +27,17 @@ public interface RenderPhase {
 
     default void init(RenderContext ctx) throws IOException {}
 
-    /** Called with renderFBO bound; renders directly into the R16 indexed buffer. */
+    /**
+     * Called once per displayed frame, before any simulation steps, for per-frame work that isn't
+     * drawing (e.g. uploading the latest audio). The indexed pass may run zero or several times a
+     * frame, so such work must not live in {@link #indexedRender}.
+     */
+    default void frameUpdate(RenderContext ctx) throws IOException {}
+
+    /**
+     * Called with renderFBO bound once per simulation step; renders directly into the R16 indexed
+     * buffer. A frame runs zero or more steps (see {@code StepClock}).
+     */
     default void indexedRender(RenderContext ctx) throws IOException {}
 
     /** Called after palette display; renders RGBA overlays onto the screen FBO. */

@@ -19,6 +19,7 @@ import io.github.duckasteroid.cthugha.map.MapFileReader;
 import io.github.duckasteroid.cthugha.map.PaletteMap;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.values.BooleanParameter;
+import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import com.asteroid.duck.opengl.util.stats.Stats;
 import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import io.github.duckasteroid.cthugha.quote.Quote;
@@ -52,6 +53,13 @@ public class JCthugha extends ParamNode implements Closeable {
 	/** How often the "current" state is flushed to disk; see {@link CurrentStatePersister}. */
 	private static final Duration CURRENT_STATE_WRITE_INTERVAL = Config.singleton().getConfigAs(
 		"session", "current_state_interval", "PT5S", Duration::parse);
+
+	/**
+	 * Flame simulation rate in steps per second (translate + in-buffer drawing + blur/fade per
+	 * step), independent of the display's refresh rate. 60 matches one step per frame on a 60 Hz
+	 * display.
+	 */
+	public final DoubleParameter simSpeed = new DoubleParameter("Speed", 10.0, 120.0, 60.0);
 
 	/** Whether transient notifications are shown; auto-persisted across sessions in state.ini. */
 	public final BooleanParameter notifications = new BooleanParameter("Notifications",

@@ -136,6 +136,11 @@ public class CthughaWindow extends GLWindow {
 
     private final RenderActionQueue renderActions = new RenderActionQueue();
     private final BackgroundWorkQueue workQueue = new BackgroundWorkQueue();
+    private final StepClock stepClock = new StepClock();
+    /** The current monitor's refresh rate (0 = unknown), re-read every {@link #REFRESH_CHECK_NANOS}. */
+    private int refreshHz;
+    private long refreshCheckedNanos;
+    private static final long REFRESH_CHECK_NANOS = 1_000_000_000L;
     /** How long a regeneration waits for the render thread to adopt its result (e.g. at shutdown). */
     private static final long ADOPT_TIMEOUT_SECONDS = 5;
     private final StdinKeyInjector stdinInjector;
@@ -530,25 +535,23 @@ public class CthughaWindow extends GLWindow {
             paletteRenderer.setEntries(newSize);
         }
 
-        java.awt.Rectangle win = getWindow();
-        glViewport(0, 0, renderWidth, renderHeight);
+        for (RenderPhase p : phases) p.frameUpdate(this);
 
-        // Indexed pass: translate displayTex → renderTex, then phases write directly into renderTex
-        renderFBO.bind();
-        translateRenderer.doRender(this);
-        for (RenderPhase p : phases) p.indexedRender(this);
-        renderFBO.unbind();
-
-        // Flame: two-pass Gaussian blur with fade — feeds the next frame's translate, not this frame's display
-        flameFBO.bind();
-        xBlur.doRender(this);
-        flameFBO.unbind();
-
-        displayFBO.bind();
-        yBlur.doRender(this);
-        displayFBO.unbind();
+        // Simulation steps at a fixed rate (Render/Speed), independent of the refresh rate: a frame
+        // runs zero or more steps; with none, renderTex still holds the last step and is re-presented.
+        long now = System.nanoTime();
+        if (refreshHz <= 0 || now - refreshCheckedNanos > REFRESH_CHECK_NANOS) {
+            refreshCheckedNanos = now;
+            refreshHz = getCurrentMonitor().refreshRate();
+        }
+        int steps = stepClock.stepsDue(now, cthugha.simSpeed.value, refreshHz);
+        if (steps > 0) {
+            glViewport(0, 0, renderWidth, renderHeight);
+            for (int i = 0; i < steps; i++) simulationStep();
+        }
 
         // Display: renderTex (R16) → RGBA via palette LUT → default FBO (window viewport)
+        java.awt.Rectangle win = getWindow();
         glViewport(0, 0, win.width, win.height);
         paletteRenderer.doRender(this);
 
@@ -602,6 +605,24 @@ public class CthughaWindow extends GLWindow {
         t.setWrap(Wrap.REPEAT);
         t.generate(w, h, data);
         return t;
+    }
+
+    /** One simulation step: translate, in-buffer drawing, then blur/fade (viewport already set). */
+    private void simulationStep() throws IOException {
+        // Indexed pass: translate displayTex → renderTex, then phases write directly into renderTex
+        renderFBO.bind();
+        translateRenderer.doRender(this);
+        for (RenderPhase p : phases) p.indexedRender(this);
+        renderFBO.unbind();
+
+        // Flame: two-pass Gaussian blur with fade — feeds the next step's translate, not this frame's display
+        flameFBO.bind();
+        xBlur.doRender(this);
+        flameFBO.unbind();
+
+        displayFBO.bind();
+        yBlur.doRender(this);
+        displayFBO.unbind();
     }
 
     /**

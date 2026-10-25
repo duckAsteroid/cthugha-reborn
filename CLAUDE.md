@@ -56,17 +56,18 @@ Further design docs live in `docs/`: `RENDERING_PIPELINE.md`, `PARAMS.md`, `REMO
 
 ### Rendering Pipeline
 
-The rendering is OpenGL-based, managed by `CthughaWindow` (extends render-core's `GLWindow`). Each frame executes as two passes driven by an ordered list of `RenderPhase` implementations:
+The rendering is OpenGL-based, managed by `CthughaWindow` (extends render-core's `GLWindow`), driven by an ordered list of `RenderPhase` implementations. Each displayed frame does per-frame work, runs a whole number of flame-simulation steps, then a screen pass. The simulation steps at a fixed rate in wall-clock time, the Render tab's "Speed" (`JCthugha.simSpeed`, steps per second, default 60): `StepClock` (`display/`) turns elapsed time into 0 or more steps per frame (one per frame when Speed matches the refresh rate, catch-up after a stall capped at `ceil(speed/refresh)+1`), so motion speed doesn't depend on the display. A frame that runs no step re-presents the last one.
 
-**Indexed pass** (while `renderFBO` is bound — writes directly to the R16 `renderTex`):
-1. **CPU tick** (`JCthugha.doRenderCPU()`) — advances animations and frame rate stats; uploads palette LUT when dirty
+**Per frame:**
+1. **CPU tick** (`JCthugha.doRenderCPU()`) — advances animations and frame rate stats; uploads palette LUT when dirty; then **`phase.frameUpdate()`** for each phase (e.g. `WavePhase` uploads the latest audio and runs the FFT/beat detection)
+
+**Each simulation step** — indexed pass (while `renderFBO` is bound — writes directly to the R16 `renderTex`):
 2. **Translate** (render-core's `TranslateTextureRenderer`) — GPU shader reads the RG16UI translation map and shifts every pixel of `displayTex` into `renderTex`
 3. **`phase.indexedRender()`** for each phase in order — waves, flash effects and quote text in `BUFFER`/`BOTH` mode write palette indices directly into `renderTex`
 
-**Blur** (between passes):
-4. **Two-pass Gaussian blur** (render-core's `BlurTextureRenderer`, `xBlur` + `yBlur`) with fade multiplier — `renderTex` → `flameTex` → `displayTex`, creating the flame spread effect. This feeds the *next* frame's translate, not this frame's display, so fresh waves appear at full value before they start fading
+4. **Two-pass Gaussian blur** (render-core's `BlurTextureRenderer`, `xBlur` + `yBlur`) with fade multiplier — `renderTex` → `flameTex` → `displayTex`, creating the flame spread effect. This feeds the *next* step's translate, not this frame's display, so fresh waves appear at full value before they start fading
 
-**Screen pass** (after palette display, renders RGBA overlays):
+**Screen pass**, once per frame (after palette display, renders RGBA overlays):
 5. **Display** (`IndexPaletteRenderer`) — palette-converts `renderTex` (R16 indices) to RGBA for the window using a 256×N LUT texture (256×1 for a standard palette)
 6. **`phase.screenRender()`** for each phase in order — waves and quote text in `OVERLAY`/`BOTH` mode, video, notifications, the work spinner, the beat debug HUD and the QR code (each phase manages its own blend state)
 
@@ -76,7 +77,7 @@ The rendering is OpenGL-based, managed by `CthughaWindow` (extends render-core's
 
 ### Render Phase Components
 
-`RenderPhase` (`display/phase/RenderPhase.java`) is a simple interface with default no-op methods: `init`, `indexedRender`, `screenRender`, `dispose`, and `registerActions`. `CthughaWindow` drives an ordered list of phases: `JCthugha.createPhases()` defines the core order (`WavePhase`, `FlashPhase`, `VideoPhase`, `QuotePhase`, `NotifPhase`, `DebugBeatsPhase`), and `CthughaWindow` appends `WorkPhase` and, when the remote server is enabled, `QrPhase`. Phases register their own actions via `registerActions()`.
+`RenderPhase` (`display/phase/RenderPhase.java`) is a simple interface with default no-op methods: `init`, `frameUpdate` (once per displayed frame), `indexedRender` (once per simulation step), `screenRender` (once per frame), `dispose`, and `registerActions`. `CthughaWindow` drives an ordered list of phases: `JCthugha.createPhases()` defines the core order (`WavePhase`, `FlashPhase`, `VideoPhase`, `QuotePhase`, `NotifPhase`, `DebugBeatsPhase`), and `CthughaWindow` appends `WorkPhase` and, when the remote server is enabled, `QrPhase`. Phases register their own actions via `registerActions()`.
 
 The implementations live in `display/phase/`:
 
