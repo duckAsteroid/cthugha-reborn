@@ -28,8 +28,8 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
 | 1 | [Cap the internal render resolution at high window sizes](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
-| 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | — | 0 | — |
-| 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | — | 0 | — |
+| 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | ext: [github.com/…/29](https://github.com/duckAsteroid/opengl-jogl-template/issues/29) | 0 | — |
+| 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | ext: [github.com/…/30](https://github.com/duckAsteroid/opengl-jogl-template/issues/30) | 0 | — |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | draft | — | 0 | — |
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | draft | — | 0 | — |
@@ -49,7 +49,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
-| 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | draft | — | 0 | — |
+| 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | draft | ext: [github.com/…/31](https://github.com/duckAsteroid/opengl-jogl-template/issues/31) | 0 | — |
 | 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | draft | ⛔ 26 | 0 | — |
 
 ### Dependencies
@@ -81,10 +81,16 @@ flowchart RL
   n26["✏️ 26 Fix render-core's Agent-Docs manifest artifact name upstream"]
   n27["✏️ 27 Move the agent-docs Gradle plugin to 3.x"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
+  x1{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/29"}}
+  x2{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/30"}}
+  x3{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/31"}}
+  n4 --> x1
+  n5 --> x2
   n22 --> n3
   n23 --> n3
   n24 --> n3
   n25 --> n3
+  n26 --> x3
   n27 --> n26
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n4 href "04-fix-audioreader-busy-spin-upstream-in-render-core.md"
@@ -111,6 +117,9 @@ flowchart RL
   click n26 href "26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md"
   click n27 href "27-move-the-agent-docs-gradle-plugin-to-3-x.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
+  click x1 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/29"
+  click x2 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/30"
+  click x3 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/31"
 ```
 
 ### Themes

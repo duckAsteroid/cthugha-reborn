@@ -12,7 +12,7 @@ In render-core, AudioWave/RadialWave.setAmplitudeFunction() marks the VBO dirty 
 
 ## Dependencies
 
-_None._
+- [https://github.com/duckAsteroid/opengl-jogl-template/issues/30](https://github.com/duckAsteroid/opengl-jogl-template/issues/30) — upstream render-core fix; then bump render-core and drop WavePhase.CachedAmplitude
 
 ## Open questions
 

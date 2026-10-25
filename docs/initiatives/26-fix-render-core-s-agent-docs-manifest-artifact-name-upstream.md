@@ -12,7 +12,7 @@ render-core's jar manifest declares its docs sidecar as `Agent-Docs: maven:io.gi
 
 ## Dependencies
 
-_None._
+- [https://github.com/duckAsteroid/opengl-jogl-template/issues/31](https://github.com/duckAsteroid/opengl-jogl-template/issues/31) — upstream render-core fix and release
 
 ## Related
 

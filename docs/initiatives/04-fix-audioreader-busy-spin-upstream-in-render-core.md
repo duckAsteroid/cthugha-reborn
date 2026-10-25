@@ -12,7 +12,7 @@ render-core's AudioReader.run() polls AudioLine.available() and calls Thread.yie
 
 ## Dependencies
 
-_None._
+- [https://github.com/duckAsteroid/opengl-jogl-template/issues/29](https://github.com/duckAsteroid/opengl-jogl-template/issues/29) — upstream render-core fix; then bump render-core and delete PacedAudioSource
 
 ## Open questions
 
