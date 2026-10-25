@@ -37,13 +37,14 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 17 | [Browsable documentation of the parameter tree](17-browsable-documentation-of-the-parameter-tree.md) | feature | draft | — | 0 | — |
 | 18 | [MCP interface for agent control and scripting](18-mcp-interface-for-agent-control-and-scripting.md) | feature | draft | — | 0 | — |
 | 19 | [Live quotes from an external source](19-live-quotes-from-an-external-source.md) | feature | draft | — | 0 | — |
-| 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | draft | — | 0 | — |
+| 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | designed | ✅ ready | 0 | — |
 | 22 | [Migrate to Jackson 3](22-migrate-to-jackson-3.md) | chore | draft | — | 0 | — |
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
 | 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | — | 0 | — |
 | 33 | [Choose the GPU and windowing platform, with native Wayland support](33-choose-the-gpu-and-windowing-platform-with-native-wayland-su.md) | feature | draft | — | 1 | — |
+| 34 | [Save animation stacks as named, reusable packages](34-save-animation-stacks-as-named-reusable-packages.md) | feature | draft | ⛔ 20 | 0 | — |
 
 ### Dependencies
 
@@ -59,13 +60,14 @@ flowchart RL
   n17["✏️ 17 Browsable documentation of the parameter tree"]
   n18["✏️ 18 MCP interface for agent control and scripting"]
   n19["✏️ 19 Live quotes from an external source"]
-  n20["✏️ 20 Named animation packages with their own dials"]
+  n20["🟢 20 Named animation packages with their own dials"]
   n22["✏️ 22 Migrate to Jackson 3"]
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
   n30["✏️ 30 Save both morph slots in screen configs"]
   n33["✏️ 33 Choose the GPU and windowing platform, with native Wayland support"]
+  n34["✏️ 34 Save animation stacks as named, reusable packages"]
   n1["✅ <s>1 Size the internal render buffer from the display at a chosen resolution</s>"]
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
@@ -77,6 +79,7 @@ flowchart RL
   n24 --> n3
   n25 --> n3
   n30 --> n28
+  n34 --> n20
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
   click n10 href "10-make-primitive-parameter-values-safe-to-read-across-threads.md"
   click n12 href "12-global-animatable-transform-applied-to-the-whole-render.md"
@@ -94,6 +97,7 @@ flowchart RL
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
   click n30 href "30-save-both-morph-slots-in-screen-configs.md"
   click n33 href "33-choose-the-gpu-and-windowing-platform-with-native-wayland-su.md"
+  click n34 href "34-save-animation-stacks-as-named-reusable-packages.md"
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
@@ -107,7 +111,7 @@ flowchart RL
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 1 open, 5 closed or deferred
 - **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 2 open, 9 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 3 closed or deferred
-- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 2 open, 1 closed or deferred
+- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 1 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
 ### Completed
