@@ -1,14 +1,15 @@
 ---
 type: bug
-status: draft
+status: done
 updated: 2026-10-25
+docs_impact: "none: build metadata only"
 tags: [render-core]
 ---
 # Fix render-core's Agent-Docs manifest artifact name upstream
 
 ## Goal
 
-render-core's jar manifest declares its docs sidecar as `Agent-Docs: maven:io.github.duckasteroid:core:<version>` (seen in 1.0.0-RC4 and 1.0.0-RC5), but the artifact is published as `io.github.duckasteroid:render-core`. agent-docs 3.x follows that attribute, finds no `core` sidecar, and removes the render-core skill from `.agents/skills/`. agent-docs 1.x ignores the attribute and resolves `<group>:<artifact>:<version>:agent-docs@zip` from the dependency's own name, which is why the skill works today. Fix the attribute in render-core's build so it names `render-core`, and publish a release with the fix.
+render-core's jar manifest declared its docs sidecar as `Agent-Docs: maven:io.github.duckasteroid:core:<version>` (RC4, RC5), but the artifact is published as `io.github.duckasteroid:render-core`, so agent-docs 3.x found no sidecar and removed the render-core skill. render-core 1.0.0-RC7 renames its subproject to `render-core`, so the manifest now names the published artifact.
 
 ## Dependencies
 
@@ -26,4 +27,4 @@ _None._
 
 ## Acceptance criteria
 
-_What must be true when this is done._
+- [x] A render-core release (1.0.0-RC7) declares `Agent-Docs: maven:io.github.duckasteroid:render-core:<version>`.

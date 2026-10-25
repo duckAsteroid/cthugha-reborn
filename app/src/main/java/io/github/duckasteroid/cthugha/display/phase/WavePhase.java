@@ -228,33 +228,11 @@ public class WavePhase implements RenderPhase {
         void dispose();
     }
 
-    /**
-     * Tracks the amplitude envelope last handed to a wave, so it's only re-set when amplitude or
-     * ellipse actually change: each {@code setAmplitudeFunction} call makes render-core rebuild the
-     * wave's whole VBO (boxing a Float per vertex), and {@code AmplitudeFunction.constant/ellipse}
-     * themselves allocate a capturing lambda per call.
-     */
-    private static final class CachedAmplitude {
-        private AmplitudeFunction fn;
-        private float amp = Float.NaN;
-        private boolean ellipse;
-
-        /** @return {@code true} if {@link #fn} was rebuilt and needs applying */
-        boolean update(float amp, boolean ellipse) {
-            if (fn != null && amp == this.amp && ellipse == this.ellipse) return false;
-            fn = ellipse ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp);
-            this.amp = amp;
-            this.ellipse = ellipse;
-            return true;
-        }
-    }
-
     private final class OscilloscopeEntry implements WaveEntry {
         private final OscilloscopeModel model;
         // Per-frame scratch, reused: render-core's setters copy their argument.
         private final Matrix4f transform = new Matrix4f();
         private final Vector4f colour = new Vector4f();
-        private final CachedAmplitude amplitude = new CachedAmplitude();
         private final AudioWave wave;
 
         OscilloscopeEntry(OscilloscopeModel model) throws IOException {
@@ -274,9 +252,9 @@ public class WavePhase implements RenderPhase {
             if (!model.enabled.value) return;
             wave.setLineWidth((float) model.lineWidth.value);
             wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
-            if (amplitude.update((float) model.amplitude.value, model.ellipse.value)) {
-                wave.setAmplitudeFunction(amplitude.fn); // render-core rebuilds the VBO on every set
-            }
+            float amp = (float) model.amplitude.value;
+            wave.setAmplitudeFunction(model.ellipse.value
+                    ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
             wave.setTransform(model.transform.applyTo(transform.identity(), PhaseConfig.aspect(ctx)));
             wave.setLineColour(overlayPass
                     ? model.color.toVector4f(1f, colour)
@@ -295,7 +273,6 @@ public class WavePhase implements RenderPhase {
         // Per-frame scratch, reused: render-core's setters copy their argument.
         private final Matrix4f transform = new Matrix4f();
         private final Vector4f colour = new Vector4f();
-        private final CachedAmplitude amplitude = new CachedAmplitude();
         private final RadialWave wave;
 
         RadialWaveEntry(RadialWaveModel model) throws IOException {
@@ -315,9 +292,9 @@ public class WavePhase implements RenderPhase {
             if (!model.enabled.value) return;
             wave.setLineWidth((float) model.lineWidth.value);
             wave.setChannelMode(model.channelMode.getEnumeration().ordinal());
-            if (amplitude.update((float) model.amplitude.value, model.ellipse.value)) {
-                wave.setAmplitudeFunction(amplitude.fn); // render-core rebuilds the VBO on every set
-            }
+            float amp = (float) model.amplitude.value;
+            wave.setAmplitudeFunction(model.ellipse.value
+                    ? AmplitudeFunction.ellipse(amp) : AmplitudeFunction.constant(amp));
             wave.setTransform(model.transform.applyTo(transform.identity(), PhaseConfig.aspect(ctx)));
             wave.setLineColour(overlayPass
                     ? model.color.toVector4f(1f, colour)

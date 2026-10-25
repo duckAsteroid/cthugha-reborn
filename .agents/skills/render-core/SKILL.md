@@ -1,8 +1,11 @@
 ---
-name: io-github-duckasteroid-render-core-1-0-0-rc5
-description: "Reference for the com.asteroid.duck.opengl:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
+name: render-core
+description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.0.0-RC7). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
 metadata:
-  sources: src/
+  group: io.github.duckasteroid
+  artifact: render-core
+  version: 1.0.0-RC7
+  sources: assets/sources/
 ---
 
 # render-core — Agent Reference
@@ -11,7 +14,7 @@ metadata:
 It wraps the raw GL API in lifecycle-safe abstractions for shaders, geometry buffers, textures,
 key input, and audio capture.
 
-**Gradle coordinate:** `com.asteroid.duck.opengl:render-core:0.0.1`
+**Gradle coordinate:** `io.github.duckasteroid:render-core:<version>` (published to this repo's GitHub Packages feed)
 **Java version:** 25 with `--enable-preview`
 
 ---

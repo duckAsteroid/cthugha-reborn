@@ -364,6 +364,23 @@ public class VertexBufferObject extends AbstractList<Map<VertexElement, ?>> impl
 	}
 
 	/**
+	 * Writes a single {@link VertexElementType#FLOAT} element without boxing.
+	 *
+	 * @param index vertex index to modify
+	 * @param element element descriptor to write; must be of type {@link VertexElementType#FLOAT}
+	 * @param data value to write
+	 * @throws IllegalArgumentException if {@code element} is not a {@code FLOAT} element
+	 */
+	public void setElement(int index, VertexElement element, float data) {
+		if (element.type() != VertexElementType.FLOAT) {
+			throw new IllegalArgumentException("Element " + element.name() + " is not a FLOAT element");
+		}
+		long elementOffset = vertexDataStructure.getOffset(element);
+		bufferView.position((int) ((index * vertexDataStructure.size()) + elementOffset));
+		bufferView.putFloat(data);
+	}
+
+	/**
 	 * Zeros one vertex record in the CPU-side buffer.
 	 *
 	 * @param index vertex index to clear

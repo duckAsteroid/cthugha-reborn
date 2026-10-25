@@ -2,7 +2,7 @@ plugins {
 	id 'java'
 	id 'application'
 	id "io.github.ben-manes.versions" version "0.66.0"
-	id 'io.github.duckasteroid.agent-docs' version '1.0.11'
+	id 'io.github.duckasteroid.agent-docs' version '3.0.3'
 	id 'io.github.duckasteroid.github-packages' version '0.2.0'
 }
 
@@ -33,7 +33,7 @@ dependencies {
 	// Logging API
 	implementation 'org.slf4j:slf4j-api:2.0.20'
 	// OpenGL utils
-	implementation 'io.github.duckasteroid:render-core:1.0.0-RC5'
+	implementation 'io.github.duckasteroid:render-core:1.0.0-RC7'
 	// LWJGL — needed for direct GL calls (render-core declares these as runtime-only)
 	implementation platform('org.lwjgl:lwjgl-bom:3.4.3')
 	implementation 'org.lwjgl:lwjgl'

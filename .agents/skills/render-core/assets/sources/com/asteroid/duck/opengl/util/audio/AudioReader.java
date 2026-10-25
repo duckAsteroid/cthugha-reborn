@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
 import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 
@@ -13,10 +14,15 @@ import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
  * Background thread that drains an {@link AudioLine} and fans the raw PCM bytes out to one
  * or more {@link AudioSink} instances.
  *
- * <p>The reader runs a tight poll loop: it calls {@link AudioLine#available()} and, when data
+ * <p>The reader runs a poll loop: it calls {@link AudioLine#available()} and, when data
  * is ready, reads up to {@value #CHUNK_SIZE} bytes and forwards them to every registered sink.
- * The loop yields the thread when nothing is available so the audio source can refill its internal
- * buffer without busy-spinning at 100 % CPU.</p>
+ * When nothing is available it parks for {@value #IDLE_PARK_NANOS} ns so the audio source can
+ * refill its internal buffer without busy-spinning a core.</p>
+ *
+ * <p>Run the reader on a <em>platform</em> thread, e.g.
+ * {@code Thread.ofPlatform().name("audio-reader").daemon().start(reader)}. It parks and wakes
+ * thousands of times a second; on a virtual thread each of those round-trips goes through the
+ * ForkJoin carrier pool, which costs far more than a dedicated platform thread.</p>
  *
  * <p>A source is injected at any time via {@link #setLine}, which opens and starts it. Replacing
  * the source atomically stops and closes the old line before opening and starting the new one, so
@@ -44,6 +50,14 @@ public class AudioReader implements Runnable {
      * that need to stay in sync with playback.
      */
     public static final int CHUNK_SIZE = 16 * 2 * 2; // 64 bytes
+
+    /**
+     * How long the loop parks when the line has no data, in nanoseconds (0.5 ms).
+     * Well under the {@link #LINE_BUFFER_SIZE} line buffer's ≈ 2.7 ms at 48 kHz, so the line
+     * cannot overrun while the reader is idle, but long enough that an empty line costs
+     * almost no CPU (a {@link Thread#yield()} here busy-spun a full core).
+     */
+    public static final long IDLE_PARK_NANOS = 500_000L;
 
     private final Stats chunkSize = StatsFactory.stats("Audio: Chunk Size");
     private final Stats available = StatsFactory.stats("Audio: Available");
@@ -89,7 +103,7 @@ public class AudioReader implements Runnable {
                 line = waitForLine();
                 int avail = line.available();
                 if (avail <= 0) {
-                    Thread.yield();
+                    LockSupport.parkNanos(IDLE_PARK_NANOS);
                     continue;
                 }
                 available.add(avail);

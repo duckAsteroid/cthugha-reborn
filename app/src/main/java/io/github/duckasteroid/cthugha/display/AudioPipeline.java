@@ -85,7 +85,7 @@ public class AudioPipeline {
 
         audioReader = new AudioReader(List.of(pboSink, freqProc));
         startAudioThread();
-        setLine(audioSources.list().get(selectedIndex));
+        audioReader.setLine(audioSources.list().get(selectedIndex));
     }
 
     /**
@@ -95,15 +95,10 @@ public class AudioPipeline {
      * rest of the process, including the simulated fallback.
      */
     private void startAudioThread() {
-        // A platform thread, not virtual: AudioReader polls in a loop, and on a virtual thread every
-        // idle iteration reschedules through the ForkJoin carrier pool (see PacedAudioSource).
+        // A platform thread, not virtual, as render-core recommends: AudioReader polls its line in a
+        // loop, and on a virtual thread every idle park reschedules through the ForkJoin carrier pool.
         audioThread = Thread.ofPlatform().name("audio-capture").daemon()
                 .uncaughtExceptionHandler(this::onAudioThreadDied).start(audioReader);
-    }
-
-    /** Hands a source to the reader, wrapped so the reader's poll loop parks instead of spinning. */
-    private void setLine(AudioDataSource source) {
-        audioReader.setLine(new PacedAudioSource(source));
     }
 
     private void onAudioThreadDied(Thread thread, Throwable error) {
@@ -123,7 +118,7 @@ public class AudioPipeline {
         AudioDataSource current = audioSources.list().get(selectedIndex);
         audioReader = new AudioReader(List.of(pboSink, freqProc));
         startAudioThread();
-        setLine(current);
+        audioReader.setLine(current);
     }
 
     public void update() {
@@ -188,7 +183,7 @@ public class AudioPipeline {
      */
     public boolean selectSource(String name) {
         if (!selectExact(name)) return false;
-        setLine(audioSources.list().get(selectedIndex));
+        audioReader.setLine(audioSources.list().get(selectedIndex));
         return true;
     }
 

@@ -28,8 +28,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
 | 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
-| 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | ext: [github.com/…/29](https://github.com/duckAsteroid/opengl-jogl-template/issues/29) | 0 | — |
-| 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | ext: [github.com/…/30](https://github.com/duckAsteroid/opengl-jogl-template/issues/30) | 0 | — |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | draft | — | 0 | — |
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | draft | — | 0 | — |
@@ -49,16 +47,12 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
-| 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | draft | ext: [github.com/…/31](https://github.com/duckAsteroid/opengl-jogl-template/issues/31) | 0 | — |
-| 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | draft | ⛔ 26 | 0 | — |
 
 ### Dependencies
 
 ```mermaid
 flowchart RL
   n1["✏️ 1 Size the internal render buffer from the display at a chosen resolution"]
-  n4["✏️ 4 Fix AudioReader busy-spin upstream in render-core"]
-  n5["✏️ 5 Stop render-core wave setters allocating and rebuilding every frame"]
   n6["✏️ 6 Throttle tab regeneration driven by animation bindings"]
   n7["✏️ 7 Upload video frames asynchronously via pixel buffer objects"]
   n8["✏️ 8 Make the flame simulation independent of display frame rate"]
@@ -78,23 +72,12 @@ flowchart RL
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
-  n26["✏️ 26 Fix render-core's Agent-Docs manifest artifact name upstream"]
-  n27["✏️ 27 Move the agent-docs Gradle plugin to 3.x"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
-  x1{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/29"}}
-  x2{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/30"}}
-  x3{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/31"}}
-  n4 --> x1
-  n5 --> x2
   n22 --> n3
   n23 --> n3
   n24 --> n3
   n25 --> n3
-  n26 --> x3
-  n27 --> n26
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
-  click n4 href "04-fix-audioreader-busy-spin-upstream-in-render-core.md"
-  click n5 href "05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md"
   click n6 href "06-throttle-tab-regeneration-driven-by-animation-bindings.md"
   click n7 href "07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md"
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
@@ -114,23 +97,18 @@ flowchart RL
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
-  click n26 href "26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md"
-  click n27 href "27-move-the-agent-docs-gradle-plugin-to-3-x.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
-  click x1 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/29"
-  click x2 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/30"
-  click x3 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/31"
 ```
 
 ### Themes
 
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
-- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 3 open, 0 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 7 open, 0 closed or deferred
+- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 0 open, 3 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 2 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 0 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
-- **upgrades** — Major-version dependency and toolchain migrations · 5 open, 0 closed or deferred
+- **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
 ### Completed
 
@@ -138,6 +116,10 @@ flowchart RL
 |---|------------|------|---------|
 | 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | 2026-10-24 |
 | 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | 2026-10-24 |
+| 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | 2026-10-25 |
+| 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | 2026-10-25 |
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
+| 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | 2026-10-25 |
+| 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | 2026-10-25 |
 
 <!-- brindley:generated:end -->

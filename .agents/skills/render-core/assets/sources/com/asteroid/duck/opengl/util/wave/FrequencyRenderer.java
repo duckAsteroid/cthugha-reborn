@@ -5,6 +5,7 @@ import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencySink;
+import com.asteroid.duck.opengl.util.renderaction.PendingValue;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
@@ -33,6 +34,8 @@ import static org.lwjgl.system.MemoryUtil.*;
  * <p>Implements {@link Transformable}: call {@link #setTransform} at any time (from any
  * thread) to apply a {@link org.joml.Matrix4f} to all output vertex positions. The matrix
  * is read once per frame on the GL thread. The default is the identity matrix (no transform).
+ * Calling it every frame is cheap: unchanged matrices are ignored and changed ones are copied
+ * into a preallocated slot, so no per-call allocation.
  * Example — slow rotation with a beat-driven scale pulse:</p>
  * <pre>{@code
  * float angle = 0f;
@@ -51,7 +54,7 @@ import static org.lwjgl.system.MemoryUtil.*;
  *       start of each {@code doRender()} before issuing draw calls.</li>
  *   <li>Call {@link #disposeFftTexture()} inside {@code dispose()} to free the texture
  *       and native upload buffer.</li>
- *   <li>Read {@link #transform} once per frame and push it to all {@code uTransform}
+ *   <li>Read {@link #currentTransform()} each frame and push it to all {@code uTransform}
  *       shader uniforms before issuing draw calls.</li>
  * </ol>
  */
@@ -100,8 +103,11 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
 
     // ── Transform ────────────────────────────────────────────────────────────────
 
-    /** Transform matrix applied to all output vertex positions; identity by default. */
-    protected volatile Matrix4f transform = new Matrix4f();
+    /** Latest transform offered by {@link #setTransform}; identity by default. */
+    private final PendingValue<Matrix4f> pendingTransform = new PendingValue<>(new Matrix4f(), (src, dst) -> dst.set(src));
+
+    /** GL-thread copy of the transform, refreshed by {@link #currentTransform()}. */
+    private final Matrix4f transform = new Matrix4f();
 
     // ── GL resources owned by this class ─────────────────────────────────────────
 
@@ -132,13 +138,24 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
      * Sets the transform matrix applied to all output vertex positions.
      * The matrix is copied; the caller may reuse the supplied instance after this call returns.
      * Safe to call from any thread — the new matrix is read by the render thread at the start
-     * of the next frame.
+     * of the next frame. A no-op when the matrix is unchanged; never allocates.
      *
      * @param matrix the transform to apply; pass {@code new Matrix4f()} to reset to identity
      */
     @Override
     public void setTransform(Matrix4f matrix) {
-        this.transform = new Matrix4f(matrix);
+        pendingTransform.offer(matrix);
+    }
+
+    /**
+     * Returns the transform to use for this frame, picking up any matrix set since the last call.
+     * GL thread only; the returned instance is owned by this renderer, so don't modify or retain it.
+     *
+     * @return the current transform matrix
+     */
+    protected Matrix4f currentTransform() {
+        pendingTransform.takeIfChanged(transform);
+        return transform;
     }
 
     // ── FrequencySink ─────────────────────────────────────────────────────────────

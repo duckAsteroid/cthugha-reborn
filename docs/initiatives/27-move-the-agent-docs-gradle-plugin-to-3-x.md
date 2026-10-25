@@ -1,14 +1,16 @@
 ---
 type: chore
-status: draft
+status: done
 updated: 2026-10-25
+docs_impact:
+  - CLAUDE.md
 tags: [upgrades]
 ---
 # Move the agent-docs Gradle plugin to 3.x
 
 ## Goal
 
-Bump `io.github.duckasteroid.agent-docs` from 1.0.11 to 3.x (3.0.1 as of 2026-10-24) and move render-core to a release with the corrected `Agent-Docs` manifest. 3.x resolves docs from each dependency's `Agent-Docs` manifest attribute, renames the resolve-skill folder from `agent-docs-resolve/` to `agent-docs/`, and accepts the existing `agentDocs { includeSources = true }` block unchanged. Done means `./gradlew :app:resolveAgentDocs` on 3.x leaves a populated render-core skill folder in `.agents/skills/`.
+Move `io.github.duckasteroid.agent-docs` from 1.0.11 to 3.x (3.0.3) together with render-core 1.0.0-RC7, whose `Agent-Docs` manifest names the right artifact. 3.x resolves docs from each dependency's `Agent-Docs` manifest attribute, writes the resolve skill to `.agents/skills/agent-docs/` and the render-core skill to an unversioned `.agents/skills/render-core/` (sources under `assets/sources/`), and accepts the existing `agentDocs { includeSources = true }` block unchanged. 3.x does not remove the 1.x `agent-docs-resolve/` folder, so that is deleted by hand.
 
 ## Dependencies
 
@@ -24,4 +26,6 @@ _None._
 
 ## Acceptance criteria
 
-_What must be true when this is done._
+- [x] `app/build.gradle` uses agent-docs 3.0.3.
+- [x] `./gradlew :app:resolveAgentDocs` leaves a populated `.agents/skills/render-core/` (SKILL.md, reference docs, 156 source files for 1.0.0-RC7).
+- [x] The stale `.agents/skills/agent-docs-resolve/` and versioned rc5 skill folders are gone.

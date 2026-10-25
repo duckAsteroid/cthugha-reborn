@@ -383,7 +383,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         uploadFftTexture();
 
         float aspect = currentAspect;
-        Matrix4f t = transform;
+        Matrix4f t = currentTransform();
         glBindVertexArray(emptyVaoId);
 
         int currentRepeats = repeats;

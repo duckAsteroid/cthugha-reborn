@@ -38,6 +38,17 @@ import static org.lwjgl.opengl.GL44.*;
  * {@link #write} is called from the audio thread; {@link #upload} and {@link #getHead} are called
  * from the GL/render thread. The PBO is mapped with {@code GL_MAP_COHERENT_BIT}, so writes are
  * visible to the GPU without an explicit flush. {@code head} is {@code volatile}.
+ *
+ * <p>The GPU executes the PBO-to-texture copy some time after {@link #upload} returns (often a
+ * frame or more later), while the audio thread keeps writing at the head. To keep those in-flight
+ * writes out of what is drawn (issue #27):</p>
+ * <ul>
+ *   <li>{@link #upload} snapshots the head before issuing the copy and {@link #getHead} returns
+ *       that snapshot, so the head always matches the data the copy was issued against;</li>
+ *   <li>visualisers draw the <em>newest</em> samples, ending at {@link #getHead}, and the buffer
+ *       is sized well beyond the drawn window (see {@link #getStereoFrames}), so the audio thread
+ *       only overwrites the oldest, undrawn region while the copy is pending.</li>
+ * </ul>
  */
 public class PboAudioSink implements AudioSink {
 
@@ -47,6 +58,8 @@ public class PboAudioSink implements AudioSink {
     private final int byteSize;
     private final int stereoFrames;
     private volatile int head;
+    /** Head (in bytes) captured by the last {@link #upload}; GL thread only. */
+    private int uploadedHead;
 
     private PboAudioSink(int pboId, int textureId, ByteBuffer mapped, int stereoFrames) {
         this.pboId        = pboId;
@@ -59,8 +72,9 @@ public class PboAudioSink implements AudioSink {
     /**
      * Allocate a PBO and a 1-D {@code GL_RG16_SNORM} audio texture.
      *
-     * @param stereoFrames number of stereo frames (= texture width in texels); typically
-     *                     {@code SCREEN_WIDTH × 2} so the write head can lap the read head
+     * @param stereoFrames number of stereo frames (= texture width in texels); use the
+     *                     visualiser's {@code AUDIO_BUFFER_SIZE}, which leaves headroom beyond the
+     *                     drawn window for writes that land while the GPU copy is pending
      * @param ctx          render context used to register the dispose callback
      * @return the fully initialised sink
      */
@@ -110,6 +124,7 @@ public class PboAudioSink implements AudioSink {
      * Must be called once per frame on the GL thread, before any visualiser draws from the texture.
      */
     public void upload() {
+        uploadedHead = head; // snapshot before the copy: everything before it is already written
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboId);
         glBindTexture(GL_TEXTURE_1D, textureId);
         glTexSubImage1D(GL_TEXTURE_1D, 0, 0, stereoFrames, GL_RG, GL_SHORT, 0L);
@@ -128,14 +143,24 @@ public class PboAudioSink implements AudioSink {
     }
 
     /**
-     * Current write-head position in <em>stereo frames</em> (texels); pass to the
-     * {@code uHead} shader uniform. Shaders sample the audio texture with
-     * {@code texelFetch}, so the index must be in texel units, not bytes.
+     * Write-head position, in <em>stereo frames</em> (texels), as of the last {@link #upload}.
+     * Texels before it (wrapping) hold the newest audio in the texture; draw the window ending
+     * here. Shaders sample the audio texture with {@code texelFetch}, so the index is in texel
+     * units, not bytes.
      *
-     * @return the write-head position as a texel index in [0, stereoFrames)
+     * @return the uploaded write-head position as a texel index in [0, stereoFrames)
      */
     public int getHead() {
-        return head / 4;
+        return uploadedHead / 4;
+    }
+
+    /**
+     * Capacity of the ring buffer (and width of the audio texture) in stereo frames.
+     *
+     * @return the number of stereo frames this sink was created with
+     */
+    public int getStereoFrames() {
+        return stereoFrames;
     }
 
     /** Release the PBO and texture. Called automatically via the ResourceManager at shutdown. */

@@ -402,7 +402,7 @@ public class RadialClockAnalyser extends FrequencyRenderer {
         uRepeatsUniform.set(repeats);
         uGrowthModeUniform.set(growthMode.ordinal());
         uHalfWidthUniform.set(computeHalfWidth());
-        uTransformUniform.set(transform);
+        uTransformUniform.set(currentTransform());
         uBinCountUniform.set(binCount);
         uBinStartUniform.set(binStartClamped);
         uBinSkipUniform.set(clampedBinSkip());

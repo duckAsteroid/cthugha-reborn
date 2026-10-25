@@ -634,7 +634,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
 
     private void renderBars(RenderContext ctx) {
         int dir = direction.ordinal();
-        Matrix4f t = transform;
+        Matrix4f t = currentTransform();
 
         barShader.use(ctx);
         uBarsDir.set(dir);
@@ -703,7 +703,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
 
     private void renderFilled(RenderContext ctx) {
         int dir = direction.ordinal();
-        Matrix4f t = transform;
+        Matrix4f t = currentTransform();
         glBindVertexArray(emptyFillVaoId);
 
         // Smooth filled area: numFillSamples pairs of (base, tip) vertices

@@ -1,14 +1,15 @@
 ---
 type: bug
-status: draft
+status: done
 updated: 2026-10-25
+docs_impact: "none: PacedAudioSource was never described in the project docs"
 tags: [smoothness, render-core]
 ---
 # Fix AudioReader busy-spin upstream in render-core
 
 ## Goal
 
-render-core's AudioReader.run() polls AudioLine.available() and calls Thread.yield() when it is 0 — a busy-spin that burns a core, and on a virtual thread resubmits the continuation to the ForkJoin pool on every yield (profiled ~20MB/s of garbage and ~14x the render thread's CPU samples). This app works around it with PacedAudioSource (parks 0.5ms on an empty line) and a platform audio-capture thread in AudioPipeline. Fix it in render-core (block/park instead of yield), bump the render-core dependency, then delete PacedAudioSource.
+render-core's AudioReader.run() polled AudioLine.available() and called Thread.yield() when it was 0: a busy-spin that burnt a core and, on a virtual thread, resubmitted the continuation to the ForkJoin pool on every yield (profiled ~20MB/s of garbage and ~14x the render thread's CPU samples). render-core 1.0.0-RC7 parks for 0.5ms on an empty line instead. The app is on RC7, PacedAudioSource is deleted, and AudioPipeline keeps the audio-capture thread a platform thread, as render-core recommends.
 
 ## Dependencies
 
@@ -20,4 +21,6 @@ _None._
 
 ## Acceptance criteria
 
-_What must be true when this is done._
+- [x] render-core is on a release whose AudioReader parks on an empty line (1.0.0-RC7).
+- [x] `PacedAudioSource` is deleted and `AudioPipeline` hands sources to `AudioReader` unwrapped.
+- [x] With the app running, the `audio-capture` thread stays at a few percent of one core (measured ~2% on RC7).

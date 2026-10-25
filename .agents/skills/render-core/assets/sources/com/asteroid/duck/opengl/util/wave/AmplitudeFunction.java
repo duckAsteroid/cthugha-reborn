@@ -7,6 +7,10 @@ package com.asteroid.duck.opengl.util.wave;
  * component of each vertex and multiplied by the normalised audio sample in the vertex shader.
  * Use {@link #constant} for a flat envelope or {@link #ellipse} to taper the wave to zero at
  * the screen edges so it fits inside an ellipse.</p>
+ *
+ * <p>The built-in factories return records, so two functions built with the same parameters
+ * are {@code equal}; renderers use that to skip rebuilding their VBO when the same envelope is
+ * set again. Custom lambdas compare by identity, so reuse one instance across calls.</p>
  */
 @FunctionalInterface
 public interface AmplitudeFunction {
@@ -29,7 +33,7 @@ public interface AmplitudeFunction {
      * @return a constant-envelope {@link AmplitudeFunction}
      */
     static AmplitudeFunction constant(float amplitude) {
-        return (i, x) -> amplitude;
+        return new Constant(amplitude);
     }
 
     /**
@@ -44,6 +48,30 @@ public interface AmplitudeFunction {
      * @return an elliptical-envelope {@link AmplitudeFunction}
      */
     static AmplitudeFunction ellipse(float maxAmplitude) {
-        return (i, x) -> maxAmplitude * (float) Math.sin(Math.PI * (x + 1.0) / 2.0);
+        return new Ellipse(maxAmplitude);
+    }
+
+    /**
+     * Same scale factor for every vertex; see {@link #constant}.
+     *
+     * @param amplitude the constant scale factor
+     */
+    record Constant(float amplitude) implements AmplitudeFunction {
+        @Override
+        public float amplitudeAt(int index, float x) {
+            return amplitude;
+        }
+    }
+
+    /**
+     * Half-sine arch peaking at {@code maxAmplitude}; see {@link #ellipse}.
+     *
+     * @param maxAmplitude the peak scale factor at the horizontal centre
+     */
+    record Ellipse(float maxAmplitude) implements AmplitudeFunction {
+        @Override
+        public float amplitudeAt(int index, float x) {
+            return maxAmplitude * (float) Math.sin(Math.PI * (x + 1.0) / 2.0);
+        }
     }
 }

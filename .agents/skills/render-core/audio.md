@@ -44,7 +44,10 @@ PboAudioSink audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
 
 `stereoFrames` controls the ring-buffer size. Use the `AUDIO_BUFFER_SIZE` constant from the
 renderer you plan to use (`AudioWave.AUDIO_BUFFER_SIZE` or `RadialWave.AUDIO_BUFFER_SIZE`;
-both are `2048`).
+both are `4096`, four times the 1024-sample drawn window). Both renderers reject a smaller sink
+with `IllegalArgumentException`: the extra capacity is headroom for audio the capture thread
+writes while the GPU's PBO-to-texture copy is still pending, so in-flight writes never land in
+the drawn window.
 
 ### Per-frame upload
 
@@ -70,7 +73,8 @@ public interface AudioSink {
 
 `PboAudioSink.write()` is safe to call from the `AudioReader` background thread. Internally it
 ring-wraps into the persistently-mapped `ByteBuffer`; a `volatile int head` is advanced after
-each write so the GL thread can snapshot it without locking.
+each write. `upload()` snapshots that head before issuing the copy and `getHead()` returns the
+snapshot, so renderers draw the newest window ending exactly where the uploaded data ends.
 
 ---
 
@@ -82,11 +86,14 @@ line) via `setLine` — opening, starting, stopping, and closing are its respons
 
 ```java
 AudioReader audioReader = new AudioReader(List.of(audioSink));   // one or more sinks
-Thread audioReaderThread = new Thread(audioReader, "audio-reader");
-audioReaderThread.setDaemon(true);
-audioReaderThread.start();
+Thread audioReaderThread = Thread.ofPlatform().name("audio-reader").daemon().start(audioReader);
 audioReader.setLine(audioSources.list().get(selectedSource));    // opens, starts, begins capturing
 ```
+
+Run the reader on a **platform** thread. When the line has no data it parks for
+`AudioReader.IDLE_PARK_NANOS` (0.5 ms, well inside the line buffer's ≈ 2.7 ms) rather than
+spinning; on a virtual thread every park/unpark goes through the ForkJoin carrier pool, which
+costs far more than a dedicated platform thread.
 
 If the source can't be opened, `setLine` logs the `AudioSourceUnavailableException` and leaves
 the reader paused (as if `null` had been passed) rather than throwing.
@@ -256,6 +263,12 @@ audioWave.setTransform(new Matrix4f());   // reset to identity
 ```
 
 `setTransform` is safe to call from any thread. The matrix is applied in NDC space (origin = screen centre) to every vertex position on the next frame.
+
+All of these setters are cheap to call **every frame** with the same value: `setTransform`,
+`setLineColour` and `setAmplitudeFunction` are no-ops when the value hasn't changed, and a
+changed transform or colour is copied into a preallocated slot (no per-call allocation). The
+built-in `AmplitudeFunction.constant(..)` / `ellipse(..)` are records with value equality, so
+`setAmplitudeFunction(AmplitudeFunction.ellipse(a))` only rebuilds the VBO when `a` changes.
 
 ---
 
