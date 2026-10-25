@@ -47,6 +47,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
 | 28 | [Morph between translation maps: two slots and an animatable Mix](28-blend-between-two-translation-maps-over-time.md) | feature | designed | ✅ ready | 0 | — |
 | 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | ⛔ 28 | 0 | — |
+| 31 | [Make beat decay and spectrum peaks frame-rate independent](31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md) | bug | draft | ext: [github.com/…/32](https://github.com/duckAsteroid/opengl-jogl-template/issues/32) | 0 | — |
 
 ### Dependencies
 
@@ -72,8 +73,10 @@ flowchart RL
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
   n28["🟢 28 Morph between translation maps: two slots and an animatable Mix"]
   n30["✏️ 30 Save both morph slots in screen configs"]
+  n31["✏️ 31 Make beat decay and spectrum peaks frame-rate independent"]
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
+  x1{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/32"}}
   n9 --> n1
   n9 --> n8
   n22 --> n3
@@ -81,6 +84,7 @@ flowchart RL
   n24 --> n3
   n25 --> n3
   n30 --> n28
+  n31 --> x1
   click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n7 href "07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md"
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
@@ -101,16 +105,18 @@ flowchart RL
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
   click n28 href "28-blend-between-two-translation-maps-over-time.md"
   click n30 href "30-save-both-morph-slots-in-screen-configs.md"
+  click n31 href "31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md"
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
+  click x1 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/32"
 ```
 
 ### Themes
 
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
-- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 0 open, 3 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 4 open, 4 closed or deferred
+- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 1 open, 3 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 4 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 4 open, 2 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
