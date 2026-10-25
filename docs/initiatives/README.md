@@ -38,7 +38,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 18 | [MCP interface for agent control and scripting](18-mcp-interface-for-agent-control-and-scripting.md) | feature | draft | — | 0 | — |
 | 19 | [Live quotes from an external source](19-live-quotes-from-an-external-source.md) | feature | draft | — | 0 | — |
 | 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | draft | — | 0 | — |
-| 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | draft | — | 6 | — |
+| 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | designed | ✅ ready | 0 | — |
 | 22 | [Migrate to Jackson 3](22-migrate-to-jackson-3.md) | chore | draft | — | 0 | — |
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
@@ -61,7 +61,7 @@ flowchart RL
   n18["✏️ 18 MCP interface for agent control and scripting"]
   n19["✏️ 19 Live quotes from an external source"]
   n20["✏️ 20 Named animation packages with their own dials"]
-  n21["✏️ 21 Make TransformParams easy to animate"]
+  n21["🟢 21 Make TransformParams easy to animate"]
   n22["✏️ 22 Migrate to Jackson 3"]
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
