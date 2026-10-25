@@ -10,6 +10,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 import java.nio.FloatBuffer;
+import java.time.Duration;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -21,7 +22,8 @@ import static org.lwjgl.system.MemoryUtil.*;
  *
  * <p>Owns the per-frame spectrum arrays ({@code magnitudes}, {@code peaks}), the 1-D
  * {@code GL_RG32F} FFT texture (R = magnitude, G = peak level), and the peak-hold
- * ballistics algorithm. Concrete subclasses ({@link SpectrumAnalyser},
+ * ballistics algorithm (timed in seconds, so it runs at the same speed at any frame rate).
+ * Concrete subclasses ({@link SpectrumAnalyser},
  * {@link RadialSpectrumAnalyser}) handle the coordinate-system-specific rendering —
  * Cartesian bars/fill or polar radial shape — without duplicating shared state.</p>
  *
@@ -60,11 +62,36 @@ import static org.lwjgl.system.MemoryUtil.*;
  */
 public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, Transformable {
 
-    /** Default peak-hold dwell ({@value} frames ≈ 0.5 s at 60 fps). */
+    /** Default peak-hold dwell: the peak holds at its maximum for half a second before sagging. */
+    public static final Duration DEFAULT_PEAK_DWELL = Duration.ofMillis(500);
+
+    /** Default peak fall time: once sagging, full scale falls to zero in three seconds. */
+    public static final Duration DEFAULT_PEAK_FALL_TIME = Duration.ofSeconds(3);
+
+    /**
+     * Default peak-hold dwell ({@value} frames ≈ 0.5 s at 60 fps).
+     *
+     * @deprecated frame counts depend on the refresh rate; use {@link #DEFAULT_PEAK_DWELL}.
+     */
+    @Deprecated
     public static final int   DEFAULT_DWELL_FRAMES      = 30;
 
-    /** Default peak sag rate per frame ({@value}): full scale falls to zero in ~3 s at 60 fps. */
+    /**
+     * Default peak sag rate per frame ({@value}): full scale falls to zero in ~3 s at 60 fps.
+     *
+     * @deprecated per-frame rates depend on the refresh rate; use {@link #DEFAULT_PEAK_FALL_TIME}.
+     */
+    @Deprecated
     public static final float DEFAULT_PEAK_SAG_PER_FRAME = 1.0f / 180f;
+
+    /**
+     * Longest gap between frames that the peak ballistics honour, in seconds. A longer gap (a
+     * stalled frame, a debugger pause) is treated as this long.
+     */
+    public static final double MAX_UPDATE_INTERVAL = 0.25;
+
+    /** Frame rate assumed when converting the deprecated per-frame peak dynamics to seconds. */
+    protected static final double LEGACY_FRAME_RATE = 60.0;
 
     // ── Per-frame data ────────────────────────────────────────────────────────────
 
@@ -77,19 +104,19 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
     /** Peak-hold high-water marks per bin; range [0, 1]. Managed by {@link #updatePeakBallistics()}. */
     protected final float[] peaks;
 
-    /** Per-bin countdown frames remaining in the dwell phase. */
-    protected final int[]   dwellCounters;
+    /** Per-bin seconds remaining in the dwell phase. */
+    protected final float[] dwellRemaining;
 
     // ── Shared configuration ──────────────────────────────────────────────────────
 
     /** When {@code true} (default) the framebuffer is cleared at the start of each frame. */
     protected volatile boolean clearBeforeRender = true;
 
-    /** Frames the peak holds at its maximum before starting to sag. */
-    protected int   dwellFrames     = DEFAULT_DWELL_FRAMES;
+    /** Seconds the peak holds at its maximum before starting to sag. */
+    protected float peakDwellSeconds = DEFAULT_PEAK_DWELL.toNanos() / 1e9f;
 
-    /** Fraction subtracted from the peak level per frame during sag. */
-    protected float peakSagPerFrame = DEFAULT_PEAK_SAG_PER_FRAME;
+    /** Fraction subtracted from the peak level per second during sag. */
+    protected float peakSagPerSecond = 1e9f / DEFAULT_PEAK_FALL_TIME.toNanos();
 
     /** Width of the peak line or tick mark in pixels. Subclass default may vary. */
     protected float peakLineWidth   = 2.0f;
@@ -120,6 +147,9 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
     /** Pre-allocated direct buffer for per-frame texture upload; length = {@code numBins * 2}. */
     protected FloatBuffer fftUploadBuffer;
 
+    /** {@link System#nanoTime()} at the previous {@link #updatePeakBallistics()}; {@code 0} before the first. */
+    private long lastBallisticsNanos;
+
     // ── Constructor ───────────────────────────────────────────────────────────────
 
     /**
@@ -129,7 +159,7 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
         this.numBins       = numBins;
         this.magnitudes    = new float[numBins];
         this.peaks         = new float[numBins];
-        this.dwellCounters = new int[numBins];
+        this.dwellRemaining = new float[numBins];
     }
 
     // ── Transformable ────────────────────────────────────────────────────────────
@@ -183,6 +213,34 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
         this.clearBeforeRender = clear;
     }
 
+    /**
+     * Sets the peak-hold ballistics; backs the subclasses' {@code withPeakDynamics}.
+     *
+     * @param dwell    how long a peak holds at its maximum before sagging; zero for no hold
+     * @param fallTime how long a sagging peak takes to fall from full scale to zero; must be positive
+     */
+    protected void setPeakDynamics(Duration dwell, Duration fallTime) {
+        if (dwell.isNegative()) {
+            throw new IllegalArgumentException("dwell must not be negative: " + dwell);
+        }
+        if (fallTime.isNegative() || fallTime.isZero()) {
+            throw new IllegalArgumentException("fallTime must be positive: " + fallTime);
+        }
+        this.peakDwellSeconds = dwell.toNanos() / 1e9f;
+        this.peakSagPerSecond = (float) (1e9 / fallTime.toNanos());
+    }
+
+    /**
+     * Sets the peak-hold ballistics from per-frame values, assuming 60 frames per second.
+     *
+     * @param dwellFrames     frames to hold at the maximum at 60 fps
+     * @param peakSagPerFrame fraction subtracted per frame during sag at 60 fps
+     */
+    protected void setPeakDynamicsPerFrame(int dwellFrames, float peakSagPerFrame) {
+        this.peakDwellSeconds = (float) (dwellFrames / LEGACY_FRAME_RATE);
+        this.peakSagPerSecond = (float) (peakSagPerFrame * LEGACY_FRAME_RATE);
+    }
+
     // ── GL helpers for subclasses ─────────────────────────────────────────────────
 
     /**
@@ -227,19 +285,35 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
     }
 
     /**
-     * Advances peak-hold ballistics for every bin: instant rise when a new maximum is
-     * seen, hold for {@link #dwellFrames} frames, then sag at {@link #peakSagPerFrame}
-     * per frame until back at zero.
+     * Advances peak-hold ballistics by the wall-clock time since the previous call (the first
+     * call advances by zero). See {@link #updatePeakBallistics(double)}.
      */
     protected void updatePeakBallistics() {
+        long now = System.nanoTime();
+        double dtSeconds = lastBallisticsNanos == 0 ? 0 : (now - lastBallisticsNanos) / 1e9;
+        lastBallisticsNanos = now;
+        updatePeakBallistics(dtSeconds);
+    }
+
+    /**
+     * Advances peak-hold ballistics for every bin by {@code dtSeconds}: instant rise when a new
+     * maximum is seen, hold for {@link #peakDwellSeconds}, then sag at {@link #peakSagPerSecond}
+     * until back at zero.
+     *
+     * @param dtSeconds seconds since the previous update; clamped to
+     *                  {@code [0, }{@link #MAX_UPDATE_INTERVAL}{@code ]}
+     */
+    protected void updatePeakBallistics(double dtSeconds) {
+        float dt  = (float) Math.clamp(dtSeconds, 0.0, MAX_UPDATE_INTERVAL);
+        float sag = peakSagPerSecond * dt;
         for (int i = 0; i < numBins; i++) {
             if (magnitudes[i] >= peaks[i]) {
-                peaks[i]         = magnitudes[i];
-                dwellCounters[i] = dwellFrames;
-            } else if (dwellCounters[i] > 0) {
-                dwellCounters[i]--;
+                peaks[i]          = magnitudes[i];
+                dwellRemaining[i] = peakDwellSeconds;
+            } else if (dwellRemaining[i] > 0) {
+                dwellRemaining[i] -= dt;
             } else {
-                peaks[i] = Math.max(0.0f, peaks[i] - peakSagPerFrame);
+                peaks[i] = Math.max(0.0f, peaks[i] - sag);
             }
         }
     }

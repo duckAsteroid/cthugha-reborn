@@ -16,6 +16,7 @@ import org.joml.Vector2f;
 import org.joml.Vector4f;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -425,14 +426,31 @@ public class SpectrumAnalyser extends FrequencyRenderer {
 
     /**
      * Tunes the peak-hold ballistics. May be called before or after {@link #init}.
+     * Both are wall-clock times, so the peaks behave the same at any frame rate.
+     *
+     * @param dwell    how long a peak holds at its maximum before sagging
+     *                 (default {@link #DEFAULT_PEAK_DWELL}, 0.5 s); zero for no hold
+     * @param fallTime how long a sagging peak takes to fall from full scale to zero
+     *                 (default {@link #DEFAULT_PEAK_FALL_TIME}, 3 s); must be positive
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withPeakDynamics(Duration dwell, Duration fallTime) {
+        setPeakDynamics(dwell, fallTime);
+        return this;
+    }
+
+    /**
+     * Tunes the peak-hold ballistics in frames, assuming 60 frames per second.
      *
      * @param dwellFrames     frames to hold at the maximum before sagging (e.g. 30 ≈ 0.5 s at 60 fps)
      * @param peakSagPerFrame fraction subtracted per frame during sag (e.g. {@code 1f/180f} ≈ 3 s)
      * @return {@code this} for fluent chaining
+     * @deprecated frame-based timing depends on the refresh rate; use
+     *             {@link #withPeakDynamics(Duration, Duration)}.
      */
+    @Deprecated
     public SpectrumAnalyser withPeakDynamics(int dwellFrames, float peakSagPerFrame) {
-        this.dwellFrames     = dwellFrames;
-        this.peakSagPerFrame = peakSagPerFrame;
+        setPeakDynamicsPerFrame(dwellFrames, peakSagPerFrame);
         return this;
     }
 

@@ -464,10 +464,11 @@ configurable dwell period, then sag slowly back to zero — the classic retro gr
 The bars themselves track the raw FFT magnitude at full speed; only the tick is damped.
 
 ```java
-// Tune dwell and sag (call before or after init()):
+// Tune dwell and sag (call before or after init()). Both are wall-clock times,
+// so the ticks behave the same at any refresh rate:
 analyser.withPeakDynamics(
-    60,         // dwellFrames: frames to hold at peak (~1 s at 60 fps)
-    1f / 180f   // peakSagPerFrame: full scale → 0 in ~3 s at 60 fps
+    Duration.ofSeconds(1),   // dwell: time to hold at peak
+    Duration.ofSeconds(3)    // fallTime: full scale → 0 once sagging
 );
 
 // Tick line width in pixels:
@@ -477,9 +478,13 @@ analyser.withPeakLineWidth(3.0f);   // default: DEFAULT_PEAK_LINE_WIDTH = 3.0
 | Constant | Default | Meaning |
 |---|---|---|
 | `DEFAULT_GAP` | 0.15 | 15% of each bar slot is empty |
-| `DEFAULT_DWELL_FRAMES` | 30 | ~0.5 s at 60 fps |
-| `DEFAULT_PEAK_SAG_PER_FRAME` | 1/180 | ~3 s full scale at 60 fps |
+| `DEFAULT_PEAK_DWELL` | 0.5 s | peak hold before sagging |
+| `DEFAULT_PEAK_FALL_TIME` | 3 s | full-scale sag to zero |
 | `DEFAULT_PEAK_LINE_WIDTH` | 3.0 | slightly thicker than one pixel |
+
+The per-frame `withPeakDynamics(int dwellFrames, float peakSagPerFrame)` and the
+`DEFAULT_DWELL_FRAMES` / `DEFAULT_PEAK_SAG_PER_FRAME` constants are deprecated; the setter
+converts assuming 60 fps.
 
 ### glClear toggle
 
@@ -613,8 +618,8 @@ safe to call after `init()` — the new value takes effect on the next frame.
 
 ```java
 radial.withPeakDynamics(
-    30,          // dwellFrames: frames to hold at maximum (~0.5 s at 60 fps)
-    1f / 180f    // peakSagPerFrame: full scale falls to 0 in ~3 s at 60 fps
+    Duration.ofMillis(500),  // dwell: time to hold at maximum
+    Duration.ofSeconds(3)    // fallTime: full scale falls to 0 once sagging
 );
 radial.withPeakLineWidth(2.0f);   // line width in pixels (default 2.0)
 ```
@@ -627,8 +632,8 @@ radial.withPeakLineWidth(2.0f);   // line width in pixels (default 2.0)
 | `DEFAULT_BASE_RADIUS` | 0.35 | Base circle radius in NDC units |
 | `DEFAULT_OUTER_HEIGHT` | 0.55 | Max outward extension at full magnitude |
 | `DEFAULT_INNER_DEPTH` | 0.15 | Max inward contraction at full magnitude |
-| `DEFAULT_DWELL_FRAMES` | 30 | ~0.5 s peak hold at 60 fps |
-| `DEFAULT_PEAK_SAG_PER_FRAME` | 1/180 | ~3 s full-scale sag at 60 fps |
+| `DEFAULT_PEAK_DWELL` | 0.5 s | peak hold before sagging |
+| `DEFAULT_PEAK_FALL_TIME` | 3 s | full-scale sag to zero |
 | `DEFAULT_PEAK_LINE_WIDTH` | 2.0 | pixels |
 
 ### glClear toggle
@@ -739,15 +744,25 @@ BeatDetector beats = new BeatDetector(numBins, fMin, fMax);
 
 // Full constructor — all parameters explicit:
 BeatDetector beats = new BeatDetector(
-    FrequencyBand.defaults(),   // or any List<FrequencyBand>
-    numBins,                    // must match FrequencyProcessor
-    fMin,                       // must match FrequencyProcessor
-    fMax,                       // must match FrequencyProcessor
-    43,                         // historyLength: frames in rolling average (~0.7 s at 60 fps)
-    1.3f,                       // threshold: ratio above average before any trigger (30%)
-    2.0f,                       // sensitivity: 50% above average → strength 1.0
-    1f / 60f                    // decayPerFrame: full scale decays to zero in one second at 60 fps
+    FrequencyBand.defaults(),       // or any List<FrequencyBand>
+    freqProc.getFftSize(),          // must match FrequencyProcessor
+    freqProc.getSampleRate(),       // must match FrequencyProcessor
+    43,                             // historyLength: updates in rolling average (~0.7 s at 60 fps)
+    1.3f,                           // threshold: ratio above average before any trigger (30%)
+    2.0f,                           // sensitivity: 50% above average → strength 1.0
+    BeatDetector.DEFAULT_NOISE_FLOOR, // noiseFloor: ignore bands quieter than this
+    Duration.ofSeconds(1)           // decayTime: full scale decays to zero in one second
 );
+```
+
+The decay is timed against the wall clock: each `update()` (driven by `freqProc.process()`)
+measures the time since the previous one, capped at `MAX_UPDATE_INTERVAL` (0.25 s), so beats
+fade at the same speed on a 60 Hz or 144 Hz display. To drive it from your own clock, call
+`update(rawMagnitudes, dtSeconds)` directly instead of registering it as a sink. The
+per-frame constructors taking `float decayPerFrame` are deprecated and convert assuming 60 fps.
+`historyLength` is still counted in updates.
+
+```java
 ```
 
 ### Wiring into an experiment with FrequencyProcessor
@@ -895,7 +910,7 @@ audioReaderThread.join(2000);
 | `historyLength` | 43 | Longer = slower response to new tempo; shorter = more false positives in sustained passages |
 | `threshold` | 1.3 | Higher = fewer triggers; 1.0 triggers on any above-average energy |
 | `sensitivity` | 2.0 | Higher = reaches full strength at a lower peak; lower = more dynamic range |
-| `decayPerFrame` | 1/60 | `1/60` decays full scale in 1 s at 60 fps; larger values decay faster |
+| `decayTime` | 1 s | Time for full scale to decay to zero; shorter values decay faster |
 
 ### Custom band example
 
@@ -908,13 +923,14 @@ List<FrequencyBand> percussionBands = List.of(
     new FrequencyBand("air",  8_000f, 20_000f)  // cymbal shimmer / air
 );
 BeatDetector beats = new BeatDetector(
-    percussionBands, NUM_BINS, F_MIN, F_MAX, 43, 1.3f, 2.0f, 1f / 60f
+    percussionBands, freqProc.getFftSize(), freqProc.getSampleRate(),
+    43, 1.3f, 2.0f, BeatDetector.DEFAULT_NOISE_FLOOR, Duration.ofSeconds(1)
 );
 ```
 
 ### Startup behaviour
 
-For approximately the first `historyLength + ceil(1 / decayPerFrame)` frames after construction,
+For approximately the first `historyLength` updates plus `decayTime` after construction,
 the rolling average is building up from zero — any non-silent audio will produce a brief burst of
 high beat strengths on all bands. At the default settings this clears in about 1 second. This is
 harmless for continuous visualisers; if you need to suppress it (e.g. for onset logging), ignore

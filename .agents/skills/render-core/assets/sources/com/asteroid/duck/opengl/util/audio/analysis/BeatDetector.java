@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util.audio.analysis;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -21,9 +22,16 @@ import java.util.List;
  *       noise fluctuations then produce large ratios even though the absolute energy is
  *       negligible. Without an absolute floor this makes the detector fire constantly on
  *       near-silence.</li>
- *   <li>Published beat strength rises instantly to {@code raw} if higher; otherwise decays by
- *       {@code decayPerFrame} — same peak-hold pattern as {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}.</li>
+ *   <li>Published beat strength rises instantly to {@code raw} if higher; otherwise decays
+ *       linearly, falling from full scale to zero over {@code decayTime} — same peak-hold
+ *       pattern as {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}.</li>
  * </ol>
+ *
+ * <p>The decay is timed against the wall clock: each {@link #update(float[])} measures the time
+ * since the previous one, so beats fade at the same speed whatever rate
+ * {@link FrequencyProcessor#process()} is called at (60 Hz, 144 Hz, ...). Use
+ * {@link #update(float[], double)} to supply the elapsed time yourself. The rolling-average
+ * {@code historyLength} is still counted in updates, not seconds.</p>
  *
  * <h2>Constructing with custom bands</h2>
  * <pre>{@code
@@ -38,7 +46,7 @@ import java.util.List;
  *     1.3f,  // threshold: 30% above average before triggering
  *     2.0f,  // sensitivity: 50% above average → strength 1.0
  *     0.02f, // noise floor: ignore bands quieter than this in absolute terms
- *     1f/60f // decay: full scale falls to zero in one second
+ *     Duration.ofSeconds(1) // decay: full scale falls to zero in one second
  * );
  * }</pre>
  *
@@ -63,12 +71,28 @@ public class BeatDetector implements FrequencySink {
      */
     public static final float DEFAULT_NOISE_FLOOR = 0.02f;
 
+    /** Default {@code decayTime} used by the convenience constructors: full scale fades to zero in one second. */
+    public static final Duration DEFAULT_DECAY_TIME = Duration.ofSeconds(1);
+
+    /**
+     * Longest gap between updates that the decay honours, in seconds. A longer gap (a stalled
+     * frame, a debugger pause) is treated as this long, so the beat fades no further than it
+     * would over a few slow frames.
+     */
+    public static final double MAX_UPDATE_INTERVAL = 0.25;
+
+    /** Frame rate assumed when converting the deprecated per-frame decay to a per-second rate. */
+    private static final double LEGACY_FRAME_RATE = 60.0;
+
     private final List<FrequencyBand> bands;
     private final BandState[] states;
     private final float threshold;
     private final float sensitivity;
     private final float noiseFloor;
-    private final float decayPerFrame;
+    private final float decayPerSecond;
+
+    /** {@link System#nanoTime()} at the previous {@link #update(float[])}; {@code 0} before the first. */
+    private long lastUpdateNanos;
 
     /**
      * Full constructor.
@@ -86,17 +110,48 @@ public class BeatDetector implements FrequencySink {
      *                      considered; bands quieter than this never trigger, which prevents
      *                      relative noise fluctuations during near-silence from being read as
      *                      beats (see class Javadoc)
-     * @param decayPerFrame per-frame fall rate of the published beat strength;
-     *                      {@code 1.0 / 60} causes full scale to decay to zero in one second at 60 fps
+     * @param decayTime     how long the published beat strength takes to fall from full scale to
+     *                      zero, independent of the update rate; must be positive
      */
     public BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
                         int historyLength, float threshold, float sensitivity, float noiseFloor,
+                        Duration decayTime) {
+        this(bands, fftSize, sampleRate, historyLength, threshold, sensitivity, noiseFloor,
+             perSecond(decayTime));
+    }
+
+    /**
+     * Per-frame variant of the full constructor, kept so existing tuning carries over: the decay
+     * is converted to a per-second rate assuming 60 updates per second.
+     *
+     * @param bands         frequency bands to track
+     * @param fftSize       the FFT window size in samples
+     * @param sampleRate    the audio sample rate in Hz
+     * @param historyLength number of past frames used for the rolling energy average
+     * @param threshold     ratio above the rolling average required to start triggering
+     * @param sensitivity   scales {@code (ratio − threshold)} to {@code [0, 1]}
+     * @param noiseFloor    minimum absolute instant energy required before the ratio test applies
+     * @param decayPerFrame per-frame fall rate of the published beat strength at 60 fps;
+     *                      {@code 1.0 / 60} decays full scale to zero in one second
+     * @deprecated per-frame decay depends on the refresh rate; use the full constructor taking a
+     *             {@link Duration} {@code decayTime} (here {@code 1 / (decayPerFrame * 60)} seconds).
+     */
+    @Deprecated
+    public BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
+                        int historyLength, float threshold, float sensitivity, float noiseFloor,
                         float decayPerFrame) {
+        this(bands, fftSize, sampleRate, historyLength, threshold, sensitivity, noiseFloor,
+             decayPerFrame * LEGACY_FRAME_RATE);
+    }
+
+    private BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
+                         int historyLength, float threshold, float sensitivity, float noiseFloor,
+                         double decayPerSecond) {
         this.bands = List.copyOf(bands);
         this.threshold = threshold;
         this.sensitivity = sensitivity;
         this.noiseFloor = noiseFloor;
-        this.decayPerFrame = decayPerFrame;
+        this.decayPerSecond = (float) decayPerSecond;
         this.states = new BandState[bands.size()];
         for (int i = 0; i < bands.size(); i++) {
             states[i] = new BandState(bands.get(i), fftSize, sampleRate, historyLength);
@@ -107,25 +162,33 @@ public class BeatDetector implements FrequencySink {
      * Compatibility overload of the full constructor without an explicit {@code noiseFloor};
      * uses {@link #DEFAULT_NOISE_FLOOR}.
      *
-     * @deprecated use the full constructor with an explicit {@code noiseFloor} instead.
+     * @deprecated use the full constructor with an explicit {@code noiseFloor} and a
+     *             {@link Duration} {@code decayTime} instead.
      */
     @Deprecated
     public BeatDetector(List<FrequencyBand> bands, int fftSize, float sampleRate,
                         int historyLength, float threshold, float sensitivity, float decayPerFrame) {
         this(bands, fftSize, sampleRate, historyLength, threshold, sensitivity, DEFAULT_NOISE_FLOOR,
-             decayPerFrame);
+             decayPerFrame * LEGACY_FRAME_RATE);
+    }
+
+    private static double perSecond(Duration decayTime) {
+        if (decayTime.isNegative() || decayTime.isZero()) {
+            throw new IllegalArgumentException("decayTime must be positive: " + decayTime);
+        }
+        return 1e9 / decayTime.toNanos();
     }
 
     /**
      * Convenience constructor using {@link FrequencyBand#defaults()} (bass / snare / hi-hat)
      * and sensible defaults: 43-frame history (~0.7 s at 60 fps), threshold 1.3, sensitivity 2.0,
-     * noise floor {@link #DEFAULT_NOISE_FLOOR}, decay 1/60 per frame.
+     * noise floor {@link #DEFAULT_NOISE_FLOOR}, decay {@link #DEFAULT_DECAY_TIME}.
      *
      * @param fftSize    the FFT window size in samples
      * @param sampleRate the audio sample rate in Hz
      */
     public BeatDetector(int fftSize, float sampleRate) {
-        this(FrequencyBand.defaults(), fftSize, sampleRate, 43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, 1.0f / 60f);
+        this(FrequencyBand.defaults(), fftSize, sampleRate, 43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, DEFAULT_DECAY_TIME);
     }
 
     /**
@@ -140,7 +203,7 @@ public class BeatDetector implements FrequencySink {
     public BeatDetector(FrequencyProcessor processor) {
         this(FrequencyBand.defaults(),
              processor.getFftSize(), processor.getSampleRate(),
-             43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, 1.0f / 60f);
+             43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, DEFAULT_DECAY_TIME);
     }
 
     /**
@@ -152,7 +215,7 @@ public class BeatDetector implements FrequencySink {
     public BeatDetector(List<FrequencyBand> bands, FrequencyProcessor processor) {
         this(bands,
              processor.getFftSize(), processor.getSampleRate(),
-             43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, 1.0f / 60f);
+             43, 1.3f, 2.0f, DEFAULT_NOISE_FLOOR, DEFAULT_DECAY_TIME);
     }
 
     /**
@@ -172,12 +235,32 @@ public class BeatDetector implements FrequencySink {
      * When using a {@link FrequencyProcessor}, prefer registering via {@link FrequencyProcessor#addSink}
      * and let {@link FrequencyProcessor#process} drive this automatically.
      *
+     * <p>The beat decay is scaled by the wall-clock time since the previous call (capped at
+     * {@link #MAX_UPDATE_INTERVAL}); the first call applies no decay.</p>
+     *
      * @param rawMagnitudes normalised per-bin magnitude array from {@link FFTProcessor#getRawMagnitudes()};
      *                      must have length {@code >= fftSize/2 + 1} passed at construction
      */
     public void update(float[] rawMagnitudes) {
+        long now = System.nanoTime();
+        double dtSeconds = lastUpdateNanos == 0 ? 0 : (now - lastUpdateNanos) / 1e9;
+        lastUpdateNanos = now;
+        update(rawMagnitudes, dtSeconds);
+    }
+
+    /**
+     * Update all bands from the latest raw FFT magnitudes, decaying the beat strengths by
+     * {@code dtSeconds} worth of fall. Use this to drive the detector from your own clock (e.g.
+     * a fixed simulation step); {@link #update(float[])} measures the interval itself.
+     *
+     * @param rawMagnitudes normalised per-bin magnitude array from {@link FFTProcessor#getRawMagnitudes()}
+     * @param dtSeconds     seconds since the previous update; clamped to
+     *                      {@code [0, }{@link #MAX_UPDATE_INTERVAL}{@code ]}
+     */
+    public void update(float[] rawMagnitudes, double dtSeconds) {
+        float decay = (float) (decayPerSecond * Math.clamp(dtSeconds, 0.0, MAX_UPDATE_INTERVAL));
         for (BandState state : states) {
-            state.update(rawMagnitudes, threshold, sensitivity, noiseFloor, decayPerFrame);
+            state.update(rawMagnitudes, threshold, sensitivity, noiseFloor, decay);
         }
     }
 
@@ -247,7 +330,7 @@ public class BeatDetector implements FrequencySink {
         }
 
         void update(float[] magnitudes, float threshold, float sensitivity, float noiseFloor,
-                    float decayPerFrame) {
+                    float decay) {
             float energy = 0;
             int width = binHigh - binLow;
             if (width > 0) {
@@ -272,8 +355,8 @@ public class BeatDetector implements FrequencySink {
                     ? Math.min(1.0f, (ratio - threshold) * sensitivity)
                     : 0.0f;
 
-            // Rise instantly to peak; decay at decayPerFrame
-            beatStrength = Math.max(raw, beatStrength - decayPerFrame);
+            // Rise instantly to peak; otherwise fall by this update's share of the decay
+            beatStrength = Math.max(raw, beatStrength - decay);
         }
     }
 

@@ -133,7 +133,8 @@ public abstract class GLWindow implements RenderContext {
 	 *
 	 * <p>The constructor performs all GLFW and GL initialisation synchronously on the calling
 	 * thread. Key and framebuffer-size callbacks are installed before the window is shown. If
-	 * running on Linux, X11 is forced to avoid libdecor issues on Wayland compositors.</p>
+	 * running on Linux, X11 is forced to avoid libdecor issues on Wayland compositors; use the
+	 * {@link GLFWConfigurer} overload to change that or any other GLFW hint.</p>
 	 *
 	 * @param resourceManager the resource manager that owns all GL handles for this window;
 	 *                        it is disposed when the window closes
@@ -149,6 +150,30 @@ public abstract class GLWindow implements RenderContext {
 	 *                        offset, or {@link WindowPlacement#defaultPlacement()} to let the OS decide
 	 */
 	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon, WindowPlacement placement) {
+		this(resourceManager, title, width, height, icon, placement, GLFWConfigurer.NONE);
+	}
+
+	/**
+	 * Create and display a GLFW window with an OpenGL 3.3 Core Profile context, letting the caller
+	 * adjust GLFW configuration before the library and the window are created.
+	 *
+	 * <p>{@code configurer}'s hooks run after this class's own defaults (X11 on Linux, a 3.3 core
+	 * debug context, resizable), so they can override any of them. See {@link GLFWConfigurer}.</p>
+	 *
+	 * @param resourceManager the resource manager that owns all GL handles for this window;
+	 *                        it is disposed when the window closes
+	 * @param title           the window title; displayed in the title bar augmented with the
+	 *                        current pixel resolution
+	 * @param width           the initial window width in screen coordinates (not framebuffer pixels)
+	 * @param height          the initial window height in screen coordinates
+	 * @param icon            classpath path to a PNG icon image, or {@code null} to use the
+	 *                        system default window icon
+	 * @param placement       where to place the window on first display
+	 * @param configurer      hooks run just before {@code glfwInit()} and {@code glfwCreateWindow()};
+	 *                        {@link GLFWConfigurer#NONE} for the defaults
+	 */
+	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon,
+	                WindowPlacement placement, GLFWConfigurer configurer) {
         this.resourceManager = resourceManager;
 		this.windowTitle = title;
 		this.initialWidth = width;
@@ -157,9 +182,8 @@ public abstract class GLWindow implements RenderContext {
 			// Force X11 to avoid libdecor issues on Wayland
 			GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_PLATFORM_X11);
 		}
+		configurer.beforeInit();
         if (!glfwInit()) throw new RuntimeException("Unable to init GLFW");
-
-
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -167,7 +191,7 @@ public abstract class GLWindow implements RenderContext {
         glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         //glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-
+        configurer.beforeCreateWindow();
 
         windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
         // Make the OpenGL context current

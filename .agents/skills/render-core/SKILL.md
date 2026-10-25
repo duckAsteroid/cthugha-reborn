@@ -1,10 +1,10 @@
 ---
 name: render-core
-description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.0.0-RC7). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
+description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.0.0-RC9). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
 metadata:
   group: io.github.duckasteroid
   artifact: render-core
-  version: 1.0.0-RC7
+  version: 1.0.0-RC9
   sources: assets/sources/
 ---
 
@@ -35,6 +35,31 @@ public interface RenderedItem extends Resource {
 - All three methods execute on the **GL/render thread**. Never call GL functions from any other thread.
 - GL handles are `null`/`0` until `init()` is called. Do not use them before or after.
 - `dispose()` must release every GL resource allocated in `init()` (shader, VAO, textures, PBOs…).
+
+---
+
+## Configuring GLFW before the window exists
+
+`GLWindow` does all GLFW setup in its constructor: it forces X11 on Linux, calls `glfwInit()`,
+then requests a resizable 3.3 core debug context. To change any of that, pass a `GLFWConfigurer`
+to the 7-argument constructor. Its hooks run *after* those defaults, so they win:
+
+```java
+// Use Wayland instead of the default X11 on Linux:
+super(resourceManager, title, width, height, icon, WindowPlacement.defaultPlacement(),
+      GLFWConfigurer.beforeInit(() -> glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND)));
+
+// Window hints (multisampling, no debug context, ...):
+GLFWConfigurer.beforeCreateWindow(() -> glfwWindowHint(GLFW_SAMPLES, 4));
+```
+
+| Hook | Runs | Use for |
+|---|---|---|
+| `beforeInit()` | just before `glfwInit()` | `glfwInitHint(...)`, e.g. `GLFW_PLATFORM` |
+| `beforeCreateWindow()` | just before `glfwCreateWindow()` | `glfwWindowHint(...)` |
+
+Implement the interface directly to use both hooks. No GL context is current in either, so make
+no GL calls there. `GLFWConfigurer.NONE` (what the other constructors use) changes nothing.
 
 ---
 
