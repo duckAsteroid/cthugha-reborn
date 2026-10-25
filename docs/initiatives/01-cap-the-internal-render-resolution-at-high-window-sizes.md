@@ -1,10 +1,14 @@
 ---
 type: perf
-status: draft
+status: abandoned
 updated: 2026-10-25
 tags: [smoothness]
+status_note: Dropped by the project owner (2026-10-25).
 ---
 # Size the internal render buffer from the display at a chosen resolution
+
+> [!WARNING]
+> **Abandoned** (2026-10-25): Dropped by the project owner (2026-10-25).
 
 ## Goal
 
@@ -20,6 +24,10 @@ Benchmarked 2026-10-24 (fullscreen on DP-4, FrameTimeStats): `render_width/heigh
 ## Dependencies
 
 _None._
+
+## Outcome
+
+Not pursued. Findings kept for reference: the indexed render buffer is sized at init from the configured windowed size (2000×1000 in cthugha.ini) and fullscreen only stretches it to the display, so fullscreen on a 16:9 monitor distorts the image; `render_width/height = 50%` removed mid-run stalls over 100ms in the 2026-10-24 benchmark and remains available as a manual setting.
 
 ## Open questions
 
