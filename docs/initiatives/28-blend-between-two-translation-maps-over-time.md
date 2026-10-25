@@ -1,9 +1,9 @@
 ---
 type: feature
-status: in-progress
+status: done
 tags: [tab-generators, smoothness]
 updated: 2026-10-25
-branch: develop
+docs_impact: "none: CLAUDE.md, docs/RENDERING_PIPELINE.md and docs/SCREEN_CONFIGS.md were updated with the code in 8034d85; this change only records the benchmark"
 ---
 # Morph between translation maps: two slots and an animatable Mix
 
@@ -54,5 +54,5 @@ _None._
 - [x] A new table arriving mid-morph (or while Mix is held mid-way by hand) produces no visible jump; a slider drag on a generator parameter glides (bake-then-morph unit-tested in `TableMorphTest`).
 - [x] With `sine(0.05)` on Mix, loading two presets in turn breathes between them; a further map change replaces the less visible slot without disturbing the breathing (`TableMorphTest`).
 - [x] Mix and the Morph settings appear on the Tab tab, are animatable (Mix) and round-trip through screen configs (`Tab/Translate Source/Morph/*`, captured in `.current.json`).
-- [ ] The translate pass with the morph adds no CPU work per frame and no frame-time regression in a fullscreen benchmark on DP-4 (unlocked session). Pending: DP-4 is at 24 Hz (2026-10-25), so a like-for-like benchmark waits for it to be back at 60 Hz. The per-frame CPU work is one uniform write.
+- [x] The translate pass with the morph adds no CPU work per frame and no frame-time regression in a fullscreen benchmark (2026-10-25, eDP-1 3840×2160@60 Hz, no video, 10 s windows in steady state): baseline `cfbe484` (single map, 2000×1000 buffer) p95 16.9–17.2 ms, p99 19–33 ms, janky 4–6; with the morph (`8b627df`, 1920×1080) p95 17.0–17.2 ms, p99 18.8–20.2 ms, janky 3–4. The per-frame CPU work is one uniform write.
 - [x] Project docs (`CLAUDE.md` rendering pipeline and translation tables, `docs/RENDERING_PIPELINE.md`, `docs/SCREEN_CONFIGS.md`) describe the morph.

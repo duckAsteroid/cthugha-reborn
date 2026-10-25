@@ -45,9 +45,9 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
-| 28 | [Morph between translation maps: two slots and an animatable Mix](28-blend-between-two-translation-maps-over-time.md) | feature | in-progress<br><sub>on develop</sub> | — | 0 | — |
-| 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | ⛔ 28 | 0 | — |
+| 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | — | 0 | — |
 | 31 | [Make beat decay and spectrum peaks frame-rate independent](31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md) | bug | draft | ext: [github.com/…/32](https://github.com/duckAsteroid/opengl-jogl-template/issues/32) | 0 | — |
+| 32 | [Find and remove the 100-400 ms presentation stalls](32-find-and-remove-the-100-400-ms-presentation-stalls.md) | spike | draft | — | 0 | — |
 
 ### Dependencies
 
@@ -71,11 +71,12 @@ flowchart RL
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
   n25["✏️ 25 Move the remote-ui toolchain to its new major versions"]
-  n28["🚧 28 Morph between translation maps: two slots and an animatable Mix"]
   n30["✏️ 30 Save both morph slots in screen configs"]
   n31["✏️ 31 Make beat decay and spectrum peaks frame-rate independent"]
+  n32["✏️ 32 Find and remove the 100-400 ms presentation stalls"]
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
+  n28["✅ <s>28 Morph between translation maps: two slots and an animatable Mix</s>"]
   x1{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/32"}}
   n9 --> n1
   n9 --> n8
@@ -103,11 +104,12 @@ flowchart RL
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
   click n25 href "25-move-the-remote-ui-toolchain-to-its-new-major-versions.md"
-  click n28 href "28-blend-between-two-translation-maps-over-time.md"
   click n30 href "30-save-both-morph-slots-in-screen-configs.md"
   click n31 href "31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md"
+  click n32 href "32-find-and-remove-the-100-400-ms-presentation-stalls.md"
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
+  click n28 href "28-blend-between-two-translation-maps-over-time.md"
   click x1 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/32"
 ```
 
@@ -115,9 +117,9 @@ flowchart RL
 
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
-- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 1 open, 3 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 4 closed or deferred
-- **tab-generators** — Translation-table generators, presets and their regeneration · 4 open, 2 closed or deferred
+- **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 2 open, 3 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 5 closed or deferred
+- **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 3 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
@@ -134,6 +136,7 @@ flowchart RL
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
 | 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | 2026-10-25 |
 | 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | 2026-10-25 |
+| 28 | [Morph between translation maps: two slots and an animatable Mix](28-blend-between-two-translation-maps-over-time.md) | feature | 2026-10-25 |
 
 ### Closed
 
