@@ -1,9 +1,9 @@
 ---
 type: perf
-status: in-progress
+status: done
 updated: 2026-10-25
 tags: [smoothness]
-branch: develop
+docs_impact: "none: CLAUDE.md, docs/RENDERING_PIPELINE.md and cthugha.ini were updated with the code in 8b627df"
 ---
 # Size the internal render buffer from the display at a chosen resolution
 
@@ -28,6 +28,21 @@ Benchmarked 2026-10-24 (fullscreen on DP-4, FrameTimeStats): `render_width/heigh
 - (implementation) **On a size change** `displayTex`, `renderTex`, `flameTex` and the three morph map textures (ct#28) get new storage at the new size in place (`Texture.generate` re-specifies the same GL texture), so their FBOs and the renderers keep their references; `JCthugha.resizeBuffer` sets `bufferWidth/Height` and swaps in an identity table at the new size, which fills both morph slots; then a regeneration is requested through ct#6's coalesced `TranslationRegenerator`, and the real table morphs in from the identity one. A result computed at the old size is discarded by the table epoch, and `uploadSpare` ignores any table whose size doesn't match the textures.
 - (implementation) `RenderSize` (`display/`) holds the sizing rules and `parseDimension`, shared with the initial window sizing. `cthugha.ini` documents `render_max`.
 
+## Benchmark
+
+2026-10-25, `develop` at 292bcc7 (render-core 1.0.0-RC9), fullscreen on eDP-1 (3840×2160@60 Hz, default 1920×1080 buffer), NVIDIA Quadro T2000 via PRIME offload under Xwayland, hands off, 60 s (`FrameTimeStats`, 10 s windows):
+
+| Window | fps | p50 | p95 | p99 | max | janky |
+|---|---|---|---|---|---|---|
+| 1 (startup) | 58.8 | 16.70 ms | 18.84 ms | 30.60 ms | 146.48 ms | 7 |
+| 2 | 59.7 | 16.70 ms | 18.91 ms | 19.69 ms | 50.00 ms | 2 |
+| 3 | 59.6 | 16.70 ms | 18.79 ms | 19.36 ms | 50.49 ms | 3 |
+| 4 | 60.0 | 16.70 ms | 19.21 ms | 19.56 ms | 19.75 ms | 0 |
+| 5 | 60.0 | 16.70 ms | 19.20 ms | 19.54 ms | 22.69 ms | 0 |
+| 6 | 60.0 | 16.70 ms | 19.22 ms | 19.58 ms | 20.45 ms | 0 |
+
+No frame over 100 ms after startup. Earlier the same day this path also showed intermittent 100–420 ms presentation stalls unrelated to the buffer size; they are tracked separately.
+
 ## Dependencies
 
 _None._
@@ -46,5 +61,5 @@ _None._
 - [x] Toggling fullscreen or resizing the window rebuilds the buffer at the new size; the image is not stretched out of its aspect ratio (checked live on DP-4: radial waves stay round fullscreen and windowed).
 - [x] `render_max = WxH` changes the cap, `render_max = 0` removes it, pixel `render_width/height` fix the size, and percentage values follow the current output (unit-tested on the size computation).
 - [x] Waves, quotes, flashes and tab presets render correctly after a size change (screenshots after each toggle; presets load at `resolution()`, the current buffer size).
-- [ ] A fullscreen benchmark on DP-4 (unlocked session) shows no frames over 100 ms in steady state, recorded in this initiative. Pending: DP-4 is at 24 Hz (2026-10-25); benchmark with it back at 60 Hz.
+- [x] A fullscreen benchmark on the built-in panel (eDP-1, 60 Hz; DP-4 runs at 24 Hz), hands off, shows no frames over 100 ms in steady state, recorded in this initiative.
 - [x] `cthugha.ini`'s comments and project docs (`CLAUDE.md`, `docs/RENDERING_PIPELINE.md`) describe the sizing.

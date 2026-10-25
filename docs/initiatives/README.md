@@ -27,9 +27,8 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
-| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | in-progress<br><sub>on develop</sub> | — | 0 | — |
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | designed | ✅ ready | 0 | — |
-| 9 | [Cross-fade between simulation steps for smooth presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | designed | ⛔ 1 | 0 | — |
+| 9 | [Cross-fade between simulation steps for smooth presentation](09-decouple-simulation-from-display-with-interpolated-presentat.md) | spike | designed | ✅ ready | 0 | — |
 | 10 | [Make primitive parameter values safe to read across threads](10-make-primitive-parameter-values-safe-to-read-across-threads.md) | bug | draft | — | 0 | — |
 | 12 | [Global animatable transform applied to the whole render](12-global-animatable-transform-applied-to-the-whole-render.md) | feature | draft | — | 0 | — |
 | 13 | [Gradient-based palette designer](13-gradient-based-palette-designer.md) | feature | draft | — | 0 | — |
@@ -53,9 +52,8 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 ```mermaid
 flowchart RL
-  n1["🚧 1 Size the internal render buffer from the display at a chosen resolution"]
   n7["🟢 7 Upload video frames asynchronously via pixel buffer objects"]
-  n9["📐 9 Cross-fade between simulation steps for smooth presentation"]
+  n9["🟢 9 Cross-fade between simulation steps for smooth presentation"]
   n10["✏️ 10 Make primitive parameter values safe to read across threads"]
   n12["✏️ 12 Global animatable transform applied to the whole render"]
   n13["✏️ 13 Gradient-based palette designer"]
@@ -74,6 +72,7 @@ flowchart RL
   n30["✏️ 30 Save both morph slots in screen configs"]
   n31["✏️ 31 Make beat decay and spectrum peaks frame-rate independent"]
   n32["✏️ 32 Find and remove the 100-400 ms presentation stalls"]
+  n1["✅ <s>1 Size the internal render buffer from the display at a chosen resolution</s>"]
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
   n28["✅ <s>28 Morph between translation maps: two slots and an animatable Mix</s>"]
@@ -86,7 +85,6 @@ flowchart RL
   n25 --> n3
   n30 --> n28
   n31 --> x1
-  click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n7 href "07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md"
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
   click n10 href "10-make-primitive-parameter-values-safe-to-read-across-threads.md"
@@ -107,6 +105,7 @@ flowchart RL
   click n30 href "30-save-both-morph-slots-in-screen-configs.md"
   click n31 href "31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md"
   click n32 href "32-find-and-remove-the-100-400-ms-presentation-stalls.md"
+  click n1 href "01-cap-the-internal-render-resolution-at-high-window-sizes.md"
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
   click n28 href "28-blend-between-two-translation-maps-over-time.md"
@@ -118,7 +117,7 @@ flowchart RL
 - **agent-control** — Driving and documenting the app programmatically: parameter-tree docs, MCP, live content · 3 open, 0 closed or deferred
 - **remote-ui** — Work mostly in the React remote UI (:remote-ui) · 3 open, 0 closed or deferred
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 2 open, 3 closed or deferred
-- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 5 open, 5 closed or deferred
+- **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 4 open, 6 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 3 closed or deferred
 - **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
@@ -127,6 +126,7 @@ flowchart RL
 
 | # | Initiative | Type | Updated |
 |---|------------|------|---------|
+| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | 2026-10-25 |
 | 2 | [Bundle a pinned JDK 25 runtime with the app](02-bundle-a-pinned-jdk-25-runtime-with-the-app.md) | build | 2026-10-24 |
 | 3 | [Update all dependencies to their latest releases](03-update-all-dependencies-to-their-latest-releases.md) | chore | 2026-10-24 |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | 2026-10-25 |
