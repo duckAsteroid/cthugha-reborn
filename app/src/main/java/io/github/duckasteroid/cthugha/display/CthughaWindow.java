@@ -216,7 +216,8 @@ public class CthughaWindow extends GLWindow {
 
     /**
      * Logs all connected monitors (so the user can pick an index for [display] monitor),
-     * then moves the window to the configured monitor if it is not the primary (index 0).
+     * then moves the window to the configured monitor (including 0: otherwise the window manager
+     * picks, e.g. whichever monitor has focus).
      * GLFW is available here because super() has already called glfwInit().
      */
     private void applyMonitorPosition() {
@@ -225,7 +226,6 @@ public class CthughaWindow extends GLWindow {
             LOG.info("Monitor {}: {}", i, monitors.get(i));
         }
         int monIdx = CFG.getConfigAs("display", "monitor", "0", Integer::parseInt);
-        if (monIdx == 0) return;
         if (monIdx >= monitors.size()) {
             LOG.warn("[display] monitor={} not found ({} monitors available)", monIdx, monitors.size());
             return;
