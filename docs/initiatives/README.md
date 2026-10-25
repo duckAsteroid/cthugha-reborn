@@ -44,7 +44,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
 | 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | — | 0 | — |
-| 31 | [Make beat decay and spectrum peaks frame-rate independent](31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md) | bug | draft | ext: [github.com/…/32](https://github.com/duckAsteroid/opengl-jogl-template/issues/32) | 0 | — |
+| 31 | [Make beat decay and spectrum peaks frame-rate independent](31-make-beat-decay-and-spectrum-peaks-frame-rate-independent.md) | bug | draft | — | 1 | — |
 | 33 | [Choose the GPU and windowing platform, with native Wayland support](33-choose-the-gpu-and-windowing-platform-with-native-wayland-su.md) | feature | draft | — | 3 | — |
 
 ### Dependencies
@@ -74,7 +74,6 @@ flowchart RL
   n8["✅ <s>8 Make the flame simulation independent of display frame rate</s>"]
   n3["✅ <s>3 Update all dependencies to their latest releases</s>"]
   n28["✅ <s>28 Morph between translation maps: two slots and an animatable Mix</s>"]
-  x1{{"🔗 https://github.com/duckAsteroid/opengl-jogl-template/issues/32"}}
   n9 --> n1
   n9 --> n8
   n22 --> n3
@@ -82,7 +81,6 @@ flowchart RL
   n24 --> n3
   n25 --> n3
   n30 --> n28
-  n31 --> x1
   click n9 href "09-decouple-simulation-from-display-with-interpolated-presentat.md"
   click n10 href "10-make-primitive-parameter-values-safe-to-read-across-threads.md"
   click n12 href "12-global-animatable-transform-applied-to-the-whole-render.md"
@@ -106,7 +104,6 @@ flowchart RL
   click n8 href "08-make-the-flame-simulation-independent-of-display-frame-rate.md"
   click n3 href "03-update-all-dependencies-to-their-latest-releases.md"
   click n28 href "28-blend-between-two-translation-maps-over-time.md"
-  click x1 href "https://github.com/duckAsteroid/opengl-jogl-template/issues/32"
 ```
 
 ### Themes
