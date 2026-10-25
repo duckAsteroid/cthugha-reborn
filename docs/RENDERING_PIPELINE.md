@@ -350,7 +350,7 @@ buffer and issues `glTexSubImage2D` from that slot's offset into `videoTex` (wit
 GPU, so no pixel data passes through the GL thread. `videoTex` is allocated in `init()`
 and reallocated only across a resolution change on `loadVideo`. It then draws a full-screen quad with a
 GLSL shader supporting colour mode (colour / greyscale / black-and-white), invert, a
-vignette, the same `TransformParams` translate/scale/shear/rotate/perspective
+vignette, the same `TransformParams` zoom/rotation/spin/stretch/translation/shear/perspective
 convention used by `QuotePhase`/wave models, and a `BlendMode` (`NORMAL`, `ADD`,
 `MULTIPLY`, `SCREEN`, `DARKEN`, `LIGHTEN`) mapped to paired `glBlendFunc`/
 `glBlendEquation` state (`DARKEN`/`LIGHTEN` use the `GL_MIN`/`GL_MAX` equations, which

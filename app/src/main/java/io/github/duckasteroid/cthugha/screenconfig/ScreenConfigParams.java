@@ -190,7 +190,7 @@ public class ScreenConfigParams {
      * later code change) rather than which alternative subtree happened to be attached first.</p>
      */
     public static void apply(Node root, Snapshot snapshot) {
-        applyDynamicChildren(root, snapshot.dynamicChildren());
+        applyDynamicChildren(root, LegacyValues.migrateDynamicChildren(snapshot.dynamicChildren()));
         List<RestoreAware> restoreAware = collectRestoreAware(root);
         restoreAware.forEach(RestoreAware::beginRestore);
         try {

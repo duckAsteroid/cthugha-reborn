@@ -15,7 +15,10 @@ interface SliderControlProps {
 const DEBOUNCE_MS = 150;
 const LOG_EXPONENT = 3;
 
+// 'geometric' matches GeometricDoubleParameter's binding mapping, value = min * (max/min)^t,
+// so equal slider steps multiply the value by equal factors (1x mid-range in 0.25x-4x).
 function toSlider(v: number, min: number, max: number, scale?: string): number {
+  if (scale === 'geometric' && min > 0 && v > 0) return Math.log(v / min) / Math.log(max / min);
   const t = (v - min) / (max - min);
   if (scale === 'log') return 1 - Math.pow(1 - t, 1 / LOG_EXPONENT);
   return t;
@@ -23,7 +26,8 @@ function toSlider(v: number, min: number, max: number, scale?: string): number {
 
 function fromSlider(t: number, min: number, max: number, scale?: string, integer?: boolean): number {
   let v: number;
-  if (scale === 'log') v = min + (max - min) * (1 - Math.pow(1 - t, LOG_EXPONENT));
+  if (scale === 'geometric' && min > 0) v = min * Math.pow(max / min, t);
+  else if (scale === 'log') v = min + (max - min) * (1 - Math.pow(1 - t, LOG_EXPONENT));
   else v = min + (max - min) * t;
   return integer ? Math.round(v) : v;
 }

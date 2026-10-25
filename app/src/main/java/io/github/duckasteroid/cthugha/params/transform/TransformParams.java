@@ -4,69 +4,93 @@ import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
+import io.github.duckasteroid.cthugha.params.values.GeometricDoubleParameter;
 import org.joml.Matrix4f;
 
 import java.util.function.DoublePredicate;
 
 /**
- * A composite parameter node that exposes the components of a 2-D transform as
- * individually tunable parameters.
+ * A composite parameter node that exposes the components of a 2-D transform as individually
+ * tunable, animatable parameters, led by the ones most often animated:
  *
- * <p>The transform is built from five child parameter groups, applied to the geometry in this
- * order by {@link #applyTo(Matrix4f, float)} (i.e. {@link #rotate} acts first, in local/object
- * space, and {@link #translate} acts last, positioning the already-shaped result — so scaling or
- * rotating never amplifies a translation you've already dialled in):</p>
- * <ol>
+ * <ul>
+ *   <li>{@link #zoom} – uniform scale, 0.25×–4× on a geometric scale, so 1× sits at the middle
+ *       of a binding's [0,1] and {@code sine()} pulses evenly around normal size.</li>
+ *   <li>{@link #rotation} – fixed angle in degrees, 0–360, about {@link #pivot}.</li>
+ *   <li>{@link #spin} – continuous rotation in revolutions per second (negative = anticlockwise),
+ *       accumulated from elapsed time and added to {@link #rotation}.</li>
+ *   <li>{@link #stretch} – X/Y scale factors multiplied with {@link #zoom}, for unequal
+ *       stretching (a collapsed group in the remote UI).</li>
+ *   <li>{@link #pivot} – the rotation centre in NDC space (origin = screen centre).</li>
+ *   <li>{@link #translate} – X/Y offset in NDC units.</li>
+ *   <li>{@link #shear} – X/Y shear factors.</li>
  *   <li>{@link #perspective} – optional perspective projection (disabled by default).</li>
- *   <li>{@link #rotate} – rotation angle in radians around {@link #rotateCenter}, aspect-corrected
- *       so it stays circular rather than squishing on a non-square viewport.</li>
- *   <li>{@link #shear} – x/y shear factors (identity = 0).</li>
- *   <li>{@link #scale} – x/y scale factors (identity = 1).</li>
- *   <li>{@link #translate} – x/y translation offsets in NDC units (identity = 0).</li>
- * </ol>
+ * </ul>
  *
- * <p>Each affine component is skipped when it equals its identity value (checked to 10 decimal
- * places), avoiding unnecessary matrix multiplications.</p>
+ * <p>{@link #applyTo(Matrix4f, float)} applies them to the geometry in a fixed order: rotate
+ * (about the pivot, aspect-corrected) → shear → scale → translate, inside the perspective
+ * projection when it is enabled. Rotation and scale therefore act in the element's own space,
+ * so a translated element spins and zooms in place, and scaling or rotating never amplifies a
+ * translation. Each component is skipped when it is at its identity value (to 10 decimal
+ * places).</p>
  */
 public class TransformParams extends ParamNode {
 
-  /** Optional perspective projection applied before the affine components. */
-  public final PerspectiveParams perspective = new PerspectiveParams();
+  /** Longest gap between {@link #applyTo} calls that {@link #spin} advances over, in seconds. */
+  static final double MAX_SPIN_STEP_SECONDS = 0.25;
 
-  /** X and Y scale factors; identity value is 1.0 for both components. */
-  public final XYParam scale = new XYParam("Scale", 0.05, 10.0, 1.0);
+  /** Uniform scale multiplier; identity 1.0, geometric so 1.0 is mid-range. */
+  public final GeometricDoubleParameter zoom = new GeometricDoubleParameter("Zoom", 0.25, 4.0, 1.0);
 
-  /** X and Y shear factors; identity value is 0.0 for both components. */
-  public final XYParam shear = new XYParam("Shear", -3.0, 3.0, 0.0);
+  /** Fixed rotation angle in degrees, in {@code [0, 360]}. */
+  public final DoubleParameter rotation = new DoubleParameter("Rotation", 0, 360, 0);
+
+  /** Continuous rotation speed in revolutions per second; negative is anticlockwise. */
+  public final DoubleParameter spin = new DoubleParameter("Spin", -5, 5, 0);
+
+  /** X and Y scale factors, multiplied with {@link #zoom}; identity value is 1.0. */
+  public final XYParam stretch = new XYParam("Stretch", 0.05, 10.0, 1.0);
+
+  /** Centre point for rotation in NDC space (origin = screen centre). */
+  public final XYParam pivot = new XYParam("Pivot", -1, 1, 0).withPadControl();
 
   /** X and Y translation offsets in NDC units; identity value is 0.0. */
   public final XYParam translate = new XYParam("Translation", -2.0, 2.0, 0.0);
 
-  /** Rotation angle in radians, in the range {@code [0, 2π]}. */
-  public final DoubleParameter rotate = new DoubleParameter("Rotation in radians", 0, 2 * Math.PI);
+  /** X and Y shear factors; identity value is 0.0 for both components. */
+  public final XYParam shear = new XYParam("Shear", -3.0, 3.0, 0.0);
 
-  /** Centre point for rotation in NDC space (origin = screen centre). */
-  public final XYParam rotateCenter = new XYParam("Rotation center point", -1, 1, 0).withPadControl();
+  /** Optional perspective projection applied around the affine components. */
+  public final PerspectiveParams perspective = new PerspectiveParams();
+
+  /** Angle {@link #spin} has turned through, in degrees within {@code [0, 360)}. GL thread only. */
+  private double spinDegrees;
+  /** {@link System#nanoTime()} of the last {@link #applyTo}; {@code -1} before the first. */
+  private long lastApplyNanos = -1;
 
   /**
    * @param name display name for this transform parameter group
    */
   public TransformParams(String name) {
     super(name);
-    rotate.withUiHint(UiHint.ICON, "rotate-cw");
-    initChildren(perspective, scale, shear, translate, rotate, rotateCenter);
+    rotation.withUiHint(UiHint.ICON, "rotate-cw");
+    initChildren(zoom, rotation, spin, stretch, pivot, translate, shear, perspective);
 
-    perspective.withDescription("Optional 3-D perspective projection applied before the affine "
-        + "components below (scale, translate, shear, rotate).");
-    scale.withDescription("X/Y scale factors applied to the geometry. 1.0 on both axes is "
-        + "identity (no scaling).");
-    shear.withDescription("X/Y shear factors applied to the geometry. 0.0 on both axes is "
-        + "identity (no shear).");
+    zoom.withDescription("Uniform size: 1 is normal, 0.25 a quarter, 4 four times. Multiplies "
+        + "Stretch X/Y. Animating it with sine() pulses evenly around normal size.");
+    rotation.withDescription("Fixed rotation angle in degrees, around Pivot. Spin turns on top of it.");
+    spin.withDescription("Continuous rotation in revolutions per second around Pivot; negative "
+        + "turns anticlockwise, 0 stops.");
+    stretch.withDescription("X/Y scale factors, multiplied by Zoom, for stretching one axis more "
+        + "than the other. 1.0 on both axes is no stretch.");
+    pivot.withDescription("Centre of Rotation and Spin, in NDC space where (0,0) is the screen "
+        + "centre. Away from the element, Spin makes it orbit this point.");
     translate.withDescription("X/Y translation offset in NDC units. 0.0 on both axes is "
         + "identity (no offset).");
-    rotate.withDescription("Rotation angle in radians, applied around Rotation Center Point.");
-    rotateCenter.withDescription("Pivot point for the rotation, in NDC space where (0,0) is the "
-        + "screen centre.");
+    shear.withDescription("X/Y shear factors applied to the geometry. 0.0 on both axes is "
+        + "identity (no shear).");
+    perspective.withDescription("Optional 3-D perspective projection around the affine "
+        + "components above.");
   }
 
   /** Returns a predicate that is true when a double equals {@code expected} to {@code dp} decimal places. */
@@ -82,22 +106,26 @@ public class TransformParams extends ParamNode {
   public final DoublePredicate ZERO = equals(0.0, 10);
 
   /**
-   * Applies the active components of this parameter group to {@code matrix} and returns it.
-   * The supplied matrix is mutated in place.  All coordinates are in NDC space.
+   * Applies the active components of this parameter group to {@code matrix} and returns it,
+   * first advancing {@link #spin} by the time since the last call (at most
+   * {@value #MAX_SPIN_STEP_SECONDS} s, so a stall doesn't jump the angle). The supplied matrix
+   * is mutated in place. All coordinates are in NDC space. GL thread only.
    *
    * <p>If {@link PerspectiveParams#enabled} is true, a perspective projection followed by the
    * configured z-distance translation is applied first, making the subsequent affine components
    * act as model transforms within the 3-D view.</p>
-   *
-   * <p>Rotation, shear and scale are applied before translation (see class docs for why), and
-   * rotation is corrected for {@code aspect} (viewport width / height) so it sweeps a circle
-   * rather than an ellipse on a non-square viewport.</p>
    *
    * @param matrix the transform to modify
    * @param aspect viewport width / height; pass 1.0 if unknown or the viewport is square
    * @return the same {@code matrix} instance, after applying the active components
    */
   public Matrix4f applyTo(Matrix4f matrix, float aspect) {
+    return applyTo(matrix, aspect, System.nanoTime());
+  }
+
+  /** As {@link #applyTo(Matrix4f, float)}, at an explicit time ({@link System#nanoTime()} scale). */
+  Matrix4f applyTo(Matrix4f matrix, float aspect, long nowNanos) {
+    advanceSpin(nowNanos);
     if (perspective.enabled.value) {
       float fovY = (float) Math.toRadians(perspective.fovY.value);
       float zDist = (float) perspective.zDistance.value;
@@ -106,8 +134,10 @@ public class TransformParams extends ParamNode {
     if (!translate.is(ZERO)) {
       matrix.translate((float) translate.x.value, (float) translate.y.value, 0f);
     }
-    if (!scale.is(UNITY)) {
-      matrix.scale((float) scale.x.value, (float) scale.y.value, 1f);
+    double scaleX = zoom.value * stretch.x.value;
+    double scaleY = zoom.value * stretch.y.value;
+    if (!UNITY.test(scaleX) || !UNITY.test(scaleY)) {
+      matrix.scale((float) scaleX, (float) scaleY, 1f);
     }
     if (!shear.is(ZERO)) {
       float shx = (float) shear.x.value;
@@ -121,10 +151,11 @@ public class TransformParams extends ParamNode {
           0f, 0f, 0f, 1f
       ));
     }
-    if (rotate.value % (2 * Math.PI) != 0.0) {
-      float cx = (float) rotateCenter.x.value;
-      float cy = (float) rotateCenter.y.value;
-      float angle = (float) rotate.value;
+    double degrees = (rotation.value + spinDegrees) % 360.0;
+    if (!ZERO.test(degrees)) {
+      float cx = (float) pivot.x.value;
+      float cy = (float) pivot.y.value;
+      float angle = (float) Math.toRadians(degrees);
       float invAspect = aspect == 0f ? 1f : 1f / aspect;
       // Rotating raw NDC coordinates squishes on a non-square viewport (x and y NDC units cover
       // different physical extents); scale into aspect-corrected units, rotate, then scale back.
@@ -135,5 +166,20 @@ public class TransformParams extends ParamNode {
           .translate(-cx, -cy, 0f);
     }
     return matrix;
+  }
+
+  /** Turns {@link #spinDegrees} by {@link #spin} over the time since the last call. */
+  private void advanceSpin(long nowNanos) {
+    if (lastApplyNanos >= 0) {
+      double seconds = Math.min(MAX_SPIN_STEP_SECONDS, Math.max(0, (nowNanos - lastApplyNanos) / 1e9));
+      double turned = (spinDegrees + spin.value * 360.0 * seconds) % 360.0;
+      spinDegrees = turned < 0 ? turned + 360.0 : turned;
+    }
+    lastApplyNanos = nowNanos;
+  }
+
+  /** The angle {@link #spin} has accumulated, in degrees within {@code [0, 360)}. */
+  double spinDegrees() {
+    return spinDegrees;
   }
 }

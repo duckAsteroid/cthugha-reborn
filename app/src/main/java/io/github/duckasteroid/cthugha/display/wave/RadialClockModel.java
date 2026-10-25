@@ -47,7 +47,7 @@ public class RadialClockModel extends ParamNode {
     /** RGB colour at the furthest possible outward extent -- used in OVERLAY/BOTH. */
     public ColorParam outerColorRgb = new ColorParam("outerColorRgb");
 
-    public TransformParams transform = new TransformParams("transform");
+    public TransformParams transform = new TransformParams("Transform");
 
     /** Default name, used by the fixed single-instance construction path. */
     public static final String DEFAULT_NAME = "RadialClock";

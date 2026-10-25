@@ -30,7 +30,7 @@ public class OscilloscopeModel extends ParamNode {
     public DoubleParameter lineWidth = new DoubleParameter("lineWidth", 0.5, 10.0, 2.0);
     public BooleanParameter ellipse = new BooleanParameter("ellipse", false);
     public EnumParameter<ChannelMode> channelMode = new EnumParameter<>("channelMode", Arrays.asList(ChannelMode.values()));
-    public TransformParams transform = new TransformParams("transform");
+    public TransformParams transform = new TransformParams("Transform");
 
     /** Default name, used by the fixed single-instance construction path. */
     public static final String DEFAULT_NAME = "Oscilloscope";

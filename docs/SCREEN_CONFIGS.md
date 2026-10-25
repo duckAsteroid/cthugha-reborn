@@ -68,7 +68,8 @@ The insertion order is not incidental — it is the whole reason `apply()` is sa
 
 ```
 apply(root, snapshot)
-  for each (path, specs) in snapshot.dynamicChildren():        ← runs FIRST, in full
+  for each (path, specs) in LegacyValues.migrateDynamicChildren(snapshot.dynamicChildren()):
+                                                               ← runs FIRST, in full
       target = root.getChild(path.split("/"))
       if target implements DynamicChildList → target.recreate(specs)
 
@@ -84,9 +85,20 @@ apply(root, snapshot)
 ```
 
 `LegacyValues` rewrites values saved under parameters that have since been renamed and re-scaled,
-so older screen configs, the auto-saved session and beat presets load with the same effect: a beat
-detector `Decay` (per frame, tuned at 60 fps) becomes `Decay Time` in seconds,
-`1 / (perFrame × 60)`, unless the snapshot already has a `Decay Time`.
+so older screen configs, the auto-saved session and beat presets load with the same effect, unless
+the snapshot already has a value under the new name:
+
+- a beat detector `Decay` (per frame, tuned at 60 fps) becomes `Decay Time` in seconds,
+  `1 / (perFrame × 60)`;
+- in a transform, a wave model's `transform` becomes `Transform`, `Scale` becomes `Stretch`,
+  `Rotation center point` becomes `Pivot`, and `Rotation in radians` becomes `Rotation` in degrees.
+  Paths are rewritten in value keys, in binding `target` values, and in the binding names and
+  targets of the dynamic-children specs (`LegacyValues.migrateDynamicChildren`, applied before
+  recreation); a binding made from the remote UI is named after its target path with `›` for `/`,
+  so its name is rewritten segment by segment.
+
+The conversion is in memory: a named config keeps its old paths on disk until it is re-saved,
+while the auto-saved session is re-written in the new form at its next save.
 
 Dynamic-child recreation always runs to completion before a single leaf value is applied, so by
 the time the leaf-value pass reaches e.g. `Bindings/Trigger 1/condition`, `recreate()` has already

@@ -1,8 +1,12 @@
 ---
 type: feature
-status: designed
+status: done
 updated: 2026-10-25
 tags: [transforms]
+docs_impact:
+  - CLAUDE.md
+  - docs/RENDERING_PIPELINE.md
+  - docs/SCREEN_CONFIGS.md
 ---
 # Make TransformParams easy to animate
 
@@ -15,6 +19,11 @@ Make the per-element affine transform (TransformParams, used by every wave model
 3. **Rotation is an angle, not a spin.** "Rotation in radians" is clamped to [0, 2π]; continuous spin needs a hand-written `saw(...)` binding, there is no speed control, and radians are an unfriendly unit.
 4. **Fixed composition order.** applyTo() always applies rotate → shear → scale → translate.
 5. **Inconsistent naming.** `transform` (wave models) vs `Transform` (QuotePhase, VideoPhase); verbose leaf names like "Rotation in radians" and "Rotation center point" alongside terse "Translation" — awkward to type into binding target paths and scripts.
+
+## Verification
+
+- Unit tests: `TransformParamsTest` (Zoom × Stretch, Zoom's geometric mapping with 1× at 0.5, Spin by elapsed time, no jump on a speed change, the stall cap, Spin added to Rotation, plus the existing order and aspect tests) and `LegacyValuesTest` (transform paths and radians → degrees; binding names, targets and dynamic-children specs; unrelated `Scale` paths untouched).
+- Live, 2026-10-25: the auto-saved session restored with RadialSpectrum 1's `sine(0.05)` binding (saved as `Wave›RadialSpectrum 1›transform›Rotation in radians`) driving `Wave/RadialSpectrum 1/Transform/Rotation`, and Zoom serialised with the `geometric` slider scale. Loading the saved configs `coldfire` and `einstein eye` applied every transform value (only the three no-persist General settings were skipped, as before), and screenshots show the transformed waves and video.
 
 ## Dependencies
 
@@ -33,6 +42,8 @@ _None._
 - **Add "Spin", in revolutions per second, −5 to +5** (negative = anticlockwise; 0 = stopped, the middle of a binding's [0,1], linear). The angle accumulates from elapsed time each frame, so speed changes never jump the picture. **"Rotation in radians" becomes "Rotation", a fixed angle in degrees, 0–360**, to which Spin's accumulated angle is added; saved radian values convert on load. (Owner, 2026-10-25.)
 - **Composition order stays fixed and out of scope**: rotate (about the rotation centre) → shear → scale → translate, inside perspective when enabled (`TransformParams.java:100–137`). Spin and Zoom act in the element's own space, so a translated element spins and zooms in place; orbiting comes from a rotation centre away from the element. A different order, if an effect needs one, belongs with ct#20's animation packages. (Owner, 2026-10-25.)
 - **Migrate old paths on load (A).** New names: every transform is `Transform` (waves used `transform`); new `Zoom` and `Spin`; `Scale/X|Y` → `Stretch/X|Y`; `Rotation in radians` → `Rotation` (degrees); `Rotation center point` → `Pivot`; `Translation`, `Shear` and `Perspective` unchanged. `LegacyValues` (ct#31) renames the old paths, converts radians to degrees, and rewrites binding target strings that point at old paths, so screen configs, the auto-saved session and beat presets load with the same look and their bindings keep driving the renamed leaves (a full turn either way, so a binding's [0,1] means the same angle). The conversion is in memory on each load: the auto-saved session re-saves itself in the new form within its interval; named configs keep old paths on disk until re-saved, which is optional. (Owner, 2026-10-25.)
+- (implementation) Zoom is a new `GeometricDoubleParameter` (`params/values/`), which overrides `setNormalisedValue` and carries the `geometric` slider scale (`UiHint.SCALE_GEOMETRIC`). The leaves appear in the order Zoom, Rotation, Spin, Stretch, Pivot, Translation, Shear, Perspective.
+- (implementation) Spin advances in `applyTo()` by the time since the previous call, capped at 0.25 s so a stall or hidden window doesn't jump the angle; a second call in the same frame (a wave drawn in both passes) adds nothing.
 
 ## Open questions
 
@@ -40,9 +51,9 @@ _None._
 
 ## Acceptance criteria
 
-- [ ] Every transform (wave models, quotes, video) is named `Transform` and leads with `Zoom` (0.25×–4×, geometric: binding 0.5 → exactly 1×), `Rotation` (degrees, 0–360) and `Spin` (−5 to +5 rev/s); the X/Y scale sits in a collapsed `Stretch` group; the rotation centre is `Pivot` (unit-tested on the normalised mappings and on `applyTo()`).
-- [ ] One binding animates each common motion: `sine(…)` on Zoom pulses evenly around normal size, a constant Spin turns continuously, and changing Spin never makes the angle jump (unit test: accumulated angle across a speed change); Zoom composes with Stretch X/Y (horizontal scale = Zoom × X).
-- [ ] The remote UI's Zoom slider uses a `geometric` scale matching the binding mapping (1× at the middle).
-- [ ] Old saved values load with the same look: `Scale/X|Y`, `Rotation in radians` (converted to degrees), `Rotation center point` and wave `transform/…` paths are migrated by `LegacyValues`, and binding targets pointing at old paths are rewritten (unit-tested; live check loading an existing screen config with a rotation binding).
-- [ ] The default "osc rotation" binding (`JCthugha.resetToDefaults`) targets the new path.
-- [ ] Project docs (`CLAUDE.md` Transforms, `docs/PARAMS.md` / `docs/SCREEN_CONFIGS.md` where they name these leaves) describe the new controls and the migration.
+- [x] Every transform (wave models, quotes, video) is named `Transform` and leads with `Zoom` (0.25×–4×, geometric: binding 0.5 → exactly 1×), `Rotation` (degrees, 0–360) and `Spin` (−5 to +5 rev/s); the X/Y scale sits in a collapsed `Stretch` group; the rotation centre is `Pivot` (unit-tested on the normalised mappings and on `applyTo()`).
+- [x] One binding animates each common motion: `sine(…)` on Zoom pulses evenly around normal size, a constant Spin turns continuously, and changing Spin never makes the angle jump (unit test: accumulated angle across a speed change); Zoom composes with Stretch X/Y (horizontal scale = Zoom × X).
+- [x] The remote UI's Zoom slider uses a `geometric` scale matching the binding mapping (1× at the middle).
+- [x] Old saved values load with the same look: `Scale/X|Y`, `Rotation in radians` (converted to degrees), `Rotation center point` and wave `transform/…` paths are migrated by `LegacyValues`, and binding targets pointing at old paths are rewritten (unit-tested; live check loading an existing screen config with a rotation binding).
+- [x] The default "osc rotation" binding (`JCthugha.resetToDefaults`) targets the new path.
+- [x] Project docs (`CLAUDE.md` Transforms, `docs/PARAMS.md` / `docs/SCREEN_CONFIGS.md` where they name these leaves) describe the new controls and the migration.

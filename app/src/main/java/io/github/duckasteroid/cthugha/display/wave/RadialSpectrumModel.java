@@ -39,7 +39,7 @@ public class RadialSpectrumModel extends ParamNode {
     /** Shows/hides the peak-hold line by setting the peak colour alpha to 1.0/0.0. */
     public BooleanParameter showPeakTicks = new BooleanParameter("showPeakTicks", true);
 
-    public TransformParams transform = new TransformParams("transform");
+    public TransformParams transform = new TransformParams("Transform");
 
     /** Default name, used by the fixed single-instance construction path. */
     public static final String DEFAULT_NAME = "RadialSpectrum";

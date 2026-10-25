@@ -187,7 +187,7 @@ public class JCthugha extends ParamNode implements Closeable {
 		bindings.recreate(List.of()); // drop bindings first: they may target the old wave instances
 		waveSystem.recreate(List.of(waveSpec(WaveSystem.WaveType.OSCILLOSCOPE)));
 		OscilloscopeModel osc = (OscilloscopeModel) waveSystem.instances().get(0);
-		bindings.addContinuous("osc rotation", osc.transform.rotate, "sine(0.05)");
+		bindings.addContinuous("osc rotation", osc.transform.rotation, "sine(0.05)");
 	}
 
 	private static DynamicChildList.ChildSpec waveSpec(WaveSystem.WaveType type) {

@@ -96,6 +96,14 @@ public final class UiHint {
     public static final String SCALE_LOG = "log";
 
     /**
+     * Value for {@link #SCALE}: geometric mapping, {@code value = min × (max/min)^t}, so equal
+     * slider steps multiply the value by equal factors and the geometric mean of the range sits
+     * at the middle (e.g. 1× in 0.25×–4×). Set by {@code GeometricDoubleParameter}, whose
+     * bindings use the same mapping.
+     */
+    public static final String SCALE_GEOMETRIC = "geometric";
+
+    /**
      * Value for {@link #CONTROL_TYPE} on a {@code StringNode}: renders a resizable
      * multi-line code editor.  Submit with Ctrl+Enter.  Compile errors are returned
      * in the PATCH response as {@code "compileError"}.

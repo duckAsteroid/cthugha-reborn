@@ -110,7 +110,7 @@ class JCthughaResetToDefaultsTest {
 
         List<ContinuousBinding> bindings = continuousBindings(app);
         assertEquals(1, bindings.size());
-        assertTrue(bindings.stream().anyMatch(b -> b.target.getValue().equals(osc.transform.rotate.getFullPath())));
+        assertTrue(bindings.stream().anyMatch(b -> b.target.getValue().equals(osc.transform.rotation.getFullPath())));
     }
 
     @Test

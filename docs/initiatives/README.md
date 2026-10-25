@@ -38,7 +38,6 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 18 | [MCP interface for agent control and scripting](18-mcp-interface-for-agent-control-and-scripting.md) | feature | draft | — | 0 | — |
 | 19 | [Live quotes from an external source](19-live-quotes-from-an-external-source.md) | feature | draft | — | 0 | — |
 | 20 | [Named animation packages with their own dials](20-named-animation-packages-with-their-own-dials.md) | feature | draft | — | 0 | — |
-| 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | designed | ✅ ready | 0 | — |
 | 22 | [Migrate to Jackson 3](22-migrate-to-jackson-3.md) | chore | draft | — | 0 | — |
 | 23 | [Migrate the remote server to Javalin 7](23-migrate-the-remote-server-to-javalin-7.md) | chore | draft | — | 0 | — |
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
@@ -61,7 +60,6 @@ flowchart RL
   n18["✏️ 18 MCP interface for agent control and scripting"]
   n19["✏️ 19 Live quotes from an external source"]
   n20["✏️ 20 Named animation packages with their own dials"]
-  n21["🟢 21 Make TransformParams easy to animate"]
   n22["✏️ 22 Migrate to Jackson 3"]
   n23["✏️ 23 Migrate the remote server to Javalin 7"]
   n24["✏️ 24 Migrate tests to JUnit 6"]
@@ -90,7 +88,6 @@ flowchart RL
   click n18 href "18-mcp-interface-for-agent-control-and-scripting.md"
   click n19 href "19-live-quotes-from-an-external-source.md"
   click n20 href "20-named-animation-packages-with-their-own-dials.md"
-  click n21 href "21-make-transformparams-easy-to-animate.md"
   click n22 href "22-migrate-to-jackson-3.md"
   click n23 href "23-migrate-the-remote-server-to-javalin-7.md"
   click n24 href "24-migrate-tests-to-junit-6.md"
@@ -110,7 +107,7 @@ flowchart RL
 - **render-core** — Fixes that land upstream in the render-core library, then get picked up here · 1 open, 5 closed or deferred
 - **smoothness** — Frame pacing and render-loop performance: stalls, dropped frames, per-frame cost · 2 open, 9 closed or deferred
 - **tab-generators** — Translation-table generators, presets and their regeneration · 3 open, 3 closed or deferred
-- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 3 open, 0 closed or deferred
+- **transforms** — Affine/perspective transforms (TransformParams) and animating them · 2 open, 1 closed or deferred
 - **upgrades** — Major-version dependency and toolchain migrations · 4 open, 1 closed or deferred
 
 ### Completed
@@ -126,6 +123,7 @@ flowchart RL
 | 7 | [Upload video frames asynchronously via pixel buffer objects](07-upload-video-frames-asynchronously-via-pixel-buffer-objects.md) | perf | 2026-10-25 |
 | 8 | [Make the flame simulation independent of display frame rate](08-make-the-flame-simulation-independent-of-display-frame-rate.md) | feature | 2026-10-25 |
 | 11 | [Bring CLAUDE.md up to date with the current codebase](11-bring-claude-md-up-to-date-with-the-current-codebase.md) | docs | 2026-10-24 |
+| 21 | [Make TransformParams easy to animate](21-make-transformparams-easy-to-animate.md) | feature | 2026-10-25 |
 | 26 | [Fix render-core's Agent-Docs manifest artifact name upstream](26-fix-render-core-s-agent-docs-manifest-artifact-name-upstream.md) | bug | 2026-10-25 |
 | 27 | [Move the agent-docs Gradle plugin to 3.x](27-move-the-agent-docs-gradle-plugin-to-3-x.md) | chore | 2026-10-25 |
 | 28 | [Morph between translation maps: two slots and an animatable Mix](28-blend-between-two-translation-maps-over-time.md) | feature | 2026-10-25 |
