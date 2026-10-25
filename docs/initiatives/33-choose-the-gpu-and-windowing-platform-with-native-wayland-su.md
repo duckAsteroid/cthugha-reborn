@@ -23,11 +23,17 @@ _None._
 ## Related
 
 - [32 Find and remove the 100-400 ms presentation stalls](32-find-and-remove-the-100-400-ms-presentation-stalls.md)
+- [https://github.com/duckAsteroid/opengl-jogl-template/issues/33](https://github.com/duckAsteroid/opengl-jogl-template/issues/33)
+- [https://github.com/duckAsteroid/opengl-jogl-template/issues/34](https://github.com/duckAsteroid/opengl-jogl-template/issues/34)
+
+## Decisions
+
+- **Code defaults stay today's behaviour (gpu = discrete, platform = x11)**, safe on machines that haven't been measured; this machine's `cthugha.ini` (the repo's `app/src/dist/cthugha.ini`, which already carries its monitor, network interface and beat tuning) sets `gpu = integrated` and `platform = wayland`, the steadiest path measured on it. (Owner: "whatever works", 2026-10-25.)
+- **Raise the two render-core behaviours the RC9 hook can't reach; keep the app's workarounds until a release fixes them.** Forced X11 needs no upstream change, since `GLFWConfigurer.beforeInit()` overrides it. Filed: [opengl-jogl-template#33](https://github.com/duckAsteroid/opengl-jogl-template/issues/33) (fullscreen and `getCurrentMonitor()` pick the monitor by window overlap, meaningless under Wayland) and [opengl-jogl-template#34](https://github.com/duckAsteroid/opengl-jogl-template/issues/34) (no accessor for the framebuffer size; `getWindow()` is in screen coordinates). The app keeps overriding `toggleFullscreen()`/`getCurrentMonitor()` under Wayland and tracking the framebuffer size itself; they are related, not blocking. (Owner, 2026-10-25.)
+- (implementation) **Use render-core 1.0.0-RC10's APIs instead of the spike's overrides** (RC10 fixes opengl-jogl-template #33 and #34): size the viewport and render buffer from `RenderContext.getFramebufferSize()` rather than tracking the framebuffer size in the app, and place the window on `[display] monitor` with a `WindowPlacement`/`moveToMonitor` (which RC10 records as the window's monitor under Wayland) so `getCurrentMonitor()` and `toggleFullscreen()` land there, rather than overriding them in `CthughaWindow`.
 
 ## Open questions
 
-- What should the defaults be? Today's behaviour is gpu = discrete, platform = x11 (NVIDIA through Xwayland); ct#32 measured integrated + wayland as steadier at today's settings but with little headroom, and it only applies on a PRIME laptop.
-- Raise upstream issues on render-core (forced X11 on Linux; fullscreen monitor chosen by window overlap, meaningless under Wayland; getWindow() in screen coordinates vs the framebuffer in pixels), or keep the workarounds in the app only?
 - Under native Wayland the window has no title bar (libdecor's GTK plugin fails to load), so a window can't be moved or resized with the mouse. Acceptable for windowed mode, or does platform = wayland need decorations (e.g. installing a libdecor plugin, or drawing our own)?
 
 ## Acceptance criteria

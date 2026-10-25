@@ -44,7 +44,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 | 24 | [Migrate tests to JUnit 6](24-migrate-tests-to-junit-6.md) | chore | draft | — | 0 | — |
 | 25 | [Move the remote-ui toolchain to its new major versions](25-move-the-remote-ui-toolchain-to-its-new-major-versions.md) | chore | draft | — | 0 | — |
 | 30 | [Save both morph slots in screen configs](30-save-both-morph-slots-in-screen-configs.md) | feature | draft | — | 0 | — |
-| 33 | [Choose the GPU and windowing platform, with native Wayland support](33-choose-the-gpu-and-windowing-platform-with-native-wayland-su.md) | feature | draft | — | 3 | — |
+| 33 | [Choose the GPU and windowing platform, with native Wayland support](33-choose-the-gpu-and-windowing-platform-with-native-wayland-su.md) | feature | draft | — | 1 | — |
 
 ### Dependencies
 
