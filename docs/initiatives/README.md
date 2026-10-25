@@ -27,7 +27,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 | # | Initiative | Type | Status | Ready / blocked by | Open Qs | Owner |
 |---|------------|------|--------|--------------------|---------|-------|
-| 1 | [Cap the internal render resolution at high window sizes](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 1 | — |
+| 1 | [Size the internal render buffer from the display at a chosen resolution](01-cap-the-internal-render-resolution-at-high-window-sizes.md) | perf | draft | — | 2 | — |
 | 4 | [Fix AudioReader busy-spin upstream in render-core](04-fix-audioreader-busy-spin-upstream-in-render-core.md) | bug | draft | ext: [github.com/…/29](https://github.com/duckAsteroid/opengl-jogl-template/issues/29) | 0 | — |
 | 5 | [Stop render-core wave setters allocating and rebuilding every frame](05-stop-render-core-wave-setters-allocating-and-rebuilding-ever.md) | perf | draft | ext: [github.com/…/30](https://github.com/duckAsteroid/opengl-jogl-template/issues/30) | 0 | — |
 | 6 | [Throttle tab regeneration driven by animation bindings](06-throttle-tab-regeneration-driven-by-animation-bindings.md) | bug | draft | — | 0 | — |
@@ -56,7 +56,7 @@ Planned work for Cthugha Reborn: features, fixes, performance and tooling for th
 
 ```mermaid
 flowchart RL
-  n1["✏️ 1 Cap the internal render resolution at high window sizes"]
+  n1["✏️ 1 Size the internal render buffer from the display at a chosen resolution"]
   n4["✏️ 4 Fix AudioReader busy-spin upstream in render-core"]
   n5["✏️ 5 Stop render-core wave setters allocating and rebuilding every frame"]
   n6["✏️ 6 Throttle tab regeneration driven by animation bindings"]

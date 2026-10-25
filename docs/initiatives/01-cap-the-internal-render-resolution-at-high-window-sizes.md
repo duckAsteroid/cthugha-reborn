@@ -4,11 +4,18 @@ status: draft
 updated: 2026-10-25
 tags: [smoothness]
 ---
-# Cap the internal render resolution at high window sizes
+# Size the internal render buffer from the display at a chosen resolution
 
 ## Goal
 
-Remove the remaining 150–450ms frame stalls seen fullscreen at 4K. The internal render buffer defaults to the window size (CthughaWindow#init, `render_width`/`render_height` in cthugha.ini), so a 3840×2160 fullscreen window runs translate, two blur passes and palette conversion over 8.3 Mpx, and on PRIME render-offload laptops every swap then copies the frame to the display GPU. Benchmarked 2026-10-24 (fullscreen DP-4, FrameTimeStats): at `render_width/height = 50%` mid-run stalls over 100ms disappeared and worst frames fell from 260–440ms to 33–86ms. Lowering resolution coarsens the flame spread (closer to original 320×200 Cthugha), so the default is a look decision as much as a performance one.
+Remove the remaining 150–450ms frame stalls seen when running fullscreen, and make the internal render resolution a deliberate choice rather than an accident of the configured window size.
+
+Today the indexed render buffer (translate, two blur passes, palette conversion input) is sized once in `CthughaWindow#init` (`CthughaWindow.java:279`) from `render_width`/`render_height`, defaulting to the window size *at init*. Fullscreen is applied afterwards (`CthughaWindow.java:484`), so the buffer is always the configured windowed size (2000×1000 in the shipped cthugha.ini, ~2 Mpx) and the final palette pass stretches it to the real output (3840×2160 on the dev machine). Consequences:
+
+- **Aspect distortion:** a 2:1 buffer is shown on a 16:9 display, so fullscreen stretches the image vertically. Changing window size or toggling fullscreen never changes the buffer.
+- **Cost unrelated to output:** the per-pixel simulation cost is set by the windowed size in cthugha.ini, not by the display.
+
+Benchmarked 2026-10-24 (fullscreen on DP-4, FrameTimeStats): `render_width/height = 50%` (1000×500) removed mid-run stalls over 100ms; worst frames fell from 260–440ms to 33–86ms. The final pass is nearest-neighbour (`renderTex` uses `Filter.NEAREST`, `CthughaWindow.java:401`, and `IndexPaletteRenderer` must sample whole palette indices), so a lower buffer resolution shows as visibly blockier pixels — closer to original 320×200 Cthugha, but a change to the look.
 
 ## Dependencies
 
@@ -17,6 +24,7 @@ _None._
 ## Open questions
 
 - What should the default be: a fixed cap on the longest side (e.g. 1920px), a percentage of the window, or keep full window resolution and only document the setting?
+- Should the buffer's aspect ratio (and size) follow the actual output — the window, or the monitor when fullscreen — rebuilding the R16 textures, FBOs and translation map whenever fullscreen is toggled or the window is resized, instead of being fixed at init from cthugha.ini's windowed size?
 
 ## Acceptance criteria
 
