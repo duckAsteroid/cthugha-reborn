@@ -117,6 +117,52 @@ class ContinuousBindingTest {
     }
 
     @Test
+    void disablingGivesBackTheValueItTookOverAndReenablingTakesOverAgain() {
+        Section section = new Section();
+        section.value.value = 0.2;
+        ContinuousBinding binding = bindingFor(section, "value", "0.75");
+        binding.tick();
+        assertEquals(0.75, section.value.value, 1e-9);
+        assertEquals(0.2, binding.restValue(), 1e-9);
+
+        binding.enabled.value = false;
+        binding.tick();
+        assertEquals(0.2, section.value.value, 1e-9);
+        assertFalse(section.value.isControlled());
+
+        // Moved by hand while off: that becomes the value to come back to.
+        section.value.value = 0.4;
+        binding.enabled.value = true;
+        binding.tick();
+        assertEquals(0.75, section.value.value, 1e-9);
+        assertEquals(0.4, binding.restValue(), 1e-9);
+    }
+
+    @Test
+    void releasingGivesBackTheRememberedValue() {
+        Section section = new Section();
+        section.value.value = 0.3;
+        ContinuousBinding binding = bindingFor(section, "value", "0.75");
+        binding.setRestValue(0.1); // as restored from a saved config
+        binding.tick();
+
+        binding.release();
+
+        assertEquals(0.1, section.value.value, 1e-9);
+    }
+
+    @Test
+    void neverDrivenLeavesTheValueAlone() {
+        Section section = new Section();
+        section.value.value = 0.3;
+        ContinuousBinding binding = bindingFor(section, "value", "0.75");
+        binding.enabled.value = false;
+        binding.tick();
+        binding.release();
+        assertEquals(0.3, section.value.value, 1e-9);
+    }
+
+    @Test
     void deletingTheTargetReleasesControlWithNoExplicitCleanupCall() {
         Section section = new Section();
         ContinuousBinding binding = bindingFor(section, "value", "0.75");

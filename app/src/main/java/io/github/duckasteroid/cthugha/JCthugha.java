@@ -6,6 +6,7 @@ import io.github.duckasteroid.cthugha.beatpresets.BeatPresetStore;
 import io.github.duckasteroid.cthugha.binding.BindingSystem;
 import io.github.duckasteroid.cthugha.config.Config;
 import io.github.duckasteroid.cthugha.display.AudioSourceNode;
+import io.github.duckasteroid.cthugha.display.BeatClock;
 import io.github.duckasteroid.cthugha.display.phase.DebugBeatsPhase;
 import io.github.duckasteroid.cthugha.display.phase.FlashPhase;
 import io.github.duckasteroid.cthugha.display.phase.NotifPhase;
@@ -105,6 +106,10 @@ public class JCthugha extends ParamNode implements Closeable {
 	 * pipeline is initialised; read by binding scripts via {@link
 	 * io.github.duckasteroid.cthugha.binding.ScriptHelpers#setContext}. */
 	public volatile BeatDetector beatDetector;
+
+	/** Set by {@link io.github.duckasteroid.cthugha.display.phase.WavePhase} alongside {@link
+	 * #beatDetector}: the live tempo, beat phase and kick drum. */
+	public volatile BeatClock beatClock;
 
 	public MapFileReader reader;
 

@@ -1,7 +1,9 @@
 package io.github.duckasteroid.cthugha.params.transform;
 
+import io.github.duckasteroid.cthugha.params.Node;
 import io.github.duckasteroid.cthugha.params.ParamNode;
 import io.github.duckasteroid.cthugha.params.UiHint;
+import io.github.duckasteroid.cthugha.params.action.AbstractAction;
 
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.GeometricDoubleParameter;
@@ -20,7 +22,8 @@ import java.util.function.DoublePredicate;
  *       of a binding's [0,1] and {@code sine()} pulses evenly around normal size.</li>
  *   <li>{@link #rotation} – fixed angle in degrees, 0–360, about {@link #pivot}.</li>
  *   <li>{@link #spin} – continuous rotation in revolutions per second (negative = anticlockwise),
- *       accumulated from elapsed time and added to {@link #rotation}.</li>
+ *       accumulated from elapsed time and added to {@link #rotation}; at 0 the accumulated angle
+ *       eases back to rest, leaving {@link #rotation} alone.</li>
  *   <li>{@link #stretch} – X/Y scale factors multiplied with {@link #zoom}, for unequal
  *       stretching (a collapsed group in the remote UI).</li>
  *   <li>{@link #pivot} – the rotation centre in NDC space (origin = screen centre).</li>
@@ -29,6 +32,7 @@ import java.util.function.DoublePredicate;
  *   <li>{@link #perspective} – optional perspective projection, with Turn and Tip (and their
  *       spins) rotating the element in depth; used automatically when one of those, or a 3-D
  *       animation package, is active.</li>
+ *   <li>{@link #reset} – puts the values above back to their defaults and stops the spins.</li>
  *   <li>{@link #animations} – a stack of animation packages (Breathe, Coin Spin, …) whose
  *       per-frame effect {@code applyTo()} combines with the values above: zoom-like factors
  *       multiply, angles and positions add, so the values above are never overwritten.</li>
@@ -73,12 +77,17 @@ public class TransformParams extends ParamNode {
   /** Animation packages stacked on top of the values above. */
   public final AnimationList animations = new AnimationList();
 
+  /** Puts every value above back to its default and stops the spins; leaves {@link #animations}. */
+  public final AbstractAction reset = new AbstractAction("Reset", ctx -> resetToDefaults());
+
   /** Angles {@link #spin} and the perspective spins have turned through, in degrees within {@code [0, 360)}. GL thread only. */
   private double spinDegrees;
   private double turnSpinDegrees;
   private double tipSpinDegrees;
   /** {@link System#nanoTime()} of the last {@link #applyTo}; {@code -1} before the first. */
   private long lastApplyNanos = -1;
+  /** Set by {@link #resetToDefaults()} (any thread); the GL thread then zeroes the spin angles. */
+  private volatile boolean spinsReset;
   /** This frame's combined animation effect; reused every frame. GL thread only. */
   private final TransformOffsets offsets = new TransformOffsets();
 
@@ -88,14 +97,17 @@ public class TransformParams extends ParamNode {
   public TransformParams(String name) {
     super(name);
     rotation.withUiHint(UiHint.ICON, "rotate-cw");
-    initChildren(zoom, rotation, spin, stretch, pivot, translate, shear, perspective, animations);
+    initChildren(zoom, rotation, spin, stretch, pivot, translate, shear, perspective, reset, animations);
     animations.withUiHint(UiHint.DEFAULT_OPEN, "true");
+    reset.withUiHint(UiHint.ICON, "rotate-ccw");
+    reset.withDescription("Puts every setting above back to its default and stops the spins. "
+        + "Animations are left as they are.");
 
     zoom.withDescription("Uniform size: 1 is normal, 0.25 a quarter, 4 four times. Multiplies "
         + "Stretch X/Y. Animating it with sine() pulses evenly around normal size.");
     rotation.withDescription("Fixed rotation angle in degrees, around Pivot. Spin turns on top of it.");
     spin.withDescription("Continuous rotation in revolutions per second around Pivot; negative "
-        + "turns anticlockwise, 0 stops.");
+        + "turns anticlockwise. 0 stops it and turns it back to Rotation.");
     stretch.withDescription("X/Y scale factors, multiplied by Zoom, for stretching one axis more "
         + "than the other. 1.0 on both axes is no stretch.");
     pivot.withDescription("Centre of Rotation and Spin, in NDC space where (0,0) is the screen "
@@ -198,24 +210,34 @@ public class TransformParams extends ParamNode {
   }
 
   /**
+   * Resets every value except {@link #animations} to its default, and the angles turned by the
+   * spins to 0.
+   */
+  @Override
+  public void resetToDefaults() {
+    getChildren().filter(child -> child != animations).forEach(Node::resetToDefaults);
+    spinsReset = true;
+  }
+
+  /**
    * Seconds since the previous call (0 on the first, at most {@value #MAX_SPIN_STEP_SECONDS}),
-   * after turning the spin angles by their speeds over that time.
+   * after turning the spin angles by their speeds over that time; a spin set to 0 eases its
+   * angle back to rest ({@link Angles#settle}).
    */
   private double advance(long nowNanos) {
+    if (spinsReset) {
+      spinsReset = false;
+      spinDegrees = turnSpinDegrees = tipSpinDegrees = 0;
+    }
     double seconds = 0;
     if (lastApplyNanos >= 0) {
       seconds = Math.min(MAX_SPIN_STEP_SECONDS, Math.max(0, (nowNanos - lastApplyNanos) / 1e9));
-      spinDegrees = wrapDegrees(spinDegrees + spin.value * 360.0 * seconds);
-      turnSpinDegrees = wrapDegrees(turnSpinDegrees + perspective.turnSpin.value * 360.0 * seconds);
-      tipSpinDegrees = wrapDegrees(tipSpinDegrees + perspective.tipSpin.value * 360.0 * seconds);
+      spinDegrees = Angles.spin(spinDegrees, spin.value, seconds);
+      turnSpinDegrees = Angles.spin(turnSpinDegrees, perspective.turnSpin.value, seconds);
+      tipSpinDegrees = Angles.spin(tipSpinDegrees, perspective.tipSpin.value, seconds);
     }
     lastApplyNanos = nowNanos;
     return seconds;
-  }
-
-  private static double wrapDegrees(double degrees) {
-    double d = degrees % 360.0;
-    return d < 0 ? d + 360.0 : d;
   }
 
   /** The angle {@link #spin} has accumulated, in degrees within {@code [0, 360)}. */

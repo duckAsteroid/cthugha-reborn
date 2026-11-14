@@ -1,10 +1,15 @@
 package io.github.duckasteroid.cthugha.params.transform.animation;
 
+import io.github.duckasteroid.cthugha.binding.ScriptHelpers;
+import io.github.duckasteroid.cthugha.display.BeatClock;
 import io.github.duckasteroid.cthugha.params.DynamicChildList.ChildSpec;
+import io.github.duckasteroid.cthugha.params.transform.animation.BuiltInPackages.BeatPulse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -12,6 +17,14 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnimationPackagesTest {
+
+    private record Fixed(double bpm, float confidence, double beatPhase, long beatCount, float kickStrength)
+            implements BeatClock.Source {}
+
+    @AfterEach
+    void clearBeatContext() {
+        ScriptHelpers.setContext(null, null, null);
+    }
 
     /** Runs {@code pkg} for {@code seconds} at {@code hz} frames per second; returns the last frame's offsets. */
     private static TransformOffsets run(AnimationPackage pkg, double seconds, int hz) {
@@ -53,6 +66,28 @@ class AnimationPackagesTest {
             off.intensity.setValue(0);
             assertTrue(isIdentity(run(off, 0.3, 60)), type.label() + " should not move at intensity 0");
         }
+    }
+
+    @Test
+    void everyPackageStoppedPartWayReturnsToRest() {
+        for (AnimationType type : AnimationType.values()) {
+            if (type == AnimationType.BEAT_PULSE) continue;
+            AnimationPackage pkg = type.newInstance("x");
+            assertFalse(isIdentity(run(pkg, 0.3, 60)), type.label());
+            pkg.intensity.setValue(0);
+            assertTrue(isIdentity(run(pkg, 0.75, 60)), type.label() + " should settle back at intensity 0");
+        }
+    }
+
+    @Test
+    void aSpinSetToZeroEasesBackTheShortWayRound() {
+        BuiltInPackages.CoinSpin coin = (BuiltInPackages.CoinSpin) AnimationType.COIN_SPIN.newInstance("c");
+        coin.speed.setValue(1.0);
+        assertEquals(270.0, run(coin, 0.75, 100).turn, 1e-6);
+        coin.speed.setValue(0);
+        double turn = run(coin, 0.1, 100).turn;
+        assertTrue(turn > 270.0 && turn < 360.0, "eases forward to 360, not back through 180: " + turn);
+        assertEquals(0.0, run(coin, 1.0, 100).turn, 0.0);
     }
 
     private static boolean isIdentity(TransformOffsets o) {
@@ -129,5 +164,38 @@ class AnimationPackagesTest {
         // A later addition doesn't reuse a recreated name.
         assertEquals("Coin Spin 3", other.add(AnimationType.COIN_SPIN).getName());
         assertNotEquals(null, other.getChild("Coin Spin 1").orElse(null));
+    }
+
+    /** Beat Pulse's zoom at {@code source} against a tracker reporting {@code tracker}. */
+    private static double beatPulseZoom(BeatPulse.Source source, Fixed tracker) {
+        ScriptHelpers.setContext(null, new BeatClock(tracker, () -> BeatClock.TempoScale.NORMAL), new Random(1));
+        BeatPulse pulse = (BeatPulse) AnimationType.BEAT_PULSE.newInstance("p");
+        pulse.strength.setValue(1.0);
+        pulse.source.setEnumeration(source);
+        pulse.sharpness.setValue(4.0);
+        pulse.beats.setValue(4.0);
+        TransformOffsets o = new TransformOffsets();
+        pulse.apply(o, 1.0 / 60, 1f);
+        return o.zoom;
+    }
+
+    @Test
+    void beatPulseFollowsTheBeatClock() {
+        Fixed tracker = new Fixed(120, 0.5f, 0.25, 6, 0.8f);
+        assertEquals(1 + Math.exp(-1) * 0.5, beatPulseZoom(BeatPulse.Source.BEAT, tracker), 1e-6);
+        assertEquals(1.8, beatPulseZoom(BeatPulse.Source.KICK, tracker), 1e-6);
+        // Beat 6 of a 4-beat cycle, a quarter in: 2.25 / 4 of the way through, scaled by confidence.
+        assertEquals(1 + 2.25 / 4 * 0.5, beatPulseZoom(BeatPulse.Source.RAMP, tracker), 1e-6);
+        assertEquals(1 + (Math.cos(2 * Math.PI * 2.25 / 4) + 1) / 2 * 0.5,
+                beatPulseZoom(BeatPulse.Source.SWELL, tracker), 1e-6);
+    }
+
+    @Test
+    void beatPulseRestsWithoutAudio() {
+        BeatPulse pulse = (BeatPulse) AnimationType.BEAT_PULSE.newInstance("p");
+        for (BeatPulse.Source source : BeatPulse.Source.values()) {
+            pulse.source.setEnumeration(source);
+            assertTrue(isIdentity(run(pulse, 0.1, 60)), source.toString());
+        }
     }
 }

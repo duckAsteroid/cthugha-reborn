@@ -20,6 +20,10 @@ import java.util.Optional;
  * serializer can embed live script/enabled/error state directly on that leaf's JSON — the
  * association follows the resolved target and is cleared automatically if the path stops
  * resolving to an {@code AbstractValue} (deleted node, retargeted binding, etc).</p>
+ *
+ * <p>When the binding takes control of a leaf it remembers the leaf's value as its {@link
+ * #restValue()}, and gives that value back whenever it lets go: disabled, deleted or retargeted.
+ * The rest value round-trips through screen configs, so it survives a restart.</p>
  */
 public final class ContinuousBinding extends Binding implements AnimationBindingView {
 
@@ -31,6 +35,10 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
             + "inactive. Delete it, or use a trigger to set the value instead.";
 
     private volatile AbstractValue boundValue;
+    /** The value {@link #boundValue} had before this binding drove it; null while not known. */
+    private Double restValue;
+    /** True while this binding is writing {@link #boundValue}. */
+    private boolean driving;
 
     ContinuousBinding(String name, String defaultTargetPath, String defaultScript, Map<String, Object> globalState) {
         super(name, BindingMode.CONTINUOUS, defaultTargetPath);
@@ -42,7 +50,8 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
             + "as t (e.g. \"(sin(t * 0.31) + 1.0) / 2.0\"); the result is clamped to [0,1] and "
             + "pushed into the target parameter.");
         enabled.withDescription("Turns this animation binding on or off. When off, the target "
-            + "parameter reverts to manual/remote control.");
+            + "parameter goes back to the value it had before the animation took over, under "
+            + "manual/remote control.");
     }
 
     @Override
@@ -72,7 +81,7 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
     }
 
     @Override
-    void tick() {
+    synchronized void tick() {
         AbstractValue av = syncBoundValue();
         if (av == null) {
             return;
@@ -81,8 +90,15 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
         if (!enabled.value || fn == null || !av.isAnimatable()) {
             // A non-animatable target can still be resolved by a binding restored from a config
             // saved before the target was marked withNoAnimate() — leave it under manual control.
+            letGo(av);
             av.setControlled(false);
             return;
+        }
+        if (!driving) {
+            if (restValue == null) {
+                restValue = av.getValue().doubleValue();
+            }
+            driving = true;
         }
         av.setControlled(true);
         if (!isTargetActive(av)) {
@@ -97,12 +113,38 @@ public final class ContinuousBinding extends Binding implements AnimationBinding
     }
 
     @Override
-    void release() {
+    synchronized void release() {
         releaseBoundValue();
+    }
+
+    /**
+     * The value the target had before this binding took control of it, restored when the
+     * binding lets go; {@code null} if it hasn't driven a target yet.
+     */
+    public synchronized Double restValue() {
+        return restValue;
+    }
+
+    /** Sets the value to restore on letting go (from a saved config); null to take the current one. */
+    synchronized void setRestValue(Double value) {
+        restValue = value;
+    }
+
+    /** Puts {@code av} back to {@link #restValue} if this binding was driving it. */
+    private void letGo(AbstractValue av) {
+        if (driving) {
+            driving = false;
+            if (restValue != null) {
+                av.setValue(restValue);
+            }
+            // Re-enabling takes over from whatever the leaf is set to by then.
+            restValue = null;
+        }
     }
 
     private void releaseBoundValue() {
         if (boundValue != null) {
+            letGo(boundValue);
             boundValue.setControlled(false);
             if (boundValue.getAnimationBinding() == this) {
                 boundValue.setAnimationBinding(null);

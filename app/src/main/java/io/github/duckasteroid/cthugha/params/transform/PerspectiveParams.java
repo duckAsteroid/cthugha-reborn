@@ -55,7 +55,7 @@ public class PerspectiveParams extends ParamNode {
             + "that keeps the element its normal size.");
         tip.withDescription("Rotation in depth about the horizontal axis, in degrees: the element "
             + "tips like a page flipping. Non-zero switches the projection on.");
-        turnSpin.withDescription("Continuous Turn in revolutions per second; negative reverses.");
-        tipSpin.withDescription("Continuous Tip in revolutions per second; negative reverses.");
+        turnSpin.withDescription("Continuous Turn in revolutions per second; negative reverses, 0 turns it back to Turn.");
+        tipSpin.withDescription("Continuous Tip in revolutions per second; negative reverses, 0 turns it back to Tip.");
     }
 }

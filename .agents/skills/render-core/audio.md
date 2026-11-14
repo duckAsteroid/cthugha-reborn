@@ -5,11 +5,13 @@
 The audio pipeline is split into three independent layers:
 
 ```
-AudioDataSource (pluggable: real line or simulated)       [audio / audio.simulated packages]
-  └─ AudioLine (opened via AudioDataSource.open)
+AudioInput (start here: default line + simulated fallback, supervised capture thread)
+  └─ AudioDataSource (pluggable: real line or simulated)  [audio / audio.simulated packages]
+     └─ AudioLine (opened via AudioDataSource.open)
        └─ AudioReader (background thread)
             └─ AudioSink.write(byte[], offset, length)
                  ├─ PboAudioSink  → GL 1-D texture → AudioWave / RadialWave  [wave package]
+                 ├─ BeatTrackerSink → tempo, beat phase, kicks (render-thread getters) [audio.beat]
                  └─ FrequencyProcessor → FFTProcessor → FrequencySink         [audio.analysis package]
                       ├─ BeatDetector   → getBeatStrength(band)
                       └─ SpectrumAnalyser / RadialSpectrumAnalyser → doRender  [wave package]
@@ -19,13 +21,43 @@ AudioDataSource (pluggable: real line or simulated)       [audio / audio.simulat
 
 | Package | Contents |
 |---|---|
-| `util.audio` | Capture: `AudioReader`, `PboAudioSink`, `RollingAudioBuffer`, `AudioDataSource`, `AudioLine`, `AudioSources`, `LineAcquirer`, `TargetLineSource`, `AudioSourceUnavailableException` |
+| `util.audio` | Capture: `AudioInput`, `AudioReader`, `PboAudioSink`, `RollingAudioBuffer`, `AudioDataSource`, `AudioLine`, `AudioSources`, `LineAcquirer`, `TargetLineSource`, `AudioSourceUnavailableException` |
 | `util.audio.simulated` | Synthetic sources: `SimulatedDataSource`, `SimulatedSources`, `Waveform`, `OscillatingStereoPositioner` |
 | `util.audio.analysis` | Signal processing: `FFTProcessor`, `FrequencyProcessor`, `FrequencySink`, `BeatDetector`, `FrequencyBand` |
+| `util.audio.beat` | Tempo / beat / kick tracking: `BeatTrackerSink` (live), `BeatTracker`, `KickDetector`, `SpectralFlux`, `TempoEstimator`, `BeatAnalyser`, `BeatListener` |
 | `util.wave` | Renderers: `AudioWave`, `RadialWave`, `SpectrumAnalyser`, `RadialSpectrumAnalyser` |
 
 **Key principle:** `AudioWave` and `RadialWave` are pure renderers — they do not own threads,
 manage PBOs, or know about audio capture. The experiment creates and wires up the pieces.
+
+---
+
+## AudioInput — capture with sensible defaults (start here)
+
+`AudioInput` replaces the usual discover-lines / start-thread / pick-a-source boilerplate:
+
+```java
+audioInput = AudioInput.start(ctx, List.of(audioSink, freqProc));  // any AudioSinks
+audioInput.bindKeys(ctx);   // optional: J / H switch source
+// dispose():
+audioInput.close();
+```
+
+- **Sources:** just the system default capture line (the one routed through PipeWire /
+  PulseAudio — found by mixer name: `pipewire`, then `pulse`, then `[default]`) and a simulated
+  middle C as an always-available fallback. Raw ALSA `plughw:` devices are not offered: they
+  bypass PipeWire and are often busy.
+- **Override** with `-Daudio.source=simulated`, or part of any `IDEAL`-format line's name
+  (e.g. `-Daudio.source=plughw:1,0`).
+- **Capturing what's playing** (not the microphone): set the environment variable
+  `PIPEWIRE_PROPS='{ stream.capture.sink=true }'`. PipeWire's ALSA plugin then connects the
+  capture stream to the default sink's monitor — no `pactl`, and no change to the system default
+  source to restore afterwards. The experiments' `run` task sets it.
+- **Supervised:** capture runs on a platform thread that is restarted if a line implementation
+  throws (up to 5 times in 10 s).
+
+The lower-level pieces below (`AudioReader`, `AudioSources`, `LineAcquirer`) remain available for
+custom setups.
 
 ---
 
@@ -111,9 +143,7 @@ audioReader.setLine(audioSources.list().get(selectedSource));
 ### Shutdown
 
 ```java
-audioReader.setRunning(false);
-audioReader.setLine(null);
-audioReaderThread.join(2000);
+audioInput.close();
 ```
 
 ---
@@ -209,27 +239,16 @@ audio amplitude. It is a pure `RenderedItem` — no threads, no PBO management.
 ```java
 // Fields:
 private PboAudioSink audioSink;
-private AudioReader audioReader;
-private Thread audioReaderThread;
+private AudioInput audioInput;
 private AudioWave audioWave;
-private final AudioSources audioSources = new AudioSources();
-private int selectedSource = 0;
 
 // init():
 audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
 audioWave  = new AudioWave(audioSink);
 audioWave.init(ctx);
 
-audioSources.add(SimulatedSources.middleC(ctx.getClock()));
-LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-        .map(LineAcquirer.MixerLine::toAudioDataSource)
-        .forEach(audioSources::add);
-
-audioReader = new AudioReader(List.of(audioSink));
-audioReaderThread = new Thread(audioReader, "audio-reader");
-audioReaderThread.setDaemon(true);
-audioReaderThread.start();
-audioReader.setLine(audioSources.list().get(selectedSource));
+audioInput = AudioInput.start(ctx, List.of(audioSink));   // system default line, simulated fallback
+audioInput.bindKeys(ctx);                         // J / H switch source
 
 // doRender():
 audioSink.upload();
@@ -237,9 +256,7 @@ audioWave.doRender(ctx);
 
 // dispose():
 audioWave.dispose();
-audioReader.setRunning(false);
-audioReader.setLine(null);
-audioReaderThread.join(2000);
+audioInput.close();
 ```
 
 ### Channel modes
@@ -337,8 +354,8 @@ radialWave = new RadialWave(audioSink);
 audioWave.init(ctx);
 radialWave.init(ctx);
 
-// One AudioReader writes into one sink:
-audioReader = new AudioReader(List.of(audioSink));
+// One capture thread writes into one sink:
+audioInput = AudioInput.start(ctx, List.of(audioSink));
 
 // doRender() — one upload, two renders, identical audio data:
 audioSink.upload();
@@ -348,16 +365,14 @@ radialWave.doRender(ctx);
 // dispose() — both renderers, one thread shutdown:
 audioWave.dispose();
 radialWave.dispose();
-audioReader.setRunning(false);
-audioReader.setLine(null);
-audioReaderThread.join(2000);
+audioInput.close();
 ```
 
-You can also fan the `AudioReader` into multiple sinks simultaneously (e.g. a `PboAudioSink`
-for the waveform and a `RollingAudioBuffer` for the FFT analyser):
+You can also fan capture into multiple sinks simultaneously (e.g. a `PboAudioSink` for the
+waveform and a `FrequencyProcessor` for the FFT analyser):
 
 ```java
-audioReader = new AudioReader(List.of(pboSink, rollingBuffer));
+audioInput = AudioInput.start(ctx, List.of(pboSink, freqProc));
 ```
 
 ---
@@ -396,25 +411,14 @@ private final FrequencyProcessor freqProc =
 private final SpectrumAnalyser analyser =
         new SpectrumAnalyser(freqProc)
                 .withBarColors(new Vector4f(0, 0.8f, 0, 1), new Vector4f(0.8f, 0, 0, 1));
-private AudioReader audioReader;
-private Thread audioReaderThread;
-private final AudioSources audioSources = new AudioSources();
-private int selectedSource = 0;
+private AudioInput audioInput;
 
 // init():
 freqProc.addSink(analyser);
 analyser.init(ctx);
 
-audioSources.add(SimulatedSources.middleC(ctx.getClock()));
-LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-        .map(LineAcquirer.MixerLine::toAudioDataSource)
-        .forEach(audioSources::add);
-
-audioReader = new AudioReader(List.of(freqProc));
-audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
-audioReaderThread.setDaemon(true);
-audioReaderThread.start();
-audioReader.setLine(audioSources.list().get(selectedSource));
+audioInput = AudioInput.start(ctx, List.of(freqProc));   // system default line, simulated fallback
+audioInput.bindKeys(ctx);                         // J / H switch source
 
 // doRender():
 freqProc.process();
@@ -422,9 +426,7 @@ analyser.doRender(ctx);
 
 // dispose():
 analyser.dispose();
-audioReader.setRunning(false);
-audioReader.setLine(null);
-audioReaderThread.join(2000);
+audioInput.close();
 ```
 
 ### Construction
@@ -775,26 +777,15 @@ to drive all registered sinks.
 // ── Fields ─────────────────────────────────────────────────────────────────────
 private FrequencyProcessor freqProc;
 private BeatDetector       beatDetector;
-private AudioReader        audioReader;
-private Thread             audioReaderThread;
-private final AudioSources audioSources = new AudioSources();
-private int                selectedSource = 0;
+private AudioInput audioInput;
 
 // ── init() ─────────────────────────────────────────────────────────────────────
 freqProc     = new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
 beatDetector = new BeatDetector(freqProc);          // geometry derived from freqProc
 freqProc.addSink(beatDetector);
 
-audioSources.add(SimulatedSources.middleC(ctx.getClock()));
-LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-        .map(LineAcquirer.MixerLine::toAudioDataSource)
-        .forEach(audioSources::add);
-
-audioReader = new AudioReader(List.of(freqProc));   // freqProc replaces RollingAudioBuffer
-audioReaderThread = new Thread(audioReader, "beat-audio-reader");
-audioReaderThread.setDaemon(true);
-audioReaderThread.start();
-audioReader.setLine(audioSources.list().get(selectedSource));
+audioInput = AudioInput.start(ctx, List.of(freqProc));   // system default line, simulated fallback
+audioInput.bindKeys(ctx);                         // J / H switch source
 
 // ── doRender() — one call runs the FFT and notifies all sinks ──────────────────
 freqProc.process();
@@ -805,9 +796,7 @@ float hihatStrength = beatDetector.getBeatStrength("hihat");
 // → pass as shader uniforms (see below)
 
 // ── dispose() ─────────────────────────────────────────────────────────────────
-audioReader.setRunning(false);
-audioReader.setLine(null);
-audioReaderThread.join(2000);
+audioInput.close();
 ```
 
 ### Querying beat strengths
@@ -867,10 +856,7 @@ to the `SpectrumAnalyser(FrequencyProcessor)` constructor and register both as s
 private FrequencyProcessor freqProc;
 private SpectrumAnalyser   analyser;
 private BeatDetector       beats;
-private AudioReader        audioReader;
-private Thread             audioReaderThread;
-private final AudioSources audioSources = new AudioSources();
-private int                selectedSource = 0;
+private AudioInput         audioInput;
 
 // ── init() ─────────────────────────────────────────────────────────────────────
 freqProc = new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
@@ -879,17 +865,9 @@ beats    = new BeatDetector(freqProc);        // geometry matched automatically
 freqProc.addSink(analyser);
 freqProc.addSink(beats);
 
-audioSources.add(SimulatedSources.middleC(ctx.getClock()));
-LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-        .map(LineAcquirer.MixerLine::toAudioDataSource)
-        .forEach(audioSources::add);
 analyser.init(ctx);                           // GL setup only; no audio thread started
 
-audioReader = new AudioReader(List.of(freqProc));
-audioReaderThread = new Thread(audioReader, "freq-audio-reader");
-audioReaderThread.setDaemon(true);
-audioReaderThread.start();
-audioReader.setLine(audioSources.list().get(selectedSource));
+audioInput = AudioInput.start(ctx, List.of(freqProc));
 
 // ── doRender() — one FFT, two consumers ───────────────────────────────────────
 freqProc.process();               // runs FFT; calls analyser.onSpectrum() and beats.onSpectrum()
@@ -898,9 +876,7 @@ float kick = beats.getBeatStrength("bass");
 
 // ── dispose() ─────────────────────────────────────────────────────────────────
 analyser.dispose();               // GL cleanup only — no thread to join
-audioReader.setRunning(false);
-audioReader.setLine(null);
-audioReaderThread.join(2000);
+audioInput.close();
 ```
 
 ### Tuning reference
@@ -938,6 +914,13 @@ values until `update()` has been called at least `historyLength * 3` times.
 
 ---
 
+## BeatTrackerSink — live tempo, beat phase and kick drum
+
+For beat timing, tempo and kick drum, use `BeatTrackerSink` (or `BeatTracker` for callbacks)
+from `util.audio.beat` rather than `BeatDetector`: see [beat.md](beat.md).
+
+---
+
 ## Constraints
 
 | Constraint | Detail |
@@ -945,7 +928,7 @@ values until `update()` has been called at least `historyLength * 3` times.
 | **GL thread for PboAudioSink** | `PboAudioSink.create()` and `upload()` must be called on the GL thread. `write()` is safe from the audio thread. |
 | **upload() once per frame** | Call `audioSink.upload()` exactly once per frame before any renderer that shares that sink. Calling it multiple times per frame wastes a DMA transfer; skipping it leaves the texture stale. |
 | **AUDIO_BUFFER_SIZE compatibility** | `AudioWave.AUDIO_BUFFER_SIZE` and `RadialWave.AUDIO_BUFFER_SIZE` are both `2048`. Pass either constant to `PboAudioSink.create()` when sharing between them. |
-| **AudioReader thread lifecycle** | Start before calling `setLine()`; stop with `setRunning(false)` + `setLine(null)` + `join(2000)` in `dispose()`. |
+| **AudioInput lifecycle** | `AudioInput.start()` in `init()`, `close()` in `dispose()`. If wiring `AudioReader` by hand instead: start its thread before `setLine()`; stop with `setRunning(false)` + `setLine(null)` + `join(2000)`. |
 | **AudioDataSource has no `isOpen()`** | An `AudioLine` only exists once `open()` has succeeded — `setLine()` handles this for you; don't try to read/start/stop an `AudioDataSource` directly. |
 | **AudioSources tracks no selection** | It's just add/remove/list. Cycling ("next input") is the caller's own index into `audioSources.list()`. |
 | **FrequencyProcessor.process() before sinks** | Call `freqProc.process()` once per frame before any `FrequencySink` (BeatDetector, SpectrumAnalyser) that reads the result in the same frame. |

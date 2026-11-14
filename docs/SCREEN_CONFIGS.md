@@ -338,7 +338,7 @@ Each file is a `ScreenConfig`:
   "dynamicChildren" : {
     "Bindings" : [
       { "name" : "anim", "type" : "CONTINUOUS",
-        "fields" : { "target" : "Wave/Oscilloscope/amplitude", "script" : "sine(0.05)" } },
+        "fields" : { "target" : "Wave/Oscilloscope/amplitude", "script" : "sine(0.05)", "rest" : "0.5" } },
       { "name" : "Trigger 1", "type" : "EDGE_TRIGGERED",
         "fields" : { "condition" : "bass() > 0.7", "target" : "Flash White", "cooldown" : "0.15", "value" : "" } }
     ]
@@ -352,7 +352,9 @@ and reads a JSON object back into one by default), so a config saved on one run 
 entries in the same order on the next. `dynamicChildren` is a separate, sibling map — one entry
 per opted-in `DynamicChildList` subtree, keyed by that subtree's own path (here just `"Bindings"`,
 since it hangs directly off the root) — applied in full before `params`, per `apply()` above.
-`structureHash` is the tree-shape digest from "Detecting structural drift" above; `null`/absent on
+A continuous binding's `rest` field is the value its target had before the binding took control
+of it, which the binding gives back when it is disabled or deleted; it is absent until the
+binding has driven its target. `structureHash` is the tree-shape digest from "Detecting structural drift" above; `null`/absent on
 configs saved before it existed.
 
 There is no checksum and no per-resolution binary, unlike `TabConfig`/`.tab` files — a screen

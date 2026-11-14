@@ -225,7 +225,8 @@ public class BindingSystem extends ParamNode implements DynamicChildList {
      * {@inheritDoc}
      *
      * <p>Captures each binding's {@link BindingMode} as the {@code type} discriminator plus its
-     * {@code target} and mode-specific fields ({@code script} for {@link ContinuousBinding};
+     * {@code target} and mode-specific fields ({@code script} and, once known, {@code rest}, the
+     * value to give back on letting go, for {@link ContinuousBinding};
      * {@code condition}/{@code cooldown}/{@code value} for {@link EdgeTriggeredBinding}) — enough
      * for {@link #recreate(List)} to rebuild an equivalent binding via {@link #addContinuous} /
      * {@link #addEdgeTriggered}.</p>
@@ -238,6 +239,10 @@ public class BindingSystem extends ParamNode implements DynamicChildList {
             fields.put("target", b.target.getValue());
             if (b instanceof ContinuousBinding cb) {
                 fields.put("script", cb.script.getValue());
+                Double rest = cb.restValue();
+                if (rest != null) {
+                    fields.put("rest", Double.toString(rest));
+                }
             } else if (b instanceof EdgeTriggeredBinding eb) {
                 fields.put("condition", eb.condition.getValue());
                 fields.put("cooldown", Double.toString(eb.cooldown.value));
@@ -262,8 +267,14 @@ public class BindingSystem extends ParamNode implements DynamicChildList {
         for (ChildSpec spec : specs) {
             Map<String, String> fields = spec.fields();
             switch (BindingMode.valueOf(spec.type())) {
-                case CONTINUOUS -> addContinuous(spec.name(), fields.getOrDefault("target", ""),
-                        fields.getOrDefault("script", ""));
+                case CONTINUOUS -> {
+                    ContinuousBinding cb = addContinuous(spec.name(), fields.getOrDefault("target", ""),
+                            fields.getOrDefault("script", ""));
+                    double rest = parseDouble(fields.get("rest"), Double.NaN);
+                    if (!Double.isNaN(rest)) {
+                        cb.setRestValue(rest);
+                    }
+                }
                 case EDGE_TRIGGERED -> addEdgeTriggeredNamed(spec.name(), fields.getOrDefault("condition", ""),
                         fields.getOrDefault("target", ""),
                         parseDouble(fields.get("cooldown"), EdgeTriggeredBinding.DEFAULT_COOLDOWN_SECONDS),

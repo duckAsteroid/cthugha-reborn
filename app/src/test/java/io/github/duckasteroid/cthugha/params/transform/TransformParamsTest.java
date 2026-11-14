@@ -145,6 +145,42 @@ class TransformParamsTest {
   }
 
   @Test
+  void spinSetToZeroTurnsBackToRotation() {
+    TransformParams transform = new TransformParams("Transform");
+    transform.rotation.setValue(30.0);
+    transform.spin.setValue(0.25);
+    transform.perspective.turnSpin.setValue(0.25);
+    long t = 0;
+    for (; t <= 500_000_000L; t += 10_000_000L) transform.applyTo(new Matrix4f(), 1f, t);
+    assertEquals(45.0, transform.spinDegrees(), 1e-6);
+    transform.spin.setValue(0);
+    transform.perspective.turnSpin.setValue(0);
+    for (long end = t + 1_000_000_000L; t <= end; t += 10_000_000L) transform.applyTo(new Matrix4f(), 1f, t);
+    assertEquals(0.0, transform.spinDegrees(), 0);
+    TransformParams still = new TransformParams("Transform");
+    still.rotation.setValue(30.0);
+    assertEquals(still.applyTo(new Matrix4f(), 1f, 0L), transform.applyTo(new Matrix4f(), 1f, t));
+  }
+
+  @Test
+  void resetRestoresDefaultsAndStopsSpinsButKeepsAnimations() {
+    TransformParams transform = new TransformParams("Transform");
+    transform.zoom.setValue(2.0);
+    transform.perspective.tip.setValue(40.0);
+    transform.spin.setValue(1.0);
+    transform.animations.add(io.github.duckasteroid.cthugha.params.transform.animation.AnimationType.BREATHE);
+    transform.applyTo(new Matrix4f(), 1f, 0L);
+    transform.applyTo(new Matrix4f(), 1f, 100_000_000L);
+    transform.reset.execute(null);
+    transform.applyTo(new Matrix4f(), 1f, 100_000_000L);
+    assertEquals(1.0, transform.zoom.value, 0);
+    assertEquals(0.0, transform.perspective.tip.value, 0);
+    assertEquals(0.0, transform.spin.value, 0);
+    assertEquals(0.0, transform.spinDegrees(), 0);
+    assertEquals(1, transform.animations.packages().size());
+  }
+
+  @Test
   void spinIsCappedAfterAStall() {
     TransformParams transform = new TransformParams("Transform");
     transform.spin.setValue(1.0);

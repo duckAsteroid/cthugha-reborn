@@ -482,7 +482,7 @@ public class CthughaWindow extends GLWindow {
             p.init(this);
         }
 
-        ScriptHelpers.setContext(cthugha.beatDetector, cthugha.rng);
+        ScriptHelpers.setContext(cthugha.beatDetector, cthugha.beatClock, cthugha.rng);
         // Restores the persisted "current" state (waves, bindings, palette, tab generator, blur,
         // etc. — everything ScreenConfigParams captures) if one exists from a previous session,
         // otherwise falls back to deterministic first-launch defaults. Either way this also starts

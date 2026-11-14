@@ -2,10 +2,13 @@ package io.github.duckasteroid.cthugha.params.transform.animation;
 
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import io.github.duckasteroid.cthugha.binding.ScriptHelpers;
+import io.github.duckasteroid.cthugha.display.BeatClock;
 import io.github.duckasteroid.cthugha.display.BeatDetectorConfig;
+import io.github.duckasteroid.cthugha.params.transform.Angles;
 import io.github.duckasteroid.cthugha.params.values.DoubleParameter;
 import io.github.duckasteroid.cthugha.params.values.EnumParameter;
 
+import java.util.Arrays;
 import java.util.List;
 
 /** The built-in {@link AnimationPackage}s, one per {@link AnimationType}. */
@@ -53,7 +56,7 @@ final class BuiltInPackages {
         @Override
         protected void apply(TransformOffsets o, double dt, float aspect, double k) {
             wobblePhase = advance(wobblePhase, WOBBLE_RATE * dt);
-            angle = turn(angle, 360 * k * speed.value * (1 + wobble.value * wave(wobblePhase)) * dt);
+            angle = Angles.spin(angle, k * speed.value * (1 + wobble.value * wave(wobblePhase)), dt);
             o.rotation += angle;
         }
     }
@@ -122,15 +125,44 @@ final class BuiltInPackages {
         }
     }
 
-    /** Kicks bigger on each beat in a band, then settles as the beat fades. */
+    /** Kicks bigger with the music, then settles: on the tracked beat, a kick, or a band's energy. */
     static final class BeatPulse extends AnimationPackage {
-        final DoubleParameter strength = dial("Strength", 0, 2, 0.5, "Extra size on a full-strength beat (0.5 = half as big again).");
+
+        /** What drives the pulse. */
+        enum Source {
+            BEAT("Beat"), KICK("Kick"), SWELL("Swell"), RAMP("Ramp"), BAND("Band");
+
+            private final String label;
+
+            Source(String label) {
+                this.label = label;
+            }
+
+            @Override
+            public String toString() {
+                return label;
+            }
+        }
+
+        final DoubleParameter strength = dial("Strength", 0, 2, 0.5, "Extra size at the peak (0.5 = half as big again).");
+        final EnumParameter<Source> source = new EnumParameter<>("Source", Arrays.asList(Source.values()), Source.BEAT);
+        final DoubleParameter sharpness = dial("Sharpness", 1, 20, BeatClock.DEFAULT_PULSE_SHARPNESS,
+                "How quickly each beat's kick dies away: higher is snappier.");
+        final DoubleParameter beats = dial("Beats", 1, 16, 4, "Beats per swell or ramp: 4 is once a bar.");
         final EnumParameter<String> band = new EnumParameter<>("Band", bandNames());
 
         BeatPulse(String name) {
             super(name, AnimationType.BEAT_PULSE);
+            source.withDescription("Beat: a kick on every tracked beat, held steady when the drum drops out. "
+                    + "Kick: each detected kick drum. Swell: grows and shrinks smoothly over a number of beats. "
+                    + "Ramp: grows over a number of beats, then snaps back on the beat. "
+                    + "Band: follows the energy in one beat-detection band. "
+                    + "Beat, Swell and Ramp fade out as the tempo lock weakens.");
+            sharpness.withVisibleWhen("Source", Source.BEAT.toString());
+            beats.withVisibleWhen("Source", Source.SWELL.toString(), Source.RAMP.toString());
             band.withDescription("Beat-detection band to follow, from [beats] in cthugha.ini.");
-            initDials(strength, band);
+            band.withVisibleWhen("Source", Source.BAND.toString());
+            initDials(strength, source, sharpness, beats, band);
         }
 
         private static List<String> bandNames() {
@@ -140,7 +172,22 @@ final class BuiltInPackages {
 
         @Override
         protected void apply(TransformOffsets o, double dt, float aspect, double k) {
-            o.zoom *= 1 + k * strength.value * ScriptHelpers.beatStrength(band.getEnumeration());
+            o.zoom *= 1 + k * strength.value * level();
+        }
+
+        /** The pulse's current height, {@code [0, 1]}. */
+        private double level() {
+            Source s = source.getEnumeration();
+            if (s == Source.BAND) return ScriptHelpers.beatStrength(band.getEnumeration());
+            BeatClock clock = ScriptHelpers.sharedBeatClock();
+            if (clock == null) return 0;
+            return switch (s) {
+                case BEAT -> clock.beatPulse(sharpness.value);
+                case KICK -> clock.kickStrength();
+                case SWELL -> (Math.cos(2 * Math.PI * clock.beatRamp(beats.value)) + 1) / 2 * clock.confidence();
+                case RAMP -> clock.beatRamp(beats.value) * clock.confidence();
+                case BAND -> throw new AssertionError();
+            };
         }
     }
 
@@ -174,7 +221,7 @@ final class BuiltInPackages {
 
         @Override
         protected void apply(TransformOffsets o, double dt, float aspect, double k) {
-            angle = turn(angle, 360 * k * speed.value * dt);
+            angle = Angles.spin(angle, k * speed.value, dt);
             o.turn += angle;
             o.threeD = true;
         }
@@ -192,7 +239,7 @@ final class BuiltInPackages {
 
         @Override
         protected void apply(TransformOffsets o, double dt, float aspect, double k) {
-            angle = turn(angle, 360 * k * speed.value * dt);
+            angle = Angles.spin(angle, k * speed.value, dt);
             o.tip += angle;
             o.threeD = true;
         }
@@ -250,8 +297,8 @@ final class BuiltInPackages {
 
         @Override
         protected void apply(TransformOffsets o, double dt, float aspect, double k) {
-            turnAngle = turn(turnAngle, 360 * k * speed.value * dt);
-            tipAngle = turn(tipAngle, 360 * k * speed.value * twist.value * dt);
+            turnAngle = Angles.spin(turnAngle, k * speed.value, dt);
+            tipAngle = Angles.spin(tipAngle, k * speed.value * twist.value, dt);
             o.turn += turnAngle;
             o.tip += tipAngle;
             o.threeD = true;

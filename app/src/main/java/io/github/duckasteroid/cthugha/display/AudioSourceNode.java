@@ -33,6 +33,8 @@ public class AudioSourceNode extends ParamNode {
     private final EnumParameter<String> selector;
     /** Live-editable beat-detector bands/tuning; persisted to cthugha.ini. */
     public final BeatDetectorSettingsNode beatDetectorSettings = new BeatDetectorSettingsNode();
+    /** Live-editable tempo-tracker latency and tempo correction; persisted to cthugha.ini. */
+    public final BeatTrackerSettingsNode beatTrackerSettings = new BeatTrackerSettingsNode();
     /** Shows the live beat-strength HUD overlay in the app window; auto-persisted in state.ini. */
     public final BooleanParameter debugBeats = new BooleanParameter("Debug Beats",
             Config.state().getConfigAs(AudioPipeline.CONFIG_SECTION, "debug_beats", "false", Boolean::parseBoolean));
@@ -72,7 +74,8 @@ public class AudioSourceNode extends ParamNode {
         random.withDescription("Switches to a random audio capture device from the list.");
 
         debugBeats.withDescription("Shows a HUD overlay in the app window with each monitored beat "
-            + "band's live name, bar, and strength value. Toggle with the D key.");
+            + "band's live strength, plus the beat tracker's kick, beat pulse, confidence, tempo "
+            + "and position in the bar. Toggle with the D key.");
         debugBeats.withNoAnimate();
         debugBeats.withNoPersist();
         debugBeats.addChangeListener(() ->
@@ -81,6 +84,7 @@ public class AudioSourceNode extends ParamNode {
         addChild(selector);
         addChild(random);
         addChild(beatDetectorSettings);
+        addChild(beatTrackerSettings);
         addChild(debugBeats);
     }
 

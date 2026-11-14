@@ -13,7 +13,8 @@ import java.util.List;
  * {@link ParamNode} whose dials are leaves, which each frame adds its effect to a
  * {@link TransformOffsets} rather than writing the transform's own values. Every package has an
  * {@link #intensity} (0 = no effect) and keeps its own phase, advanced by elapsed time, so a rate
- * change never jumps the motion.
+ * change never jumps the motion. A package that spins eases its angle back to rest when its
+ * speed or intensity is 0 ({@link io.github.duckasteroid.cthugha.params.transform.Angles#spin}).
  */
 public abstract class AnimationPackage extends ParamNode {
 
@@ -65,12 +66,6 @@ public abstract class AnimationPackage extends ParamNode {
     protected static double advance(double phase, double cycles) {
         double p = (phase + cycles) % 1.0;
         return p < 0 ? p + 1.0 : p;
-    }
-
-    /** {@code degrees + delta}, kept within {@code [0, 360)}. */
-    protected static double turn(double degrees, double delta) {
-        double d = (degrees + delta) % 360.0;
-        return d < 0 ? d + 360.0 : d;
     }
 
     /** {@code sin(2π × phase)}. */

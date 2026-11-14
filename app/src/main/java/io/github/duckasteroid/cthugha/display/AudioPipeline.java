@@ -8,6 +8,7 @@ import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
+import com.asteroid.duck.opengl.util.audio.beat.BeatTrackerSink;
 import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import io.github.duckasteroid.cthugha.config.Config;
@@ -42,6 +43,8 @@ public class AudioPipeline {
     private PboAudioSink pboSink;
     private FrequencyProcessor freqProc;
     private BeatDetector beatDetector;
+    /** Tempo, predicted beat phase and kick drum; analyses on the capture thread. */
+    private BeatTrackerSink beatTracker;
     private AudioReader audioReader;
     private Thread audioThread;
     private int restartCount = 0;
@@ -73,6 +76,7 @@ public class AudioPipeline {
                 tuning.historyLength(), tuning.threshold(), tuning.sensitivity(),
                 BeatDetector.DEFAULT_NOISE_FLOOR, tuning.decayTime());
         freqProc.addSink(beatDetector);
+        beatTracker = new BeatTrackerSink(freqProc.getSampleRate());
 
         // Always-available fallback so capture works even with no usable hardware line.
         audioSources.add(SimulatedSources.middleC(ctx.getClock()));
@@ -84,7 +88,7 @@ public class AudioPipeline {
             selectPreferredSource("pipewire");
         }
 
-        audioReader = new AudioReader(List.of(pboSink, freqProc));
+        audioReader = new AudioReader(List.of(pboSink, freqProc, beatTracker));
         startAudioThread();
         audioReader.setLine(audioSources.list().get(selectedIndex));
     }
@@ -117,7 +121,7 @@ public class AudioPipeline {
         }
 
         AudioDataSource current = audioSources.list().get(selectedIndex);
-        audioReader = new AudioReader(List.of(pboSink, freqProc));
+        audioReader = new AudioReader(List.of(pboSink, freqProc, beatTracker));
         startAudioThread();
         audioReader.setLine(current);
     }
@@ -172,6 +176,8 @@ public class AudioPipeline {
     public FrequencyProcessor getFreqProc() { return freqProc; }
 
     public BeatDetector getBeatDetector() { return beatDetector; }
+
+    public BeatTrackerSink getBeatTracker() { return beatTracker; }
 
     public String getSelectedSourceName() {
         return audioSources.list().get(selectedIndex).getName();

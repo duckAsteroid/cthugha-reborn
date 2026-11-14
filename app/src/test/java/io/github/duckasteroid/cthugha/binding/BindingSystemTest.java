@@ -88,6 +88,31 @@ class BindingSystemTest {
     }
 
     @Test
+    void deletingABindingGivesBackTheValueItTookOverAndTheValueSurvivesASavedConfig() {
+        BindingSystem bindings = new BindingSystem();
+        Root root = new Root();
+        root.addChild(bindings);
+        bindings.init(new StaticClock(0.0, 0.0), root, CTX);
+        root.amplitude.value = 3.0;
+
+        ContinuousBinding anim = bindings.addContinuous("anim", "Amplitude", "0.5");
+        bindings.tick();
+        assertEquals(5.0, root.amplitude.value, 1e-9);
+        var specs = bindings.describe();
+        assertEquals("3.0", specs.get(0).fields().get("rest"));
+
+        bindings.removeBinding(anim);
+        assertEquals(3.0, root.amplitude.value, 1e-9);
+
+        // Restored from the config while the leaf holds the last animated value.
+        root.amplitude.value = 5.0;
+        bindings.recreate(specs);
+        bindings.tick();
+        bindings.recreate(java.util.List.of());
+        assertEquals(3.0, root.amplitude.value, 1e-9);
+    }
+
+    @Test
     void globalStateIsSharedBetweenBindingsCreatedThroughTheSameSystem() {
         BindingSystem bindings = new BindingSystem();
         Root root = new Root();

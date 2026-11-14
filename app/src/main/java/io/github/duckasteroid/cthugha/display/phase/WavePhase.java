@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.display.phase;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.audio.beat.BeatTrackerSink;
 import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
@@ -9,6 +10,8 @@ import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
 import io.github.duckasteroid.cthugha.JCthugha;
 import io.github.duckasteroid.cthugha.binding.ScriptHelpers;
 import io.github.duckasteroid.cthugha.display.AudioPipeline;
+import io.github.duckasteroid.cthugha.display.BeatClock;
+import io.github.duckasteroid.cthugha.display.BeatTrackerSettingsNode;
 import io.github.duckasteroid.cthugha.display.wave.OscilloscopeModel;
 import io.github.duckasteroid.cthugha.display.wave.RadialClockAnalyser;
 import io.github.duckasteroid.cthugha.display.wave.RadialClockModel;
@@ -100,8 +103,14 @@ public class WavePhase implements RenderPhase {
         cthugha.beatDetector = audioPipeline.getBeatDetector();
         audioPipeline.setOnBeatDetectorRebuilt(bd -> {
             cthugha.beatDetector = bd;
-            ScriptHelpers.setContext(bd, cthugha.rng);
+            ScriptHelpers.setContext(bd, cthugha.beatClock, cthugha.rng);
         });
+
+        BeatTrackerSettingsNode trackerSettings = cthugha.audioSource.beatTrackerSettings;
+        BeatTrackerSink tracker = audioPipeline.getBeatTracker();
+        tracker.setLatency(trackerSettings.latency());
+        trackerSettings.setOnChanged(() -> tracker.setLatency(trackerSettings.latency()));
+        cthugha.beatClock = new BeatClock(BeatClock.of(tracker), trackerSettings::tempoScale);
         cthugha.audioSource.beatDetectorSettings.setOnChanged(() ->
             audioPipeline.requestBeatDetectorReload(
                 cthugha.audioSource.beatDetectorSettings.getBands(),

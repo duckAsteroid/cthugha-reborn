@@ -27,6 +27,20 @@ export const SCRIPT_HELP: { section: string; items: { name: string; desc: string
     ],
   },
   {
+    section: 'Tempo — locked to the predicted beat',
+    items: [
+      { name: 'beatPulse()',          desc: '1 exactly on each beat, decaying; fades when the beat is lost' },
+      { name: 'beatPulse(sharpness)', desc: 'as beatPulse(), higher = snappier (default 6)' },
+      { name: 'beatPhase()',          desc: '0 on the beat, rising to 1 before the next' },
+      { name: 'beatRamp(beats)',      desc: 'ramp 0→1 every n beats; beatRamp(4) once per bar' },
+      { name: 'beatSine(beats)',      desc: 'smooth wave every n beats, 1 on the beat' },
+      { name: 'beatCount()',          desc: 'beats so far; beatCount() % 4 == 0 every 4th beat' },
+      { name: 'kick()',               desc: 'kick drum strength [0, 1], decaying' },
+      { name: 'bpm()',                desc: 'tempo in BPM; 0 until locked on (~3 s)' },
+      { name: 'beatConfidence()',     desc: 'confidence [0, 1] in the tempo' },
+    ],
+  },
+  {
     section: 'Random',
     items: [
       { name: 'random()',        desc: 'uniform random value in [0, 1)' },

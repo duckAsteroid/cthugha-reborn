@@ -1,6 +1,7 @@
 package io.github.duckasteroid.cthugha.binding;
 
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
+import io.github.duckasteroid.cthugha.display.BeatClock;
 
 import java.util.Map;
 import java.util.Random;
@@ -21,6 +22,14 @@ import java.util.Random;
  *   phase(hz)        — raw angular phase (radians) at hz; use with Math.sin/cos
  *   bass()/snare()/hihat() — beat strength [0,1] for the standard drum-machine bands
  *   beat(name)       — beat strength [0,1] for any named band; 0 if unknown/unavailable
+ *   bpm()            — tracked tempo in BPM; 0 until locked on (~3 s)
+ *   beatConfidence() — confidence [0,1] in the tempo; 0 after silence
+ *   beatPhase()      — position in the beat: 0 on the beat, rising to 1 just before the next
+ *   beatCount()      — beats so far (long); beatCount() % 4 cycles a bar
+ *   beatPulse() / beatPulse(sharpness) — 1 exactly on each beat, decaying; scaled by confidence
+ *   beatRamp(beats)  — ramp 0→1 over every `beats` beats, e.g. beatRamp(4) once per bar
+ *   beatSine(beats)  — cosine wave 1→0→1 over every `beats` beats, 1 on the beat
+ *   kick()           — last kick drum's strength [0,1], decaying over ~150 ms
  *   random()         — uniform random double in [0,1)
  *   random(min,max)  — uniform random double in [min,max)
  *   range(min,max,value) — remaps value from [0,1] into [min,max], e.g. range(0.2,0.5,sine(0.05))
@@ -53,14 +62,16 @@ public abstract class ScriptHelpers {
     protected ScriptState global = new ScriptState(Map.of());
 
     private static volatile BeatDetector beatDetector;
+    private static volatile BeatClock beatClock;
     private static volatile Random random;
 
     /**
-     * Sets the shared beat detector and random source every compiled script reads from.
-     * Called once per frame setup (not per script) since there is one of each per running app.
+     * Sets the shared beat detector, beat clock and random source every compiled script reads
+     * from. Called once per frame setup (not per script) since there is one of each per running app.
      */
-    public static void setContext(BeatDetector bd, Random rng) {
+    public static void setContext(BeatDetector bd, BeatClock clock, Random rng) {
         beatDetector = bd;
+        beatClock = clock;
         random = rng;
     }
 
@@ -136,6 +147,14 @@ public abstract class ScriptHelpers {
         }
     }
 
+    /**
+     * The shared beat clock, for code outside binding scripts (e.g. the Beat Pulse animation
+     * package); {@code null} until audio is up.
+     */
+    public static BeatClock sharedBeatClock() {
+        return beatClock;
+    }
+
     /** Beat strength [0,1] for the "bass" band (kick drum, sub-bass). */
     protected double bass() {
         return beat("bass");
@@ -149,6 +168,70 @@ public abstract class ScriptHelpers {
     /** Beat strength [0,1] for the "hihat" band (hi-hat, cymbals, shimmer). */
     protected double hihat() {
         return beat("hihat");
+    }
+
+    /** Tracked tempo in BPM, or 0.0 until the tracker has locked on (or after silence). */
+    protected double bpm() {
+        BeatClock clock = beatClock;
+        if (clock == null) return 0.0;
+        double bpm = clock.bpm();
+        return Double.isNaN(bpm) ? 0.0 : bpm;
+    }
+
+    /** Confidence in [0,1] in the tracked tempo; falls through breakdowns, 0 after silence. */
+    protected double beatConfidence() {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.confidence() : 0.0;
+    }
+
+    /**
+     * Position within the current beat in [0,1): 0 on the beat, rising to 1 just before the
+     * next. Predicted, so it stays on the beat even when the kick drops out briefly.
+     */
+    protected double beatPhase() {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.beatPhase() : 0.0;
+    }
+
+    /**
+     * Beats so far. {@code beatCount() % 4} cycles through a bar (which beat is the downbeat is
+     * not known); in a trigger, {@code beatCount() % 4 == 0} fires once every four beats.
+     */
+    protected long beatCount() {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.beatCount() : 0L;
+    }
+
+    /** 1 exactly on each beat, decaying to ~0.05 by mid-beat, scaled by {@link #beatConfidence()}. */
+    protected double beatPulse() {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.beatPulse() : 0.0;
+    }
+
+    /** As {@link #beatPulse()}, decaying {@code exp(-sharpness × beatPhase())}: higher is snappier. */
+    protected double beatPulse(double sharpness) {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.beatPulse(sharpness) : 0.0;
+    }
+
+    /**
+     * Linear ramp 0→1 over every {@code beats} beats (rounded, at least 1), locked to the beat:
+     * {@code beatRamp(1)} is {@link #beatPhase()}, {@code beatRamp(4)} rises once per bar.
+     */
+    protected double beatRamp(double beats) {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.beatRamp(beats) : 0.0;
+    }
+
+    /** Smooth cosine wave over every {@code beats} beats in [0,1]: 1 on the beat, 0 halfway. */
+    protected double beatSine(double beats) {
+        return (Math.cos(beatRamp(beats) * TWO_PI) + 1.0) / 2.0;
+    }
+
+    /** The last kick drum's strength in [0,1], decaying over ~150 ms; 0 with no kick yet. */
+    protected double kick() {
+        BeatClock clock = beatClock;
+        return clock != null ? clock.kickStrength() : 0.0;
     }
 
     /** Uniform random double in [0, 1). Returns 0.0 if no random source is available yet. */

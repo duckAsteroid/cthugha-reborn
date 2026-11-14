@@ -1,10 +1,10 @@
 ---
 name: render-core
-description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.0.0-RC10). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
+description: "Reference documentation for the Java library `io.github.duckasteroid:render-core` (Maven, resolved version 1.1.0). Use this skill when writing, reviewing, or debugging code that depends on it. Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser), beat/tempo/kick detection, and key input."
 metadata:
   group: io.github.duckasteroid
   artifact: render-core
-  version: 1.0.0-RC10
+  version: 1.1.0
   sources: assets/sources/
 ---
 
@@ -178,7 +178,8 @@ The `SHIFT+PRINT_SCREEN` → recording binding is likewise wired in `Main.regist
 | Resource manager, textures, texture units | [resources.md](resources.md) |
 | Utility renderers, timer/clock library | [utilities.md](utilities.md) |
 | Key input, cross-thread actions, colours | [input.md](input.md) |
-| Audio capture, FFT analysis, beat detection, spectrum rendering | [audio.md](audio.md) |
+| Audio capture, FFT analysis, spectrum rendering | [audio.md](audio.md) |
+| Beat, tempo and kick drum detection | [beat.md](beat.md) |
 
 ---
 
